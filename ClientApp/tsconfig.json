@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    // 使用最新语法
+    "target": "ESNext",
+    // 模块系统
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    // 启用严格模式（推荐）
+    "strict": true,
+    // 保留 JSX（Vue 3 TSX 支持）
+    "jsx": "preserve",
+    "importHelpers": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    // 支持路径别名
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    // 支持现代浏览器 API
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    // 加载 Node 和 Vite 类型声明
+    "types": [
+      "vite/client",
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.vitest.json"
+    }
+  ]
+}
