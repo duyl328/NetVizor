@@ -24,3 +24,6 @@ app.use(router)
 app.use(vuetify)
 
 app.mount('#app')
+
+// 注册 C# 函数
+window.externalFunctions = {};

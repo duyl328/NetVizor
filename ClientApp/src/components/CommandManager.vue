@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { type Ref, ref } from 'vue'
-import { baseInvoke } from '@/utils/commandUtil.ts'
 import type { CommandType } from '@/types/command'
 import { logN } from '@/utils/logHelper/logUtils.ts'
+import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 
 // 传递参数
 const props = defineProps({
@@ -10,6 +10,7 @@ const props = defineProps({
 })
 // 使用 ref 使数据变成响应式数据
 const modules: Ref<CommandType[]> = ref([...(props.pro || [])])
+const bridge = CSharpBridgeV2.getBridge()
 
 /**
  * 指令触发
@@ -20,13 +21,9 @@ const invokeCommand = async (module: CommandType) => {
   logN.success('前端发送的参数', module.name, params)
 
   try {
-    const s = baseInvoke(module.name, params)
-    s.then((res) => {
-      logN.warning('后端返回的参数', module.name, res)
-      module.result = JSON.stringify(res, null, 2)
-    }).catch((err) => {
-      console.error(err)
-      module.result = `Error: ${err.message}`
+    bridge.send(module.name, params, (data) => {
+      logN.warning('后端返回的参数', module.name, data)
+      module.result = JSON.stringify(data, null, 2)
     })
   } catch (error) {
     console.error(err)
@@ -34,7 +31,6 @@ const invokeCommand = async (module: CommandType) => {
   }
 }
 </script>
-
 
 <template>
   <div class="container">
@@ -44,11 +40,7 @@ const invokeCommand = async (module: CommandType) => {
         <p class="module-description">{{ module.description }}</p>
 
         <div class="params-container">
-          <div
-            v-for="(param, paramIndex) in module.params"
-            :key="paramIndex"
-            class="param-item"
-          >
+          <div v-for="(param, paramIndex) in module.params" :key="paramIndex" class="param-item">
             <label :for="`${module.name}-${param.name}`" class="param-label">
               {{ param.label }}
             </label>
@@ -70,12 +62,7 @@ const invokeCommand = async (module: CommandType) => {
           </div>
         </div>
 
-        <button
-          @click="invokeCommand(module)"
-          class="action-button"
-        >
-          触发 {{ module.name }}
-        </button>
+        <button @click="invokeCommand(module)" class="action-button">触发 {{ module.name }}</button>
 
         <div v-if="module.result" class="result-container">
           <h3 class="result-title">结果</h3>
@@ -108,9 +95,8 @@ const invokeCommand = async (module: CommandType) => {
         font-size: 1.125rem; // text-lg
         font-weight: 600; // font-semibold
         margin-bottom: 0.5rem; // mb-2
-        user-select: text;     /* 允许选中 */
-        pointer-events: auto;  /* 确保可以响应鼠标操作 */
-
+        user-select: text; /* 允许选中 */
+        pointer-events: auto; /* 确保可以响应鼠标操作 */
       }
 
       .module-description {
@@ -189,8 +175,8 @@ const invokeCommand = async (module: CommandType) => {
         .result-content {
           font-size: 0.875rem; // text-sm
           white-space: pre-wrap;
-          user-select: text;     /* 允许选中 */
-          pointer-events: auto;  /* 确保可以响应鼠标操作 */
+          user-select: text; /* 允许选中 */
+          pointer-events: auto; /* 确保可以响应鼠标操作 */
         }
       }
     }
