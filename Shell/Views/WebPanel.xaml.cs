@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using Infrastructure.utils;
 
 namespace Shell.Views;
 
@@ -35,10 +36,29 @@ public partial class WebPanel : UserControl
 
             Console.WriteLine(json);
             Console.WriteLine(msg?.Channel);
-            if (msg?.Channel == "showMessage")
+
+            switch (msg?.Channel)
             {
-                MessageBox.Show(msg.Payload?.Content ?? "无内容", msg.Payload?.Title ?? "提示");
-                InitWebView1();
+                case "showMessage":
+                    MessageBox.Show(msg.Payload?.Content ?? "无内容", msg.Payload?.Title ?? "提示");
+                    InitWebView1();
+                    break;
+                case "GetNetInfo":
+                    NetUtils.GetNetInfo();
+                    break;
+                case "GetProgramDiagnostics":
+                    var programDiagnostics = SysInfoUtils.GetProgramDiagnostics();
+                    Console.WriteLine(programDiagnostics);
+                    break;
+                case "InspectProcess":
+                    SysInfoUtils.InspectProcess(23192);
+                    break;
+                case "GetAllTcpConnections":
+                    NetUtils.GetAllTcpConnections();
+                    break;
+                default:
+                    Console.WriteLine("没有任何函数被触发...");
+                    break;
             }
         };
     }

@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import CommandManager from '@/components/CommandManager.vue'
 import type { CommandType } from '@/types/command'
-import {onMounted,onUnmounted} from 'vue'
-import CSharpBridgeV2 from "@/correspond/CSharpBridgeV2"
-
+import { onMounted, onUnmounted } from 'vue'
+import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 
 const bridge = CSharpBridgeV2.getBridge()
-bridge.listen("showMessage",(data) => {
-  console.log('11111111',data);
+bridge.listen('showMessage', (data) => {
+  console.log('11111111', data)
 })
 
 function func() {
   console.log('点击anniu')
 
-  bridge.send('showMessage',{
-    title: "来自前端的问候",
-    content: "Hello C#!"
-  },(data) => {
-    console.log(data,'======');
-    console.log(window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__);
-  })
+  bridge.send(
+    'showMessage',
+    {
+      title: '来自前端的问候',
+      content: 'Hello C#!',
+    },
+    (data) => {
+      console.log(data, '======')
+      console.log(window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__)
+    },
+  )
 }
 
 const commands: CommandType[] = [
@@ -32,19 +35,43 @@ const commands: CommandType[] = [
         label: '标题',
         type: 'text',
         value: 'Vue',
-        placeholder: 'text'
-      },{
+        placeholder: 'text',
+      },
+      {
         name: 'content',
         label: '标题',
         type: 'text',
         value: 'Hello C#!',
-        placeholder: 'text'
+        placeholder: 'text',
       },
     ],
     result: null,
   },
+  {
+    name: 'GetNetInfo',
+    description: 'GetNetInfo!!',
+    params: [],
+    result: null,
+  },
+  {
+    name: 'GetProgramDiagnostics',
+    description: 'GetProgramDiagnostics!!',
+    params: [],
+    result: null,
+  },
+  {
+    name: 'InspectProcess',
+    description: 'InspectProcess!!',
+    params: [],
+    result: null,
+  },
+  {
+    name: 'GetAllTcpConnections',
+    description: 'GetAllTcpConnections!!',
+    params: [],
+    result: null,
+  },
 ]
-
 </script>
 
 <template>
