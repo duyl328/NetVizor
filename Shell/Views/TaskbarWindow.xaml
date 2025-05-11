@@ -1,0 +1,21 @@
+<Window x:Class="Shell.Views.TaskbarWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    WindowStyle="None"
+    AllowsTransparency="True"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d"
+    Topmost="True"
+    ShowInTaskbar="False"
+    Title="MainWindow"
+    ResizeMode="NoResize"
+    Width="100" Height="50">
+    <Grid>
+        <TextBlock Text="↑ 0.1 MB/s&#x0a;↓ 1.8 MB/s"
+            Foreground="White"
+            FontSize="14"
+            FontFamily="Consolas"/>
+    </Grid>
+</Window>
