@@ -1,0 +1,35 @@
+0:00:02 Tab2 StartNav6 #typed
+0:00:02 Tab2 FinishNav5
+0:00:02 Tab2 PageLoad
+0:00:02 Tab2 FinishNav6
+0:00:02 Tab2 StartNav7 #renderer-script #link
+0:00:02 Tab2 FinishNav7
+0:00:02 Tab2 StartNav8 #renderer-script #link
+0:00:02 Tab2 FinishNav8
+0:00:02 Tab2 PageLoad
+0:00:08 Tab2 StartNav9 #renderer-user #link
+0:00:08 Tab2 FinishNav9
+0:00:08 Tab2 StartNav10 #renderer-user #link
+0:00:08 Tab2 FinishNav10
+0:00:10 Tab1 StartNav11 #renderer-user #link
+0:00:10 Tab1 FinishNav11
+0:00:10 Tab1 StartNav12 #renderer-user #link
+0:00:10 Tab1 FinishNav12
+0:00:26 Microsoft.NewBrowser_Popup
+0:00:26 Microsoft.BrowserList.AddBrowser
+0:00:26 Browser3 Insert active Tab3 at 0
+0:00:26 Tab3 StartNav13 #auto_toplevel
+0:00:26 Tab3 StartNav14 #typed
+0:00:26 Tab3 FinishNav13
+0:00:26 Tab3 PageLoad
+0:00:26 Tab3 FinishNav14
+0:00:26 Tab3 StartNav15 #renderer-script #link
+0:00:26 Tab3 FinishNav15
+0:00:26 Tab3 StartNav16 #renderer-script #link
+0:00:26 Tab3 FinishNav16
+0:00:26 Tab3 PageLoad
+0:00:30 Tab3 StartNav17 #renderer-user #link
+0:00:30 Tab3 FinishNav17
+0:00:30 Tab3 StartNav18 #renderer-user #link
+0:00:30 Tab3 FinishNav18
+0:01:10 Microsoft.Shutdown.TabStripModel.SendDetachWebContentsNotifications

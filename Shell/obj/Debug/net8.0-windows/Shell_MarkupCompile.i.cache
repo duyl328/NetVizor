@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-D:\NetVizor\NetVizor\Shell\obj\Debug\net8.0-windows\
+D:\yuanll\NetVizor\Shell\obj\Debug\net8.0-windows\
 Shell
 none
 false
-TRACE;DEBUG;NET;NET8_0;NETCOREAPP
-D:\NetVizor\NetVizor\Shell\App.xaml
-11407045341
-31872546579
-61825453201
-2011525993637
-MainWindow.xaml;
+TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
+D:\yuanll\NetVizor\Shell\App.xaml
+41362856008
+11-69383492
+10-325326313
+2181782994044
+MainWindow.xaml;Views\TaskbarWindow.xaml;Views\WebPanel.xaml;Views\Window1.xaml;
 
-False
+True
 

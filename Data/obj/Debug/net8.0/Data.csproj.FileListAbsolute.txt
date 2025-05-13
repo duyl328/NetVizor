@@ -1,0 +1,12 @@
+D:\yuanll\NetVizor\Data\bin\Debug\net8.0\Data.deps.json
+D:\yuanll\NetVizor\Data\bin\Debug\net8.0\Data.dll
+D:\yuanll\NetVizor\Data\bin\Debug\net8.0\Data.pdb
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.GeneratedMSBuildEditorConfig.editorconfig
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.AssemblyInfoInputs.cache
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.AssemblyInfo.cs
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.csproj.CoreCompileInputs.cache
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.sourcelink.json
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.dll
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\refint\Data.dll
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\Data.pdb
+D:\yuanll\NetVizor\Data\obj\Debug\net8.0\ref\Data.dll
