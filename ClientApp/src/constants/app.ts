@@ -27,7 +27,7 @@ const app = {
   /**
    * 是否展示生成路由
    */
-  IS_SHOW_GENERATE_ROUTER: true
+  IS_SHOW_GENERATE_ROUTER: false
 }
 
 export default app

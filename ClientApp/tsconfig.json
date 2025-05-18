@@ -29,7 +29,8 @@
     // 加载 Node 和 Vite 类型声明
     "types": [
       "vite/client",
-      "node"
+      "node",
+      "element-plus/global"
     ]
   },
   "include": [
