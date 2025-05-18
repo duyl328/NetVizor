@@ -73,6 +73,12 @@ const commands: CommandType[] = [
     params: [],
     result: null,
   },
+  {
+    name: 'PacketSnifferStart',
+    description: 'WinDivert!!',
+    params: [],
+    result: null,
+  },
 ]
 </script>
 

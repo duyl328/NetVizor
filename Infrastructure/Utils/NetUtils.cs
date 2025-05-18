@@ -9,7 +9,27 @@ using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 
-public class NetUtils
+public enum TCP_TABLE_CLASS
+{
+    TCP_TABLE_BASIC_LISTENER,
+    TCP_TABLE_BASIC_CONNECTIONS,
+    TCP_TABLE_BASIC_ALL,
+    TCP_TABLE_OWNER_PID_LISTENER,
+    TCP_TABLE_OWNER_PID_CONNECTIONS,
+    TCP_TABLE_OWNER_PID_ALL, // 使用这个
+    TCP_TABLE_OWNER_MODULE_LISTENER,
+    TCP_TABLE_OWNER_MODULE_CONNECTIONS,
+    TCP_TABLE_OWNER_MODULE_ALL
+}
+
+public enum UDP_TABLE_CLASS
+{
+    UDP_TABLE_BASIC,
+    UDP_TABLE_OWNER_PID,
+    UDP_TABLE_OWNER_MODULE
+}
+
+public static class NetUtils
 {
     /// <summary>
     /// 联网内容监视 
@@ -63,19 +83,6 @@ public class NetUtils
         }
     }
 
-    private enum TCP_TABLE_CLASS
-    {
-        TCP_TABLE_BASIC_LISTENER,
-        TCP_TABLE_BASIC_CONNECTIONS,
-        TCP_TABLE_BASIC_ALL,
-        TCP_TABLE_OWNER_PID_LISTENER,
-        TCP_TABLE_OWNER_PID_CONNECTIONS,
-        TCP_TABLE_OWNER_PID_ALL, // 我们使用这个
-        TCP_TABLE_OWNER_MODULE_LISTENER,
-        TCP_TABLE_OWNER_MODULE_CONNECTIONS,
-        TCP_TABLE_OWNER_MODULE_ALL
-    }
-
     /// <summary>
     /// 获取所有连接
     /// </summary>
@@ -87,8 +94,8 @@ public class NetUtils
 
         try
         {
-            if (GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, 2, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL, 0) ==
-                0)
+            if (GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, 2,
+                    TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL, 0) == 0)
             {
                 int rowCount = Marshal.ReadInt32(tcpTablePtr);
                 IntPtr rowPtr = IntPtr.Add(tcpTablePtr, 4);
@@ -113,7 +120,11 @@ public class NetUtils
         }
     }
 
-// 网络字节序转主机字节序
+    /// <summary>
+    /// 网络字节序转主机字节序
+    /// </summary>
+    /// <param name="netshort"></param>
+    /// <returns></returns>
     private static ushort ntohs(ushort netshort) => (ushort)((netshort >> 8) | (netshort << 8));
 
     [DllImport("iphlpapi.dll", SetLastError = true)]
@@ -153,12 +164,6 @@ public class NetUtils
         UDP_TABLE_CLASS tableClass,
         uint reserved = 0);
 
-    public enum UDP_TABLE_CLASS
-    {
-        UDP_TABLE_BASIC,
-        UDP_TABLE_OWNER_PID,
-        UDP_TABLE_OWNER_MODULE
-    }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct MIB_UDPROW_OWNER_PID

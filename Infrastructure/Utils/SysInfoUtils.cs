@@ -1,21 +1,19 @@
-using System.Text.Json;
-
 namespace Infrastructure.utils;
 
+using Infrastructure.GlobalCaches;
+using Infrastructure.Models;
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 
 public static class SysInfoUtils
 {
+    /// <summary>
+    /// 程序自身信息
+    /// </summary>
+    /// <returns></returns>
     public static string GetProgramDiagnostics()
     {
         var sb = new StringBuilder();
@@ -53,48 +51,79 @@ public static class SysInfoUtils
         return sb.ToString();
     }
 
-    public static void InspectProcess(int pid)
+
+    /// <summary>
+    /// 获取指定进程的信息
+    /// </summary>
+    /// <param name="pid"></param>
+    /// <returns></returns>
+    /// <exception cref="ExceptionExpand"></exception>
+    public static ProgramInfo InspectProcess(int pid)
     {
         try
         {
             var proc = Process.GetProcessById(pid);
 
-            Console.WriteLine($"进程名称：{proc.ProcessName}");
-            Console.WriteLine($"进程ID：{proc.Id}");
-            Console.WriteLine($"启动时间：{proc.StartTime}");
-            Console.WriteLine($"是否退出：{proc.HasExited}");
-            Console.WriteLine($"退出时间：{proc.ExitTime}");
-            Console.WriteLine($"退出代码：{proc.ExitCode}");
-            Console.WriteLine($"占用内存：{FormatBytes(proc.WorkingSet64)}");
-            Console.WriteLine($"线程数：{proc.Threads.Count}");
-            Console.WriteLine($"主模块路径：{proc.MainModule?.FileName}");
-            Console.WriteLine($"启动文件名：{proc.MainModule?.ModuleName}");
-            var serialize = JsonSerializer.Serialize(proc.MainModule);
-            Console.WriteLine($"YYY：{serialize}");
-            var filePath = proc.MainModule?.FileName;
-            if (filePath != null)
-            {
-                var versionInfo = FileVersionInfo.GetVersionInfo(filePath);
+            #region 检查缓存
 
-                Console.WriteLine($"文件描述：{versionInfo.FileDescription}");
-                Console.WriteLine($"产品名称：{versionInfo.ProductName}");
-                Console.WriteLine($"公司名称：{versionInfo.CompanyName}");
-                Console.WriteLine($"版本号：{versionInfo.FileVersion}");
-                Console.WriteLine($"版权：{versionInfo.LegalCopyright}");
-                var serialize1 = JsonSerializer.Serialize(versionInfo);
-                
-                Console.WriteLine($"XXX：{serialize1}");
+            var pck = new ProcessCache.ProcessCacheKey(pid, proc.StartTime);
+            var programInfo = ProcessCache.Instance.Get(pck);
+            if (programInfo != null)
+            {
+                return programInfo;
             }
+
+            #endregion
+
+            #region 获取进程信息
+
+            var exeInfo = new ProgramInfo
+            {
+                ProcessName = proc.ProcessName,
+                ProcessId = proc.Id,
+                StartTime = proc.StartTime,
+                HasExited = proc.HasExited,
+                ExitTime = proc.ExitTime,
+                ExitCode = proc.ExitCode,
+                UseMemory = proc.WorkingSet64,
+                ThreadCount = proc.Threads.Count,
+                MainModulePath = proc.MainModule?.FileName,
+                MainModuleName = proc.MainModule?.ModuleName
+            };
+
+            // MainModule 是一个涉及 native 调用的属性，不建议频繁调用，尤其在枚举大量进程时可能影响性能。
+
+            if (exeInfo.MainModulePath != null)
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(exeInfo.MainModulePath);
+
+                exeInfo.FileDescription = versionInfo.FileDescription;
+                exeInfo.ProductName = versionInfo.ProductName;
+                exeInfo.CompanyName = versionInfo.CompanyName;
+                exeInfo.Version = versionInfo.FileVersion;
+                exeInfo.LegalCopyright = versionInfo.LegalCopyright;
+            }
+
+            // 获取软件 Icon 【不一定存在】
+            var iconBase64 = IconHelper.GetIconBase64(exeInfo.MainModulePath);
+            exeInfo.IconBase64 = iconBase64;
+
+            #endregion
+
+            ProcessCache.Instance.Set(pck, exeInfo);
+            return exeInfo;
         }
-        catch (Exception ex)
+        // 只捕获能遇见的异常
+        catch (ArgumentException ex)
         {
             Console.WriteLine($"获取进程信息失败：{ex.Message}");
+            throw ExceptionEnum.ProcessGetException;
         }
     }
-    
+
     private static string FormatBytes(long bytes)
     {
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         double len = bytes;
         int order = 0;
         while (len >= 1024 && order < sizes.Length - 1)

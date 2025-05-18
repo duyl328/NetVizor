@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using Infrastructure.utils;
+using WinDivertNet.WinDivertWrapper;
 
 namespace Shell.Views;
 
@@ -55,6 +56,9 @@ public partial class WebPanel : UserControl
                     break;
                 case "GetAllTcpConnections":
                     NetUtils.GetAllTcpConnections();
+                    break;
+                case "PacketSnifferStart":
+                    PacketSniffer.Start();
                     break;
                 default:
                     Console.WriteLine("没有任何函数被触发...");

@@ -1,16 +1,11 @@
 namespace Infrastructure.Models;
 
-public class D
+public class ProgramInfo
 {
-    /// <summary>
-    ///  网络信息
-    /// </summary>
-    public List<NetInfo> NetInfos { get; set; }
-
     /// <summary>
     /// 进程名称
     /// </summary>
-    public string ProcessName { get; set; }
+    public string ProcessName { get; set; } = "";
 
     /// <summary>
     ///  进程ID
@@ -40,7 +35,7 @@ public class D
     /// <summary>
     /// 占用内存
     /// </summary>
-    public string UseMemory { get; set; }
+    public long UseMemory { get; set; }
 
     /// <summary>
     ///  线程数
@@ -80,7 +75,12 @@ public class D
     /// <summary>
     /// 版权
     /// </summary>
-    public string? Copyright { get; set; }
+    public string? LegalCopyright { get; set; }
+
+    /// <summary>
+    /// 图标
+    /// </summary>
+    public string IconBase64 { get; set; } = "";
 }
 
 /// <summary>
@@ -151,5 +151,5 @@ public class NetInfo
     /// <summary>
     /// 接收字节数
     /// </summary>
-    public long TotalRecvBytes { get; set; }
+    public long TotalReceiveBytes { get; set; }
 }
