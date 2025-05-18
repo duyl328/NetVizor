@@ -14,12 +14,11 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "element-plus": "^2.9.10",
     "gsap": "^3.13.0",
     "pinia": "^3.0.1",
-    "sass": "^1.87.0",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0",
-    "vuetify": "^3.8.3"
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
@@ -27,6 +26,7 @@
     "@types/node": "^22.15.3",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
+    "@unocss/preset-mini": "^66.1.2",
     "@vitejs/plugin-vue": "^5.2.3",
     "@vitejs/plugin-vue-jsx": "^4.1.2",
     "@vitest/eslint-plugin": "^1.1.39",
@@ -43,6 +43,9 @@
     "npm-run-all2": "^7.0.2",
     "prettier": "3.5.3",
     "typescript": "~5.8.0",
+    "unocss": "^66.1.2",
+    "unplugin-auto-import": "^19.2.0",
+    "unplugin-vue-components": "^28.5.0",
     "vite": "^6.2.4",
     "vite-plugin-vue-devtools": "^7.7.2",
     "vitest": "^3.1.1",

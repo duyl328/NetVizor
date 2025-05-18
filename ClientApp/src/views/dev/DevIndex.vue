@@ -93,148 +93,47 @@ function jumpToHome() {
 
 // endregion
 </script>
-
 <template>
-  <div class="root-container">
-    <h1 class="title">Dev</h1>
+  <div class="h-auto select-none">
+    <h1 class="text-blue-900 font-bold font-sans text-[3rem] text-center py-10">Dev</h1>
     <hr />
 
-    <div v-if="routerListIsEmpty" class="empty-container">
-      <div class="empty-message">
+    <div v-if="routerListIsEmpty" class="bg-slate-50 overflow-hidden">
+      <div class="text-center font-serif text-red-500 text-[3.75rem] pb-[20rem]">
         无数据!
         <br />
-        <div class="countdown-box">
-          <div class="countdown-top">
-            <p id="animated-text" class="countdown-number">9</p>
+        <div
+          class="inline-flex translate-x-[-20rem] translate-y-10 text-[1.5rem] min-h-[10rem] h-[10rem] max-h-[10rem] text-blue-900 justify-center items-center"
+        >
+          <div class="h-[6rem] overflow-hidden text-center">
+            <p id="animated-text" class="text-[2.25rem]">9</p>
           </div>
-          <p class="jump-message">
+          <p class="ml-4">
             <span>秒后跳转至</span>
-            <span class="jump-link" @click="jumpToHome">主页</span>
+            <span class="underline cursor-pointer ml-1.5" @click="jumpToHome">主页</span>
           </p>
         </div>
       </div>
     </div>
 
-    <div v-else class="main-content">
-      <ul class="nav-list">
+    <div v-else class="flex flex-col mt-5 mx-auto w-9/12">
+      <ul class="hidden lg:block mr-20">
         <li
-          class="nav-item"
           v-for="(subRoute, index) in subRouteLists"
-          :class="{ active: isActive(subRoute.path) }"
           :key="index"
+          :class="[
+            'list-none p-1 m-1 transition-all duration-300 ease-in-out select-none cursor-pointer text-gray-700 hover:text-yellow-300',
+            isActive(subRoute.path) && 'font-bold underline text-[1.5rem]',
+          ]"
           @click="listClickJump(subRoute)"
         >
           {{ subRoute.displayName }}
         </li>
       </ul>
-      <main class="router-content">
+
+      <main class="flex flex-col mt-5 overflow-y-auto">
         <router-view />
       </main>
     </div>
   </div>
 </template>
-
-<style scoped lang="scss">
-.root-container {
-  height: auto;
-  user-select: none;
-}
-
-.title {
-  color: #1e3a8a; // tailwind's text-blue-900
-  font-weight: bold;
-  font-family: sans-serif;
-  font-size: 3rem;
-  text-align: center;
-  padding: 2.5rem 0;
-}
-
-.empty-container {
-  background-color: #f8fafc; // slate-50
-  overflow: hidden;
-}
-
-.empty-message {
-  text-align: center;
-  font-family: serif;
-  color: #ef4444; // red-500
-  font-size: 3.75rem;
-  padding-bottom: 20rem;
-}
-
-.countdown-box {
-  display: inline-flex;
-  transform: translate(-20rem, 2.5rem); // 原 translate-x-80 translate-y-10
-  font-size: 1.5rem;
-  min-height: 10rem;
-  height: 10rem;
-  max-height: 10rem;
-  color: #1e3a8a;
-  justify-content: center;
-  align-items: center;
-}
-
-.countdown-top {
-  height: 6rem;
-  overflow: hidden;
-  text-align: center;
-}
-
-.countdown-number {
-  font-size: 2.25rem;
-}
-
-.jump-message {
-  margin-left: 1rem;
-}
-
-.jump-link {
-  text-decoration: underline;
-  cursor: pointer;
-  margin-left: 0.375rem;
-}
-
-.main-content {
-  display: flex;
-  margin-top: 1.25rem;
-  flex-direction: column;
-  margin-inline: auto;
-  width: 75%; // 相当于 lg:w-9/12
-}
-
-.nav-list {
-  margin-right: 5rem;
-  display: none;
-
-  @media (min-width: 1024px) {
-    display: block;
-  }
-}
-
-.nav-item {
-  list-style: none;
-  padding: 0.25rem;
-  margin: 0.25rem;
-  transition: all 0.3s ease;
-  user-select: none;
-  cursor: pointer;
-  color: #4b5563; // gray-700
-
-  &:hover {
-    color: #facc15; // yellow-300
-  }
-
-  &.active {
-    font-weight: bold;
-    text-decoration: underline;
-    font-size: 1.5rem;
-  }
-}
-
-.router-content {
-  display: flex;
-  flex-direction: column;
-  margin: 1.25rem auto auto;
-  overflow-y: auto;
-}
-</style>

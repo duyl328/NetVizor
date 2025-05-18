@@ -78,7 +78,7 @@ function startDrag(event) {
     const rect = navElement.getBoundingClientRect()
     dragOffset.value = {
       x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+      y: event.clientY - rect.top,
     }
 
     // 阻止默认事件，防止文本选择等
@@ -91,7 +91,7 @@ function onDrag(event) {
     // 计算新位置
     navPosition.value = {
       x: event.clientX - dragOffset.value.x,
-      y: event.clientY - dragOffset.value.y
+      y: event.clientY - dragOffset.value.y,
     }
     event.preventDefault()
   }
@@ -115,81 +115,37 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="main-container">
+  <div class="relative w-full h-full">
     <!-- 可拖动的导航栏 -->
     <div
       v-if="isShowGenerateRouter"
       ref="navRef"
-      class="floating-navigation"
+      class="fixed z-[9999] bg-white rounded-lg shadow-lg p-1.5 min-w-[300px] cursor-move"
       :style="{ left: `${navPosition.x}px`, top: `${navPosition.y}px` }"
       @mousedown="startDrag"
     >
-      <div class="drag-handle">
-        <span>≡</span> <!-- 拖动图标 -->
+      <div class="bg-red:10 p-1.5 text-center border-b border-[#eee] text-lg cursor-move drag-handle">
+        <span class="inline-block px-2">≡</span>
       </div>
-      <ul class="nav-list">
-        <li v-for="(subRoute, index) in subRouteLists" :key="index">
-          <v-btn :type="isActive(subRoute.path) ? 'primary' : ''" @click="listClickJump(subRoute)">
+      <ul class="flex flex-wrap justify-start p-1.5 m-0">
+        <li
+          v-for="(subRoute, index) in subRouteLists"
+          :key="index"
+          class="text-center m-2"
+        >
+          <el-button
+            :type="isActive(subRoute.path) ? 'primary' : ''"
+            @click="listClickJump(subRoute)"
+          >
             {{ subRoute.displayName }}
-          </v-btn>
+          </el-button>
         </li>
       </ul>
     </div>
 
-    <!--  展示主要内容-->
-    <div class="main-show">
+    <!-- 展示主要内容 -->
+    <div class="w-full h-full">
       <router-view />
     </div>
   </div>
 </template>
-
-<style scoped lang="scss">
-.main-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-
-  .floating-navigation {
-    z-index: 9999; // 确保在最上层
-    position: fixed; // 改为固定定位，不随滚动条滚动
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    padding: 5px;
-    min-width: 300px;
-    cursor: move; // 鼠标显示为可移动状态
-
-    .drag-handle {
-      padding: 5px;
-      text-align: center;
-      border-bottom: 1px solid #eee;
-      font-size: 18px;
-      cursor: move;
-
-      span {
-        display: inline-block;
-        padding: 0 10px;
-      }
-    }
-
-    .nav-list {
-      display: flex;
-      flex-wrap: wrap; // 允许内容换行
-      justify-content: flex-start;
-      list-style: none;
-      padding: 5px;
-      margin: 0;
-
-      li {
-        margin: 3px;
-        text-align: center;
-      }
-    }
-  }
-
-  .main-show {
-    width: 100%;
-    height: 100%;
-  }
-}
-</style>

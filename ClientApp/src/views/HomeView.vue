@@ -4,10 +4,8 @@ import TheWelcome from '../components/TheWelcome.vue'
 
 <template>
   <main>
-<!--    顶部工具栏-->
-
-<!--    核心内容展示部分-->
 <!--  左侧信息栏-->
+<h1>测试</h1>
 <!--    左侧顶部搜索栏-->
 <!--    左侧底部信息展示栏-->
 

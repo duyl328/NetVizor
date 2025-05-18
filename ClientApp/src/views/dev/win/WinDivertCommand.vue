@@ -5,9 +5,11 @@ import { onMounted, onUnmounted } from 'vue'
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 
 const bridge = CSharpBridgeV2.getBridge()
-bridge.listen('showMessage', (data) => {
-  console.log('11111111', data)
-})
+if (bridge !== null){
+  bridge.listen('showMessage', (data) => {
+    console.log('11111111', data)
+  })
+}
 
 function func() {
   console.log('点击anniu')
