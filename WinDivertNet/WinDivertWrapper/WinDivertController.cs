@@ -12,7 +12,7 @@ public class WinDivertController : IDisposable
 {
     private IntPtr _handle;
     private bool _disposed = false;
-
+    public  IntPtr Handle => _handle;
     /// <summary>
     /// 获取句柄是否有效
     /// </summary>
@@ -50,9 +50,28 @@ public class WinDivertController : IDisposable
         {
             Close();
         }
-
-        _handle = WinDivert.Open(filter, layer, priority, flags);
+        
+        _handle = WinDivert.WinDivertOpen(filter, layer, priority, flags);
+        
+        if (_handle == IntPtr.Zero)
+        {
+            int errorCode = Marshal.GetLastWin32Error();
+            Console.WriteLine($"WinDivert打开失败，错误码: {errorCode}");
+        }
+        
         return IsValid;
+    }
+    public bool TryGetPacket(out byte[] packet, out WinDivert.WINDIVERT_ADDRESS address)
+    {
+        packet = null;
+        address = new WinDivert.WINDIVERT_ADDRESS { Reserved = new byte[8] };
+        
+        if (!IsValid) return false;
+        
+        byte[] buffer = new byte[65535]; // 足够大的缓冲区
+        
+        // 使用我们的SafeRecv函数处理异常大小问题
+        return WinDivert.SafeRecv(_handle, buffer, ref address, out packet);
     }
 
     /// <summary>
@@ -83,6 +102,7 @@ public class WinDivertController : IDisposable
         uint readLen = 0;
         if (WinDivert.Recv(_handle, buffer, (uint)buffer.Length, ref addr, ref readLen))
         {
+            Console.WriteLine($"Receive: {readLen}");
             return readLen;
         }
 
@@ -215,7 +235,7 @@ public class WinDivertController : IDisposable
         IntPtr ppTcpHdr = IntPtr.Zero;
         IntPtr ppUdpHdr = IntPtr.Zero;
         IntPtr ppData = IntPtr.Zero;
-        uint pDataLen = 0;
+        ushort pDataLen = 0;
 
         bool success = WinDivert.ParsePacket(packet, (uint)packet.Length, ref ppIpHdr, ref ppIpv6Hdr,
             ref ppIcmpHdr, ref ppIcmpv6Hdr, ref ppTcpHdr, ref ppUdpHdr, ref ppData, ref pDataLen);
@@ -478,7 +498,6 @@ public class WinDivertController : IDisposable
     }
 }
 
-
 /// <summary>
 /// 数据包头信息
 /// </summary>
@@ -558,4 +577,31 @@ public class PacketHeaders
     /// 数据长度
     /// </summary>
     public uint DataLength { get; set; }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("PacketHeaders {");
+        sb.AppendLine($"  Success: {Success},");
+        sb.AppendLine($"  HasIpHeader: {HasIpHeader},");
+        sb.AppendLine($"  HasIpv6Header: {HasIpv6Header},");
+        sb.AppendLine($"  HasTcpHeader: {HasTcpHeader},");
+        sb.AppendLine($"  HasUdpHeader: {HasUdpHeader},");
+        sb.AppendLine($"  HasIcmpHeader: {HasIcmpHeader},");
+        sb.AppendLine($"  HasIcmpv6Header: {HasIcmpv6Header},");
+
+        sb.AppendLine($"  IpHeader: {(HasIpHeader ? IpHeader.ToString() : "N/A")},");
+        sb.AppendLine($"  Ipv6Header: {(HasIpv6Header ? Ipv6Header.ToString() : "N/A")},");
+        sb.AppendLine($"  TcpHeader: {(HasTcpHeader ? TcpHeader.ToString() : "N/A")},");
+        sb.AppendLine($"  UdpHeader: {(HasUdpHeader ? UdpHeader.ToString() : "N/A")},");
+        sb.AppendLine($"  IcmpHeader: {(HasIcmpHeader ? IcmpHeader.ToString() : "N/A")},");
+        sb.AppendLine($"  Icmpv6Header: {(HasIcmpv6Header ? Icmpv6Header.ToString() : "N/A")},");
+
+        sb.AppendLine($"  DataLength: {DataLength},");
+        sb.AppendLine(
+            $"  Data: {(Data != null ? BitConverter.ToString(Data, 0, (int)Math.Min(Data.Length, 32)) + (Data.Length > 32 ? "..." : "") : "null")}");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
 }

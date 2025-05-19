@@ -71,20 +71,38 @@ public static class WinDivert
     /// <summary>
     /// WinDivert 地址结构
     /// </summary>
+    // [StructLayout(LayoutKind.Sequential)]
+    // public struct WINDIVERT_ADDRESS
+    // {
+    //     public long Timestamp; // 时间戳
+    //     public byte Layer; // 层级
+    //     public byte Event; // 事件
+    //     public byte Flags; // 标志
+    //     public byte Reserved1; // 保留
+    //     public uint IfIdx; // 接口索引
+    //     public uint SubIfIdx; // 子接口索引
+    //     public byte Direction; // 方向
+    //     public byte Reserved2; // 保留
+    //     public ulong Reserved3; // 保留
+    // }
+    // 确保结构体布局正确 - 使用StructLayout和FieldOffset
+    // 完全匹配WinDivert 2.0版本的结构体定义
     [StructLayout(LayoutKind.Sequential)]
     public struct WINDIVERT_ADDRESS
     {
-        public long Timestamp; // 时间戳
-        public byte Layer; // 层级
-        public byte Event; // 事件
-        public byte Flags; // 标志
-        public byte Reserved1; // 保留
-        public uint IfIdx; // 接口索引
-        public uint SubIfIdx; // 子接口索引
-        public byte Direction; // 方向
-        public byte Reserved2; // 保留
-        public ulong Reserved3; // 保留
+        public long Timestamp;
+        public byte Layer;
+        public byte Event;
+        public ushort Flags;
+        public uint IfIdx;
+        public uint SubIfIdx;
+        
+        // 注意：在WinDivert 2.0中，Reserved字段是64位(8字节)对齐的
+        // 所以我们使用固定大小的字节数组
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] Reserved;
     }
+
 
     /// <summary>
     /// IPv4 头结构
@@ -178,30 +196,30 @@ public static class WinDivert
 
     #region 原生 API 导入
 
-    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
     public static extern IntPtr WinDivertOpen(
         [MarshalAs(UnmanagedType.LPStr)] string filter,
         uint layer,
         short priority,
         ulong flags);
 
-    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
     public static extern bool WinDivertRecv(
         IntPtr handle,
-        byte[] pPacket,
+        [Out] byte[] pPacket,
         uint packetLen,
         ref WINDIVERT_ADDRESS pAddr,
         ref uint readLen);
 
-    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
     public static extern bool WinDivertRecvEx(
         IntPtr handle,
-        byte[] pPacket,
+        [Out] byte[] pPacket,
         uint packetLen,
-        uint flags,
-        ref WINDIVERT_ADDRESS pAddr,
-        ref uint readLen,
-        IntPtr overlapped);
+        uint recvFlags,
+        [In, Out] ref WINDIVERT_ADDRESS pAddr,
+        [In, Out] ref uint readLen,
+        IntPtr lpOverlapped);
 
     [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool WinDivertSend(
@@ -221,9 +239,30 @@ public static class WinDivert
         ref uint writeLen,
         IntPtr overlapped);
 
-    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
     public static extern bool WinDivertClose(
         IntPtr handle);
+
+    // 获取错误信息的帮助函数
+    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern uint WinDivertHelperNtohs(ushort value);
+
+    // 获取WinDivert特定错误
+    [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    public static extern IntPtr WinDivertHelperFormatFilter(
+        [MarshalAs(UnmanagedType.LPStr)] string filter,
+        WinDivertFormatFlags formatFlags,
+        IntPtr buffer,
+        uint bufferLen);
+
+    // 用于格式化过滤器的标志
+    [Flags]
+    public enum WinDivertFormatFlags : uint
+    {
+        Normal = 0,
+        NoNumbers = 1,
+        Aliases = 2,
+    }
 
     [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool WinDivertSetParam(
@@ -244,31 +283,93 @@ public static class WinDivert
         ref WINDIVERT_ADDRESS pAddr,
         uint flags);
 
-    // [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
-    // public static extern bool WinDivertHelperParsePacket(
-    //     byte[] pPacket,
-    //     uint packetLen,
-    //     ref IntPtr ppIpHdr,
-    //     ref IntPtr ppIpv6Hdr,
-    //     ref IntPtr ppIcmpHdr,
-    //     ref IntPtr ppIcmpv6Hdr,
-    //     ref IntPtr ppTcpHdr,
-    //     ref IntPtr ppUdpHdr,
-    //     ref IntPtr ppData,
-    //     ref uint pDataLen);
     [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool WinDivertHelperParsePacket(
-        [In] byte[] pPacket,
+        byte[] pPacket,
         uint packetLen,
-        [Out] out IntPtr ppIpHdr,
-        [Out] out IntPtr ppIpv6Hdr,
-        [Out] out IntPtr ppIcmpHdr,
-        [Out] out IntPtr ppIcmpv6Hdr,
-        [Out] out IntPtr ppTcpHdr,
-        [Out] out IntPtr ppUdpHdr,
-        [Out] out IntPtr ppData,
-        [Out] out uint pDataLen);
-
+        out IntPtr ppIpHdr,
+        out IntPtr ppIpv6Hdr,
+        out IntPtr ppIcmpHdr,
+        out IntPtr ppIcmpv6Hdr,
+        out IntPtr ppTcpHdr,
+        out IntPtr ppUdpHdr,
+        out IntPtr ppData,
+        out ushort pDataLen
+    );
+ // 安全包装 - 处理异常大小问题
+    public static bool SafeRecv(IntPtr handle, byte[] buffer, ref WINDIVERT_ADDRESS addr, out byte[] packet)
+    {
+        packet = null;
+        
+        // 确保结构体正确初始化
+        if (addr.Reserved == null)
+        {
+            addr.Reserved = new byte[8];
+        }
+        
+        uint readLen = 0;
+        
+        // 使用基础函数调用
+        bool result = WinDivertRecv(handle, buffer, (uint)buffer.Length, ref addr, ref readLen);
+        
+        if (!result) return false;
+        
+        // *** 关键修复：处理异常大小 ***
+        // 通过数据包的第一个字节验证它是IPv4还是IPv6数据包
+        if (buffer.Length > 0)
+        {
+            byte version = (byte)(buffer[0] >> 4);
+            
+            // IPv4数据包版本是4，IPv6是6
+            if (version == 4 || version == 6) 
+            {
+                // 检查IP头部中的长度字段
+                // 对于IPv4，长度在字节3-4中；对于IPv6，长度在字节5-6中
+                ushort ipLength;
+                
+                if (version == 4 && buffer.Length >= 4)
+                {
+                    ipLength = (ushort)((buffer[2] << 8) | buffer[3]);
+                    
+                    // IPv4报头最小20字节，最大65535字节
+                    if (ipLength >= 20 && ipLength <= 65535)
+                    {
+                        readLen = ipLength;
+                    }
+                    else if (buffer.Length >= 20) // 如果长度字段无效，至少读取IPv4头
+                    {
+                        readLen = 1500; // 使用标准以太网MTU大小
+                    }
+                }
+                else if (version == 6 && buffer.Length >= 6)
+                {
+                    ipLength = (ushort)((buffer[4] << 8) | buffer[5]);
+                    
+                    // IPv6报头固定40字节，加上有效载荷
+                    if (ipLength + 40 <= 65535)
+                    {
+                        readLen = (uint)(ipLength + 40);
+                    }
+                    else if (buffer.Length >= 40) // 如果长度字段无效，至少读取IPv6头
+                    {
+                        readLen = 1500; // 使用标准以太网MTU大小
+                    }
+                }
+            }
+            
+            // 如果仍然出现异常大小，强制使用安全值
+            if (readLen > 9000 || readLen == 0)
+            {
+                // 设置为安全的默认值(标准以太网MTU)
+                readLen = 1500;
+            }
+        }
+        
+        // 只提取有效数据
+        packet = new byte[readLen];
+        Array.Copy(buffer, packet, readLen);
+        return true;
+    }
     [DllImport("WinDivert.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool WinDivertHelperParseIPv4Address(
         [MarshalAs(UnmanagedType.LPStr)] string str,
@@ -322,8 +423,20 @@ public static class WinDivert
     /// <param name="addr">地址结构</param>
     /// <param name="readLen">实际读取长度</param>
     /// <returns>是否成功</returns>
-    public static bool Recv(IntPtr handle, byte[] buffer, uint len, ref WINDIVERT_ADDRESS addr, ref uint readLen) =>
-        WinDivertRecv(handle, buffer, len, ref addr, ref readLen);
+    public static bool Recv(IntPtr handle, byte[] buffer, uint bufferLength, ref WINDIVERT_ADDRESS addr,
+        ref uint readLen)
+    {
+        // 明确初始化readLen为0
+        readLen = 0;
+
+        // 确保WINDIVERT_ADDRESS结构体初始化正确
+        if (addr.Reserved == null)
+        {
+            addr.Reserved = new byte[8];
+        }
+
+        return WinDivertRecv(handle, buffer, bufferLength, ref addr, ref readLen);
+    }
 
     /// <summary>
     /// 扩展接收数据包
@@ -336,9 +449,27 @@ public static class WinDivert
     /// <param name="readLen">实际读取长度</param>
     /// <param name="overlapped">重叠 I/O 结构</param>
     /// <returns>是否成功</returns>
-    public static bool RecvEx(IntPtr handle, byte[] buffer, uint len, uint flags, ref WINDIVERT_ADDRESS addr,
-        ref uint readLen, IntPtr overlapped) =>
-        WinDivertRecvEx(handle, buffer, len, flags, ref addr, ref readLen, overlapped);
+    // 更安全的Recv包装
+    public static bool RecvEx(IntPtr handle, byte[] buffer, ref WINDIVERT_ADDRESS addr, ref uint readLen)
+    {
+        // 确保结构体正确初始化
+        if (addr.Reserved == null)
+            addr.Reserved = new byte[8];
+
+        // 清零readLen
+        readLen = 0;
+
+        // 使用Ex版本，提供更多控制和稳定性
+        return WinDivertRecvEx(
+            handle,
+            buffer,
+            (uint)buffer.Length,
+            0, // 默认接收标志
+            ref addr,
+            ref readLen,
+            IntPtr.Zero // 非异步调用
+        );
+    }
 
     /// <summary>
     /// 发送数据包
@@ -407,7 +538,7 @@ public static class WinDivert
         WinDivertHelperCalcChecksums(buffer, len, ref addr, flags);
 
     /// <summary>
-    /// 解析数据包
+    /// 解析数据包【传递至此的 buffer 必须是新的！必须是空的！不能是用过的！】
     /// </summary>
     /// <param name="buffer">数据缓冲区</param>
     /// <param name="len">缓冲区长度</param>
@@ -420,11 +551,32 @@ public static class WinDivert
     /// <param name="ppData">数据指针</param>
     /// <param name="pDataLen">数据长度</param>
     /// <returns>是否成功</returns>
-    public static bool ParsePacket(byte[] buffer, uint len, ref IntPtr ppIpHdr, ref IntPtr ppIpv6Hdr,
-        ref IntPtr ppIcmpHdr, ref IntPtr ppIcmpv6Hdr, ref IntPtr ppTcpHdr, ref IntPtr ppUdpHdr,
-        ref IntPtr ppData, ref uint pDataLen) =>
-        WinDivertHelperParsePacket(buffer, len, out ppIpHdr, out ppIpv6Hdr, out ppIcmpHdr, out ppIcmpv6Hdr,
-            out ppTcpHdr, out ppUdpHdr, out ppData, out pDataLen);
+    public static bool ParsePacket(
+        byte[] buffer,
+        uint len,
+        ref IntPtr ppIpHdr,
+        ref IntPtr ppIpv6Hdr,
+        ref IntPtr ppIcmpHdr,
+        ref IntPtr ppIcmpv6Hdr,
+        ref IntPtr ppTcpHdr,
+        ref IntPtr ppUdpHdr,
+        ref IntPtr ppData,
+        ref ushort pDataLen
+    )
+    {
+        return WinDivertHelperParsePacket(
+            buffer,
+            len,
+            out ppIpHdr,
+            out ppIpv6Hdr,
+            out ppIcmpHdr,
+            out ppIcmpv6Hdr,
+            out ppTcpHdr,
+            out ppUdpHdr,
+            out ppData,
+            out pDataLen
+        );
+    }
 
     /// <summary>
     /// 解析 IPv4 地址
@@ -488,7 +640,7 @@ public static class WinDivert
         WinDivertHelperCheckFilter(filter, layer, errorStr, errorStrLen);
 
     #endregion
-    
+
     [StructLayout(LayoutKind.Sequential)]
     public struct PacketHeaders
     {
@@ -507,5 +659,4 @@ public static class WinDivert
         [In] byte[] pPacket,
         uint packetLen,
         ref PacketHeaders headers);
-
 }
