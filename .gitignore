@@ -1,0 +1,18 @@
+/Application/obj/*
+/Application/bin/*
+
+/Data/obj/*
+/Data/bin/*
+
+/Infrastructure/obj/*
+/Infrastructure/bin/*
+
+/Shell/obj/*
+/Shell/bin/*
+
+/WinDivertNet/obj/*
+/WinDivertNet/bin/*
+
+# 忽略所有 bin 和 obj 文件夹
+**/bin/
+**/obj/
