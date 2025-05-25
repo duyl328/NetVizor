@@ -3,12 +3,12 @@ namespace Application.Connections;
 // 消息基类
 public abstract class BaseMessage
 {
-    public string Type { get; set; }
+    public string MessageId { get; set; } = Guid.NewGuid().ToString();
     public DateTime Timestamp { get; set; } = DateTime.Now;
 }
 
 // 网络状态消息
-public class NetworkStatusMessage : BaseMessage
+public class NetworkStatusMessage : NotificationMessage
 {
     public string InterfaceName { get; set; }
     public string Status { get; set; }
@@ -18,7 +18,7 @@ public class NetworkStatusMessage : BaseMessage
 }
 
 // 防火墙规则消息
-public class FirewallRuleMessage : BaseMessage
+public class FirewallRuleMessage : NotificationMessage
 {
     public string RuleName { get; set; }
     public string Action { get; set; }
@@ -31,13 +31,21 @@ public class FirewallRuleMessage : BaseMessage
 public class CommandMessage : BaseMessage
 {
     public string Command { get; set; }
+
     public object Data { get; set; }
 }
 
 // 响应消息
-public class ResponseMessage : BaseMessage
+public class ResponseMessage : NotificationMessage
 {
     public bool Success { get; set; }
-    public string Message { get; set; }
+}
+/// <summary>
+/// 通知消息 【服务端发往客户端的消息】
+/// </summary>
+public class NotificationMessage : BaseMessage
+{
+    public string Type { get; set; }     // 通知类型，如 "networkStatusUpdate", "firewallRuleChanged"
     public object Data { get; set; }
+    public string Message { get; set; }
 }

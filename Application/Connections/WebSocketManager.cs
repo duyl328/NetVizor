@@ -125,6 +125,7 @@ public class WebSocketManager
         // 获取网络状态
         RegisterHandler("getNetworkStatus", async (cmd, socket) =>
         {
+            // cmd.Command;
             // 这里应该调用你的网络状态获取逻辑
             var networkStatus = GetNetworkStatus();
             await SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
@@ -187,7 +188,7 @@ public class WebSocketManager
     }
 
     // 发送消息给指定客户端
-    public async Task<bool> SendToClient(Guid clientId, object message)
+    public async Task<bool> SendToClient(Guid clientId, ResponseMessage message)
     {
         if (_connections.TryGetValue(clientId, out var socket))
         {
@@ -208,7 +209,7 @@ public class WebSocketManager
     }
 
     // 广播消息给所有客户端
-    public async Task BroadcastMessage(object message)
+    public async Task BroadcastMessage(ResponseMessage message)
     {
         var json = JsonSerializer.Serialize(message);
         var tasks = new List<Task>();
