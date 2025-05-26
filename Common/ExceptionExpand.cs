@@ -1,4 +1,4 @@
-namespace Infrastructure;
+namespace Common;
 
 public class ExceptionExpand : Exception
 {

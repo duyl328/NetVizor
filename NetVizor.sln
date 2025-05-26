@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinDivertNet", "WinDivertNet\WinDivertNet.csproj", "{CE7B8A5A-BD55-4945-A844-571DEDB08942}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{F16BB136-23AD-43F6-8D95-4C0D88FD8FBA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{CE7B8A5A-BD55-4945-A844-571DEDB08942}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE7B8A5A-BD55-4945-A844-571DEDB08942}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE7B8A5A-BD55-4945-A844-571DEDB08942}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F16BB136-23AD-43F6-8D95-4C0D88FD8FBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F16BB136-23AD-43F6-8D95-4C0D88FD8FBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F16BB136-23AD-43F6-8D95-4C0D88FD8FBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F16BB136-23AD-43F6-8D95-4C0D88FD8FBA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
