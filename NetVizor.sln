@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UI.Shared.Wpf", "UI.Shared.Wpf\UI.Shared.Wpf.csproj", "{8512B4F6-65F3-48EE-845F-09A1692BB901}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common.Test", "Common.Test\Common.Test.csproj", "{B3F481C9-B351-449C-AE2B-CDEC29BD5DCC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{8512B4F6-65F3-48EE-845F-09A1692BB901}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8512B4F6-65F3-48EE-845F-09A1692BB901}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8512B4F6-65F3-48EE-845F-09A1692BB901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3F481C9-B351-449C-AE2B-CDEC29BD5DCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3F481C9-B351-449C-AE2B-CDEC29BD5DCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3F481C9-B351-449C-AE2B-CDEC29BD5DCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3F481C9-B351-449C-AE2B-CDEC29BD5DCC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
