@@ -1,4 +1,5 @@
 using Common;
+using Common.ExpandException;
 
 namespace Infrastructure.utils;
 
