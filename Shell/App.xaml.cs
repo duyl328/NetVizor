@@ -32,7 +32,6 @@ public partial class App : System.Windows.Application
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
         // 注册全局异常处理
         TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
-
     }
     
     /// <summary>
