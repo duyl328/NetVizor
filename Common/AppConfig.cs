@@ -14,20 +14,21 @@ public sealed class AppConfig
     private AppConfig()
     {
         var model = ConfigReader.LoadConfig();
-        AppName = model.AppName ?? "MyApp";
-        Version = model.Version ?? "1.0.0";
-        MaxConnection = model.MaxConnection > 0 ? model.MaxConnection : 10;
-
-        // 初始化配置（可以从文件或环境变量读取）
-        AppName = "MyApp";
-        Version = "1.0.0";
-        MaxConnection = 10;
+        ConfigModel = model;
     }
 
-    // 配置项：只读属性
-    public string AppName { get; }
-    public string Version { get; }
-    public int MaxConnection { get; }
+    /// <summary>
+    ///     全局配置
+    /// </summary>
+    public AppConfigModel ConfigModel { get; }
 
-    // 可扩展其他读取配置的方法
+    /// <summary>
+    /// WebSocket 端口
+    /// </summary>
+    public int WebSocketPort { get; set; }
+
+    /// <summary>
+    /// WebSocket 连接地址
+    /// </summary>
+    public string? WebSocketPath { get; set; }
 }

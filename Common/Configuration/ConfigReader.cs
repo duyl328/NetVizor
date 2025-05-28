@@ -1,3 +1,4 @@
+using Common.Logger;
 using Microsoft.Extensions.Configuration;
 
 namespace Common.Configuration;
@@ -26,4 +27,5 @@ public class AppConfigModel
     public string AppName { get; set; }
     public string Version { get; set; }
     public int MaxConnection { get; set; }
+    public LoggerConfig Logging { get; set; }
 }

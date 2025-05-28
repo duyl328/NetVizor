@@ -1,21 +1,9 @@
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
-using System.Timers;
-using System;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Timers;
-using Serilog;
-using Serilog.Core;
-using Serilog.Events;
-using Serilog.Formatting.Json;
-using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
 
 namespace Common.Logger;
 
@@ -68,10 +56,11 @@ public class UniversalLogger : IDisposable
     private Serilog.Core.Logger CreateLogger()
     {
         var loggerConfig = new LoggerConfiguration()
-            .MinimumLevel.Is(_config.MinimumLevel)
-            .Enrich.WithProperty("MachineName", Environment.MachineName)
-            .Enrich.WithProperty("ProcessId", Environment.ProcessId)
-            .Enrich.WithProperty("ThreadId", Environment.CurrentManagedThreadId);
+                .MinimumLevel.Is(_config.MinimumLevel)
+                .Enrich.WithThreadId()
+                .Enrich.WithProcessId()
+            // .Enrich.WithMachineName() // 推荐添加机器名 enrich 扩展
+            ;
 
         // 配置控制台输出
         if (_config.EnableConsole)
@@ -86,17 +75,17 @@ public class UniversalLogger : IDisposable
         {
             Directory.CreateDirectory(_config.LogPath);
 
-            string logFileName = Path.Combine(_config.LogPath, "log-.txt");
+            string logFileName = Path.Combine(_config.LogPath, "log-.log");
 
             if (_config.UseJsonFormat)
             {
                 loggerConfig = loggerConfig.WriteTo.File(
                     formatter: new JsonFormatter(),
                     path: logFileName,
-                    rollingInterval: RollingInterval.Day,
-                    rollOnFileSizeLimit: true,
-                    fileSizeLimitBytes: _config.MaxFileSizeMB * 1024 * 1024,
-                    retainedFileCountLimit: null,
+                    rollingInterval: RollingInterval.Day, // 按天分类
+                    rollOnFileSizeLimit: true, // 当日志文件大小超过限制时滚动
+                    fileSizeLimitBytes: _config.MaxFileSizeMB * 1024 * 1024, // 日志文件大小限制
+                    retainedFileCountLimit: null, // 保留最近7天的日志文件
                     restrictedToMinimumLevel: _config.MinimumLevel);
             }
             else
@@ -108,7 +97,9 @@ public class UniversalLogger : IDisposable
                     rollOnFileSizeLimit: true,
                     fileSizeLimitBytes: _config.MaxFileSizeMB * 1024 * 1024,
                     retainedFileCountLimit: null,
-                    restrictedToMinimumLevel: _config.MinimumLevel);
+                    restrictedToMinimumLevel: _config.MinimumLevel,
+                    shared: true // 允许多个应用程序实例共享同一日志文件
+                );
             }
         }
 
@@ -142,7 +133,7 @@ public class UniversalLogger : IDisposable
         _logger.Error(message, args);
     }
 
-    public void LogError(Exception exception, string message, params object[] args)
+    public void LogError(Exception? exception, string message, params object[] args)
     {
         _logger.Error(exception, message, args);
     }
@@ -152,16 +143,25 @@ public class UniversalLogger : IDisposable
         _logger.Fatal(message, args);
     }
 
-    public void LogFatal(Exception exception, string message, params object[] args)
+    public void LogFatal(Exception? exception, string message, params object[] args)
     {
         _logger.Fatal(exception, message, args);
     }
 
     /// <summary>
+    /// 获取上下文
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public ILogger GetLogger<T>() => _logger.ForContext<T>();
+
+    public ILogger ForContext(string propertyName, object? value)
+        => _logger.ForContext(propertyName, value);
+
+    /// <summary>
     /// 记录带上下文信息的日志
     /// </summary>
     public void LogWithContext(LogEventLevel level, string message, Dictionary<string, object> context,
-        Exception exception = null)
+        Exception? exception = null)
     {
         var logEvent = new LogEventLevel[] { level };
         ILogger logger = _logger;
@@ -199,7 +199,7 @@ public class UniversalLogger : IDisposable
                 await DeleteOldLogsAsync();
             }
         }
-        catch (Exception ex)
+        catch (Exception? ex)
         {
             _logger.Error(ex, "执行日志维护任务时发生错误");
         }
@@ -214,7 +214,7 @@ public class UniversalLogger : IDisposable
         if (!logDirectory.Exists) return;
 
         var cutoffDate = DateTime.Now.Date.AddDays(-_config.CompressDaysThreshold);
-        var logFiles = logDirectory.GetFiles("log*.txt")
+        var logFiles = logDirectory.GetFiles("log*.log")
             .Where(f => f.CreationTime.Date < cutoffDate && !f.Name.EndsWith(".gz"))
             .ToList();
 
@@ -230,7 +230,7 @@ public class UniversalLogger : IDisposable
 
                 _logger.Information("已压缩日志文件: {FileName}", file.Name);
             }
-            catch (Exception ex)
+            catch (Exception? ex)
             {
                 _logger.Error(ex, "压缩日志文件失败: {FileName}", file.Name);
             }
@@ -257,7 +257,7 @@ public class UniversalLogger : IDisposable
                 File.Delete(file.FullName);
                 _logger.Information("已删除过期日志文件: {FileName}", file.Name);
             }
-            catch (Exception ex)
+            catch (Exception? ex)
             {
                 _logger.Error(ex, "删除过期日志文件失败: {FileName}", file.Name);
             }
@@ -382,21 +382,81 @@ public static class Log
     }
 
     public static void Verbose(string message, params object[] args) => Instance.LogVerbose(message, args);
+
+    public static void Verbose4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Verbose(str);
+    }
+
     public static void Debug(string message, params object[] args) => Instance.LogDebug(message, args);
+
+    public static void Debug4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Debug(str);
+    }
+
     public static void Information(string message, params object[] args) => Instance.LogInformation(message, args);
+
+    public static void Information4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Information(str);
+    }
+
     public static void Warning(string message, params object[] args) => Instance.LogWarning(message, args);
+
+    public static void Warning4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Warning(str);
+    }
+
     public static void Error(string message, params object[] args) => Instance.LogError(message, args);
 
-    public static void Error(Exception exception, string message, params object[] args) =>
-        Instance.LogError(exception, message, args);
+    public static void Error4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Error(str);
+    }
+
+
+    public static void Error(Exception? exception, string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Instance.LogError(exception, str);
+    }
 
     public static void Fatal(string message, params object[] args) => Instance.LogFatal(message, args);
 
-    public static void Fatal(Exception exception, string message, params object[] args) =>
-        Instance.LogFatal(exception, message, args);
+    public static void Fatal4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Fatal(str);
+    }
+
+    public static void Fatal(Exception? exception, string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
+        Instance.LogFatal(exception, str);
+    }
+
+    private static string GetLog(string callerMemberName, string getFileName, int callerLineNumber, string message)
+    {
+        return $"[{callerMemberName}] - {getFileName}:{callerLineNumber} :{message}";
+    }
 
     public static void WithContext(LogEventLevel level, string message, Dictionary<string, object> context,
-        Exception exception = null)
+        Exception? exception = null)
         => Instance.LogWithContext(level, message, context, exception);
 
     public static async Task RunMaintenanceAsync() => await Instance.RunMaintenanceAsync();
