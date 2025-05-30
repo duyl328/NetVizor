@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Common.Logger;
 using WinDivertNet.WinDivertWrapper;
 
 namespace WinDivertNet;
@@ -7,7 +8,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        Console.WriteLine("WinDivert 捕获启动...");
+        Log.Information("WinDivert 捕获启动...");
         PacketSniffer.Start();
     }
 
@@ -20,7 +21,7 @@ class Program
             var checkResult = controller.CheckFilter("tcp.DstPort == 80");
             if (!checkResult.IsValid)
             {
-                Console.WriteLine($"过滤器语法错误: {checkResult.ErrorMessage}");
+                Log.Information($"过滤器语法错误: {checkResult.ErrorMessage}");
                 return;
             }
 
@@ -34,12 +35,12 @@ class Program
 
             if (!success)
             {
-                Console.WriteLine("打开 WinDivert 失败！");
+                Log.Information("打开 WinDivert 失败！");
                 return;
             }
 
-            Console.WriteLine("开始监听 HTTP 流量...");
-            Console.WriteLine("按 ESC 键退出");
+            Log.Information("开始监听 HTTP 流量...");
+            Log.Information("按 ESC 键退出");
 
             // 设置队列长度
             controller.SetParam(WinDivert.WINDIVERT_PARAM_QUEUE_LENGTH, 8192);
@@ -66,14 +67,14 @@ class Program
                                 ushort srcPort = headers.TcpHeader.SrcPort;
                                 ushort dstPort = headers.TcpHeader.DstPort;
 
-                                Console.WriteLine($"捕获到 TCP 数据包: {srcIp}:{srcPort} -> {dstIp}:{dstPort}");
+                                Log.Information($"捕获到 TCP 数据包: {srcIp}:{srcPort} -> {dstIp}:{dstPort}");
 
                                 // 如果有数据，则尝试输出前 100 个字节
                                 if (headers.Data != null && headers.DataLength > 0)
                                 {
                                     int len = (int)Math.Min(headers.DataLength, 100);
                                     string data = Encoding.ASCII.GetString(headers.Data, 0, len);
-                                    Console.WriteLine($"数据内容: {data}");
+                                    Log.Information($"数据内容: {data}");
                                 }
                             }
                         }
@@ -91,7 +92,7 @@ class Program
 
             // 关闭 WinDivert
             controller.Close();
-            Console.WriteLine("监听结束！");
+            Log.Information("监听结束！");
         }
     }
 }

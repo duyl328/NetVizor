@@ -12,4 +12,8 @@
       <None Remove="WinDivert\WinDivert64.sys" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Common\Common.csproj" />
+    </ItemGroup>
+
 </Project>

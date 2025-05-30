@@ -1,3 +1,5 @@
+using Common.Logger;
+
 namespace WinDivertNet.WinDivertWrapper;
 
 using System;
@@ -56,7 +58,7 @@ public class WinDivertController : IDisposable
         if (_handle == IntPtr.Zero)
         {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"WinDivert打开失败，错误码: {errorCode}");
+            Log.Information($"WinDivert打开失败，错误码: {errorCode}");
         }
         
         return IsValid;
@@ -102,7 +104,7 @@ public class WinDivertController : IDisposable
         uint readLen = 0;
         if (WinDivert.Recv(_handle, buffer, (uint)buffer.Length, ref addr, ref readLen))
         {
-            Console.WriteLine($"Receive: {readLen}");
+            Log.Information($"Receive: {readLen}");
             return readLen;
         }
 

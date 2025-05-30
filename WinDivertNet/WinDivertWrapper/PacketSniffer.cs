@@ -1,3 +1,5 @@
+using Common.Logger;
+
 namespace WinDivertNet.WinDivertWrapper;
 
 using System;
@@ -7,7 +9,7 @@ public static class PacketSniffer
 {
     public static void Start1()
     {
-        Console.WriteLine($"进入 12313 ");
+        Log.Information($"进入 12313 ");
         var handle = WinDivert.Open("true", WinDivert.WINDIVERT_LAYER_NETWORK, 0, WinDivert.WINDIVERT_FLAG_SNIFF);
 
         byte[] buffer = new byte[65535];
@@ -25,13 +27,13 @@ public static class PacketSniffer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"接收数据包时出错: {ex.Message}");
+                Log.Information($"接收数据包时出错: {ex.Message}");
             }
         }
 
         void ParsePacketAndLog(byte[] buffer, uint length, WinDivert.WINDIVERT_ADDRESS addr)
         {
-            Console.WriteLine($"length: {length}");
+            Log.Information($"length: {length}");
             if (buffer == null || length == 0)
                 return;
 
@@ -55,7 +57,7 @@ public static class PacketSniffer
                         string srcIpStr = $"{buffer[12]}.{buffer[13]}.{buffer[14]}.{buffer[15]}";
                         string dstIpStr = $"{buffer[16]}.{buffer[17]}.{buffer[18]}.{buffer[19]}";
 
-                        Console.WriteLine($"IPv4: Src={srcIpStr}, Dst={dstIpStr}, Protocol={protocol}");
+                        Log.Information($"IPv4: Src={srcIpStr}, Dst={dstIpStr}, Protocol={protocol}");
 
                         // 如果有足够的数据，解析 TCP 或 UDP
                         if (length >= (uint)(headerLength + 4) && (protocol == 6 || protocol == 17))
@@ -67,11 +69,11 @@ public static class PacketSniffer
 
                             if (protocol == 6) // TCP
                             {
-                                Console.WriteLine($"TCP: SrcPort={srcPort}, DstPort={dstPort}");
+                                Log.Information($"TCP: SrcPort={srcPort}, DstPort={dstPort}");
                             }
                             else if (protocol == 17) // UDP
                             {
-                                Console.WriteLine($"UDP: SrcPort={srcPort}, DstPort={dstPort}");
+                                Log.Information($"UDP: SrcPort={srcPort}, DstPort={dstPort}");
                             }
                         }
                     }
@@ -84,14 +86,14 @@ public static class PacketSniffer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"解析数据包时出错: {ex.Message}");
+                Log.Information($"解析数据包时出错: {ex.Message}");
             }
         }
     }
 
     public static void Start()
     {
-        Console.WriteLine("WinDivert调试工具启动...");
+        Log.Information("WinDivert调试工具启动...");
 
         // 检查是否以管理员身份运行
         bool isAdmin = new System.Security.Principal.WindowsPrincipal(
@@ -100,12 +102,12 @@ public static class PacketSniffer
 
         if (!isAdmin)
         {
-            Console.WriteLine("错误: 此程序需要管理员权限才能使用WinDivert！");
-            Console.WriteLine("请右键点击程序，选择'以管理员身份运行'然后重试。");
+            Log.Information("错误: 此程序需要管理员权限才能使用WinDivert！");
+            Log.Information("请右键点击程序，选择'以管理员身份运行'然后重试。");
             return;
         }
 
-        Console.WriteLine("步骤1: 尝试打开WinDivert...");
+        Log.Information("步骤1: 尝试打开WinDivert...");
 
         // 最简单的过滤器
         string filter = "true";
@@ -116,15 +118,15 @@ public static class PacketSniffer
         if (handle == IntPtr.Zero)
         {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"错误: 无法打开WinDivert，错误码: {errorCode}");
+            Log.Information($"错误: 无法打开WinDivert，错误码: {errorCode}");
             PrintWin32Error(errorCode);
             return;
         }
 
-        Console.WriteLine("成功: WinDivert句柄已打开");
+        Log.Information("成功: WinDivert句柄已打开");
 
         // 尝试接收一个数据包
-        Console.WriteLine("\n步骤2: 尝试接收数据包...");
+        Log.Information("\n步骤2: 尝试接收数据包...");
 
         // 为数据包分配缓冲区
         byte[] buffer = new byte[65535]; // 最大以太网帧大小
@@ -139,52 +141,52 @@ public static class PacketSniffer
         uint readLen = 0;
 
         // 尝试直接使用基本的Recv函数
-        Console.WriteLine("尝试WinDivertRecv...");
+        Log.Information("尝试WinDivertRecv...");
         bool recvResult = WinDivert.WinDivertRecv(handle, buffer, (uint)buffer.Length, ref addr, ref readLen);
 
         if (!recvResult)
         {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"错误: WinDivertRecv失败，错误码: {errorCode}");
+            Log.Information($"错误: WinDivertRecv失败，错误码: {errorCode}");
             PrintWin32Error(errorCode);
         }
         else
         {
-            Console.WriteLine($"成功: 接收到数据包，大小: {readLen} 字节");
+            Log.Information($"成功: 接收到数据包，大小: {readLen} 字节");
 
             // 打印数据包的前16个字节
             string hexData = BitConverter.ToString(buffer, 0, Math.Min((int)readLen, 16));
-            Console.WriteLine($"数据包前16字节: {hexData}");
+            Log.Information($"数据包前16字节: {hexData}");
         }
 
         // 重置并尝试使用Ex版本
         readLen = 0;
         addr = new WinDivert.WINDIVERT_ADDRESS { Reserved = new byte[8] };
 
-        Console.WriteLine("\n尝试WinDivertRecvEx...");
+        Log.Information("\n尝试WinDivertRecvEx...");
         bool recvExResult =
             WinDivert.WinDivertRecvEx(handle, buffer, (uint)buffer.Length, 0, ref addr, ref readLen, IntPtr.Zero);
 
         if (!recvExResult)
         {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"错误: WinDivertRecvEx失败，错误码: {errorCode}");
+            Log.Information($"错误: WinDivertRecvEx失败，错误码: {errorCode}");
             PrintWin32Error(errorCode);
         }
         else
         {
-            Console.WriteLine($"成功: 接收到数据包，大小: {readLen} 字节");
+            Log.Information($"成功: 接收到数据包，大小: {readLen} 字节");
 
             // 打印数据包的前16个字节
             string hexData = BitConverter.ToString(buffer, 0, Math.Min((int)readLen, 16));
-            Console.WriteLine($"数据包前16字节: {hexData}");
+            Log.Information($"数据包前16字节: {hexData}");
         }
 
         // 最后关闭句柄
         WinDivert.WinDivertClose(handle);
-        Console.WriteLine("\nWinDivert句柄已关闭");
+        Log.Information("\nWinDivert句柄已关闭");
 
-        Console.WriteLine("\n调试信息收集完成。请检查以上输出以确定问题所在。");
+        Log.Information("\n调试信息收集完成。请检查以上输出以确定问题所在。");
     }
 
     // 辅助函数：打印Win32错误信息
@@ -193,34 +195,34 @@ public static class PacketSniffer
         switch (errorCode)
         {
             case 5:
-                Console.WriteLine("访问被拒绝。请确认程序以管理员权限运行。");
+                Log.Information("访问被拒绝。请确认程序以管理员权限运行。");
                 break;
             case 87:
-                Console.WriteLine("参数错误。过滤器语法可能不正确。");
+                Log.Information("参数错误。过滤器语法可能不正确。");
                 break;
             case 123:
-                Console.WriteLine("文件名、目录名或卷标语法不正确。请检查WinDivert.dll是否位于正确的路径。");
+                Log.Information("文件名、目录名或卷标语法不正确。请检查WinDivert.dll是否位于正确的路径。");
                 break;
             case 126:
-                Console.WriteLine("找不到指定的模块。无法找到WinDivert.dll文件。");
+                Log.Information("找不到指定的模块。无法找到WinDivert.dll文件。");
                 break;
             case 193:
-                Console.WriteLine("不是有效的Win32应用程序。WinDivert.dll可能是错误的版本(32位/64位)。");
+                Log.Information("不是有效的Win32应用程序。WinDivert.dll可能是错误的版本(32位/64位)。");
                 break;
             case 997:
-                Console.WriteLine("正在进行重叠操作。WinDivert可能需要异步调用。");
+                Log.Information("正在进行重叠操作。WinDivert可能需要异步调用。");
                 break;
             case 995:
-                Console.WriteLine("由于线程退出或应用程序请求，已中止I/O操作。");
+                Log.Information("由于线程退出或应用程序请求，已中止I/O操作。");
                 break;
             case 998:
-                Console.WriteLine("无效访问WinDivert。请检查是否有另一个进程正在使用相同的过滤器。");
+                Log.Information("无效访问WinDivert。请检查是否有另一个进程正在使用相同的过滤器。");
                 break;
             case 1450:
-                Console.WriteLine("系统资源不足，无法完成请求的服务。");
+                Log.Information("系统资源不足，无法完成请求的服务。");
                 break;
             default:
-                Console.WriteLine($"未知错误。Windows错误码: {errorCode}");
+                Log.Information($"未知错误。Windows错误码: {errorCode}");
                 break;
         }
     }
