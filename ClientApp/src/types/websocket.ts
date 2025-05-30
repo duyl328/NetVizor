@@ -1,88 +1,88 @@
 // types/websocket.ts
+
+// 基础消息格式
 export interface WebSocketMessage<T = unknown> {
-  type: string
-  data: T
-  timestamp: number
-  requestId?: string
+  type: string;
+  data: T;
+  requestId?: string; // 用于请求-响应匹配
+  timestamp?: number;
 }
 
+// 响应消息格式
+export interface WebSocketResponse<T = unknown> extends WebSocketMessage<T> {
+  success: boolean;
+  error?: string;
+  message?: string;
+  messageId?: string;
+}
+
+// 订阅相关
+export interface SubscriptionMessage {
+  type: 'subscribe' | 'unsubscribe';
+  topic: string;
+}
+
+// 网络状态数据结构示例
 export interface NetworkStatus {
-  interfaceName: string
-  isConnected: boolean
-  ipAddress: string
-  macAddress: string
-  speed: number
-  bytesReceived: number
-  bytesSent: number
+  connectionCount: number;
+  bandwidth: number;
+  latency: number;
+  timestamp: number;
 }
 
-export interface FirewallRule {
-  id: string
-  name: string
-  direction: 'inbound' | 'outbound'
-  action: 'allow' | 'block'
-  protocol: 'tcp' | 'udp' | 'icmp' | 'any'
-  localPort?: string
-  remotePort?: string
-  localAddress?: string
-  remoteAddress?: string
-  enabled: boolean
+// 数据库查询请求
+export interface DatabaseQueryRequest {
+  table: string;
+  query: Record<string, unknown>;
+  limit?: number;
 }
 
-export interface SystemInfo {
-  cpuUsage: number
-  memoryUsage: number
-  networkInterfaces: NetworkStatus[]
-  firewallRules: FirewallRule[]
-  connectionCount: number
+// 配置更新请求
+export interface ConfigUpdateRequest {
+  section: string;
+  config: Record<string, unknown>;
 }
 
-export enum MessageType {
-  // 数据获取相关
-  GET_NETWORK_STATUS = 'get_network_status',
-  GET_FIREWALL_RULES = 'get_firewall_rules',
-  GET_SYSTEM_INFO = 'get_system_info',
-
-  // 数据响应相关
-  NETWORK_STATUS_RESPONSE = 'network_status_response',
-  FIREWALL_RULES_RESPONSE = 'firewall_rules_response',
-  SYSTEM_INFO_RESPONSE = 'system_info_response',
-
-  // 操作相关
-  ADD_FIREWALL_RULE = 'add_firewall_rule',
-  UPDATE_FIREWALL_RULE = 'update_firewall_rule',
-  DELETE_FIREWALL_RULE = 'delete_firewall_rule',
-  TOGGLE_FIREWALL_RULE = 'toggle_firewall_rule',
-
-  // 通知相关
-  NETWORK_STATUS_CHANGED = 'network_status_changed',
-  FIREWALL_RULE_CHANGED = 'firewall_rule_changed',
-  SYSTEM_ALERT = 'system_alert',
-  ERROR = 'error',
-  SUCCESS = 'success'
+// 命令执行请求
+export interface CommandRequest {
+  functionName: string;
+  parameters: Record<string, unknown>;
 }
 
-export interface WebSocketConfig {
-  url: string
-  /**
-   * 重新连接间隔
-   */
-  reconnectInterval: number
-  /**
-   * 最大重新连接尝试次数
-   */
-  maxReconnectAttempts: number
-  /**
-   * 心跳间隔
-   */
-  heartbeatInterval: number
-  timeout: number
-}
-
-export enum ConnectionState {
+// WebSocket连接状态
+export enum WebSocketState {
   CONNECTING = 'connecting',
   CONNECTED = 'connected',
   DISCONNECTED = 'disconnected',
-  RECONNECTING = 'reconnecting',
   ERROR = 'error'
 }
+
+// 事件监听器类型
+export type EventListener<T = unknown> = (data: T) => void;
+
+// 订阅回调类型
+export type SubscriptionCallback<T = unknown> = (data: T, topic: string) => void;
+
+// 请求选项
+export interface RequestOptions {
+  timeout?: number;
+  retries?: number;
+}
+
+// WebSocket管理器配置
+export interface WebSocketConfig {
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  heartbeatInterval?: number;
+  requestTimeout?: number;
+}
+
+// 订阅请求格式
+export interface SubscriptionRequest {
+  type: string;
+  interval?: number; // 更新间隔(ms)
+  // 可添加其他订阅参数
+}
+
+// 命令处理函数类型
+export type CommandHandler = (data: unknown) => void | Promise<void>;

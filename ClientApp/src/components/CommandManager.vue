@@ -1,17 +1,27 @@
 <script setup lang="ts">
-import { type Ref, ref } from 'vue'
+import { onMounted, type Ref, ref } from 'vue'
 import type { CommandType } from '@/types/command'
 import { logN } from '@/utils/logHelper/logUtils.ts'
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
+import { useWebSocketStore } from '@/stores/websocketStore'
 
 // 传递参数
 const props = defineProps({
   pro: Array<CommandType>,
+  isUseWebSocket: Boolean,
 })
 // 使用 ref 使数据变成响应式数据
 const modules: Ref<CommandType[]> = ref([...(props.pro || [])])
 const bridge = CSharpBridgeV2.getBridge()
 
+const useWebSocket = useWebSocketStore()
+
+const newVar = (data) => {
+  logN.warning('后端返回的参数', module.name, data)
+  module.result = JSON.stringify(data, null, 2)
+
+  useWebSocket.unsubscribe(module.name)
+}
 /**
  * 指令触发
  * @param module
@@ -19,15 +29,20 @@ const bridge = CSharpBridgeV2.getBridge()
 const invokeCommand = async (module: CommandType) => {
   const params = Object.fromEntries(module.params.map((param) => [param.name, param.value]))
   logN.success('前端发送的参数', module.name, params)
+  if (props.isUseWebSocket) {
+    useWebSocket.registerHandler(module.name, newVar)
 
-  try {
-    bridge.send(module.name, params, (data) => {
-      logN.warning('后端返回的参数', module.name, data)
-      module.result = JSON.stringify(data, null, 2)
-    })
-  } catch (error) {
-    console.error(err)
-    module.result = `Error: ${error}`
+    useWebSocket.send('hello')
+  } else {
+    try {
+      bridge.send(module.name, params, (data) => {
+        logN.warning('后端返回的参数', module.name, data)
+        module.result = JSON.stringify(data, null, 2)
+      })
+    } catch (error) {
+      console.error(err)
+      module.result = `Error: ${error}`
+    }
   }
 }
 </script>
@@ -35,7 +50,11 @@ const invokeCommand = async (module: CommandType) => {
 <template>
   <div class="p-6 font-sans">
     <div class="flex flex-wrap gap-6 w-full justify-center">
-      <div v-for="(module, index) in modules" :key="index" class="w-full border shadow-lg p-4 shadow-md rounded-md">
+      <div
+        v-for="(module, index) in modules"
+        :key="index"
+        class="w-full border shadow-lg p-4 shadow-md rounded-md"
+      >
         <h2 class="text-lg font-semibold mb-2 select-text pointer-events-auto">
           {{ module.name }}
         </h2>
