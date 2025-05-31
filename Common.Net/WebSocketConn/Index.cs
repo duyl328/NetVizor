@@ -1,11 +1,6 @@
-namespace Application.Connections;
+using Common.Logger;
 
-using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
-using System.Text.Json;
-using Fleck;
-using System.Timers;
+namespace Common.Net.WebSocketConn;
 
 // 主程序示例
 public class Program
@@ -23,7 +18,7 @@ public class Program
             // 注册自定义处理器
             wsManager.RegisterHandler("customCommand", async (cmd, socket) =>
             {
-                Console.WriteLine($"处理自定义命令: {cmd.Command}");
+                Log.Information($"处理自定义命令: {cmd.Command}");
                 await wsManager.SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
                 {
                     Type = "customResponse",
@@ -34,7 +29,7 @@ public class Program
             // 启动网络监控
             networkMonitor.StartMonitoring(3000);
 
-            Console.WriteLine("服务器运行中，按任意键退出...");
+            Log.Information("服务器运行中，按任意键退出...");
             Console.ReadKey();
         }
         finally

@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using System.Net.WebSockets;
 using System.Text.Json;
+using Common.Logger;
 using Fleck;
 
-namespace Application.Connections;
+namespace Common.Net.WebSocketConn;
 
 // WebSocket管理器 - 单例模式
 public class WebSocketManager
@@ -41,7 +43,7 @@ public class WebSocketManager
             });
 
             _isStarted = true;
-            Console.WriteLine($"WebSocket服务器已启动: {url}");
+            Log.Information($"WebSocket服务器已启动: {url}");
         }
     }
 
@@ -51,19 +53,26 @@ public class WebSocketManager
         lock (_lockObject)
         {
             if (!_isStarted) return;
-
+            AppConfig.Instance.WebSocketPath = "";
             _server?.Dispose();
+            CloseAllSocketsAsync();
             _connections.Clear();
             _isStarted = false;
-            Console.WriteLine("WebSocket服务器已停止");
+            Log.Information("WebSocket服务器已停止");
         }
     }
-
+    public async Task CloseAllSocketsAsync()
+    {
+        foreach (var webSocketConnection in _connections)
+        {
+            webSocketConnection.Value.Close();
+        }
+    }
     // 连接建立
     private void OnConnectionOpen(IWebSocketConnection socket)
     {
         _connections.TryAdd(socket.ConnectionInfo.Id, socket);
-        Console.WriteLine($"客户端连接: {socket.ConnectionInfo.Id}");
+        Log.Information($"客户端连接: {socket.ConnectionInfo.Id}");
 
         // 发送欢迎消息
         _ = SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
@@ -79,7 +88,7 @@ public class WebSocketManager
     private void OnConnectionClose(IWebSocketConnection socket)
     {
         _connections.TryRemove(socket.ConnectionInfo.Id, out _);
-        Console.WriteLine($"客户端断开: {socket.ConnectionInfo.Id}");
+        Log.Information($"客户端断开: {socket.ConnectionInfo.Id}");
     }
 
     // 接收消息
@@ -87,6 +96,7 @@ public class WebSocketManager
     {
         try
         {
+            Console.WriteLine(DateTime.Now);
             var commandMessage = JsonSerializer.Deserialize<CommandMessage>(message);
             if (commandMessage != null && !string.IsNullOrEmpty(commandMessage.Command))
             {
@@ -95,7 +105,7 @@ public class WebSocketManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"消息处理错误: {ex.Message}");
+            Log.Information($"消息处理错误: {ex.Message}");
             await SendErrorResponse(socket, "消息格式错误");
         }
     }
@@ -200,7 +210,7 @@ public class WebSocketManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"发送消息失败: {ex.Message}");
+                Log.Information($"发送消息失败: {ex.Message}");
                 return false;
             }
         }
@@ -225,7 +235,7 @@ public class WebSocketManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"广播消息失败: {ex.Message}");
+            Log.Information($"广播消息失败: {ex.Message}");
         }
     }
 
@@ -285,7 +295,7 @@ public class WebSocketManager
     private bool AddFirewallRule(FirewallRuleMessage rule)
     {
         // 实现添加防火墙规则逻辑
-        Console.WriteLine($"添加防火墙规则: {rule.RuleName}");
+        Log.Information($"添加防火墙规则: {rule.RuleName}");
         return true; // 示例返回
     }
 

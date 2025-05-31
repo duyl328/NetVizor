@@ -1,4 +1,6 @@
-namespace Application.Connections;
+using Common.Logger;
+
+namespace Common.Net.WebSocketConn;
 
 public class NetworkMonitorService
 {
@@ -17,7 +19,7 @@ public class NetworkMonitorService
         _monitorTimer.Elapsed += async (sender, e) => await SendNetworkUpdate();
         _monitorTimer.AutoReset = true;
         _monitorTimer.Start();
-        Console.WriteLine($"网络监控已启动，更新间隔: {intervalMs}ms");
+        Log.Information($"网络监控已启动，更新间隔: {intervalMs}ms");
     }
 
     // 停止监控
@@ -25,7 +27,7 @@ public class NetworkMonitorService
     {
         _monitorTimer?.Stop();
         _monitorTimer?.Dispose();
-        Console.WriteLine("网络监控已停止");
+        Log.Information("网络监控已停止");
     }
 
     // 发送网络状态更新
