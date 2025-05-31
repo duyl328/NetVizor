@@ -2,7 +2,13 @@ using System.Windows.Controls;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using Application.Utils;
+using Common;
+using Common.Logger;
+using Common.Net;
+using Common.Net.WebSocketConn;
 using Infrastructure.utils;
+using Utils.ETW;
 using WinDivertNet.WinDivertWrapper;
 
 namespace Shell.Views;
@@ -12,6 +18,9 @@ public partial class WebPanel : UserControl
     public WebPanel()
     {
         InitializeComponent();
+
+        Class1.Main2();
+        
         InitWebView();
     }
 
@@ -35,8 +44,8 @@ public partial class WebPanel : UserControl
             // 反序列化为 C# 对象
             var msg = JsonSerializer.Deserialize<JsMessage>(json);
 
-            Console.WriteLine(json);
-            Console.WriteLine(msg?.Channel);
+            Log.Information(json);
+            Log.Information(msg?.Channel);
 
             switch (msg?.Channel)
             {
@@ -49,7 +58,7 @@ public partial class WebPanel : UserControl
                     break;
                 case "GetProgramDiagnostics":
                     var programDiagnostics = SysInfoUtils.GetProgramDiagnostics();
-                    Console.WriteLine(programDiagnostics);
+                    Log.Information(programDiagnostics);
                     break;
                 case "InspectProcess":
                     SysInfoUtils.InspectProcess(23192);
@@ -60,11 +69,33 @@ public partial class WebPanel : UserControl
                 case "PacketSnifferStart":
                     PacketSniffer.Start();
                     break;
+                case "GetWebSocketPath":
+                    WebSocketPath();
+                    break;
+                case "CloseWebSocket":
+                    CloseWebSocket();
+                    break;
+                case "OpenWebSocket":
+                    OpenWebSocket();
+                    break;
                 default:
-                    Console.WriteLine("没有任何函数被触发...");
+                    Log.Information("没有任何函数被触发...");
                     break;
             }
         };
+    }
+
+    private void OpenWebSocket()
+    {
+        int port = SysHelper.GetAvailablePort();
+        AppConfig.Instance.WebSocketPort = port;
+        AppConfig.Instance.WebSocketPath = $"ws://127.0.0.1:{port}";
+        WebSocketManager.Instance.Start(AppConfig.Instance.WebSocketPath);
+    }
+
+    private void CloseWebSocket()
+    {
+        WebSocketManager.Instance.Stop();
     }
 
     private async void InitWebView1()
@@ -72,6 +103,19 @@ public partial class WebPanel : UserControl
         await webView.ExecuteScriptAsync("""
                                            window.externalFunctions.__BRIDGE_LISTEN__('showMessage','来自 C# 的问候');
                                          """);
+    }
+
+    private async void WebSocketPath()
+    {
+        var instanceWebSocketPath = AppConfig.Instance.WebSocketPath;
+        Log.Information($"instanceWebSocketPath -> :{instanceWebSocketPath}");
+        string result = await webView.ExecuteScriptAsync($"""
+                                                           window.externalFunctions.__BRIDGE_LISTEN__('ListenWebSocketPath','{instanceWebSocketPath}');
+                                                         """);
+        string result1 = await webView.ExecuteScriptAsync($"""
+                                                           window.externalFunctions.__BRIDGE_LISTEN__('GetWebSocketPath','{instanceWebSocketPath}');
+                                                         """);
+        
     }
 }
 

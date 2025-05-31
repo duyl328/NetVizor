@@ -4,8 +4,11 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
 using Application.Utils;
+using Common;
 using Common.Logger;
+using Common.Net.WebSocketConn;
 using Microsoft.Extensions.Logging;
+using Serilog.Events;
 
 namespace Shell;
 
@@ -18,11 +21,15 @@ public partial class App : System.Windows.Application
     {
         // 异常处理
         ExceptionCatch();
+        // 初始化日志
+        var configModelLogging = AppConfig.Instance.ConfigModel.Logging;
+        Log.Initialize(configModelLogging);
         base.OnStartup(e);
 
         // ✅ 启动你的服务（如 WebSocket、HTTP、端口监听等）
         StartMyServer();
     }
+
     /// <summary>
     ///     异常捕捉
     /// </summary>
@@ -33,7 +40,7 @@ public partial class App : System.Windows.Application
         // 注册全局异常处理
         TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
     }
-    
+
     /// <summary>
     ///     处理异常
     /// </summary>
@@ -48,6 +55,7 @@ public partial class App : System.Windows.Application
             MessageBox.Show($"恭喜你发现了BUG，请联系管理员解决：{exception.Message}");
         }
     }
+
     private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log.Error(e.Exception, "UI线程异常");
@@ -64,13 +72,14 @@ public partial class App : System.Windows.Application
             // 让应用正常关闭而不是崩溃
         }
     }
+
     private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
     {
         foreach (var ex in e.Exception.InnerExceptions)
         {
             Log.Error(e.Exception, "UI线程异常");
         }
-    
+
         e.SetObserved(); // 标记异常已被观察，防止应用终止
     }
 
@@ -78,7 +87,7 @@ public partial class App : System.Windows.Application
     {
         var exception = e.ExceptionObject as Exception;
         Log.Error(exception, "非UI线程异常");
-    
+
         if (e.IsTerminating)
         {
             // 应用即将终止，进行紧急清理
@@ -86,6 +95,7 @@ public partial class App : System.Windows.Application
             Log.Fatal("应用程序即将因未处理异常而终止");
         }
     }
+
     private bool CanRecover(Exception exception)
     {
         return exception switch
@@ -104,17 +114,15 @@ public partial class App : System.Windows.Application
     private void StartMyServer()
     {
         int port = SysHelper.GetAvailablePort();
-        Console.WriteLine($"服务启动在端口: {port}");
 
-        // 例如开启线程或任务监听 WS：
-        Task.Run(() =>
-        {
-            StartWebSocketServer(port);
-        });
-    }
+        AppConfig.Instance.WebSocketPort = port;
 
-    private void StartWebSocketServer(int port)
-    {
-        // 示例服务逻辑，如上文 WebSocket 实现
+        AppConfig.Instance.WebSocketPath = $"ws://127.0.0.1:{port}";
+        Log.Information4Ctx($"服务启动在端口: {AppConfig.Instance.WebSocketPort}");
+        Log.Information($"服务完整地址: {AppConfig.Instance.WebSocketPath}");
+        // TODO 2025年5月28日 22点25分 ：开启 Http 网络本地服务，提供网页访问    
+
+        // 启动WebSocket服务器
+        WebSocketManager.Instance.Start(AppConfig.Instance.WebSocketPath);
     }
 }

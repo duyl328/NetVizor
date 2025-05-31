@@ -9,13 +9,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="WinDivert.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Include="WinDivert64.sys" />
-    </ItemGroup>
-
-    <ItemGroup>
       <Folder Include="wwwroot\" />
     </ItemGroup>
 
@@ -25,8 +18,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Application\Application.csproj" />
+      <ProjectReference Include="..\Common.Net\Common.Net.csproj" />
       <ProjectReference Include="..\Data\Data.csproj" />
       <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+      <ProjectReference Include="..\Utils.ETW\Utils.ETW.csproj" />
     </ItemGroup>
 
     <ItemGroup>
