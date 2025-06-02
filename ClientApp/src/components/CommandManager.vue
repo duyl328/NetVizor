@@ -32,7 +32,7 @@ const invokeCommand = async (module: CommandType) => {
   if (props.isUseWebSocket) {
     useWebSocket.registerHandler(module.name, newVar)
 
-    useWebSocket.send('hello')
+    useWebSocket.send(module.name)
   } else {
     try {
       bridge.send(module.name, params, (data) => {
