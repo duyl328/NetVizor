@@ -8,7 +8,6 @@ public class Program
     public static void Main(string[] args)
     {
         var wsManager = WebSocketManager.Instance;
-        var networkMonitor = new NetworkMonitorService();
 
         try
         {
@@ -26,15 +25,12 @@ public class Program
                     Message = "自定义命令处理完成"
                 });
             });
-            // 启动网络监控
-            networkMonitor.StartMonitoring(3000);
 
             Log.Information("服务器运行中，按任意键退出...");
             Console.ReadKey();
         }
         finally
         {
-            networkMonitor.StopMonitoring();
             wsManager.Stop();
         }
     }
