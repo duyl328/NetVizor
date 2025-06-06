@@ -1,4 +1,4 @@
-﻿namespace Common;
+namespace Common.Wpf;
 
 public class Class1
 {
