@@ -21,7 +21,7 @@ public static class IconHelper
         IntPtr hIcon = ExtractIcon(IntPtr.Zero, exePath, 0);
         if (hIcon == IntPtr.Zero) return "";
 
-        using Icon icon = Icon.FromHandle(hIcon);
+        using System.Drawing.Icon icon = Icon.FromHandle(hIcon);
         using Bitmap bmp = icon.ToBitmap();
         using MemoryStream ms = new MemoryStream();
         // 保存为 PNG 格式

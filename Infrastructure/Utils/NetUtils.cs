@@ -1,5 +1,6 @@
 using System.Net;
 using System.Runtime.InteropServices;
+using Common.Logger;
 
 namespace Infrastructure.utils;
 
@@ -38,7 +39,7 @@ public static class NetUtils
     {
         if (TraceEventSession.IsElevated() == false)
         {
-            Console.WriteLine("请以管理员身份运行此程序。");
+            Log.Information("请以管理员身份运行此程序。");
             return;
         }
 
@@ -48,35 +49,35 @@ public static class NetUtils
             session.EnableKernelProvider(
                 KernelTraceEventParser.Keywords.NetworkTCPIP);
 
-            Console.WriteLine("监听网络事件中（按 Ctrl+C 停止）...");
+            Log.Information("监听网络事件中（按 Ctrl+C 停止）...");
             session.Source.Kernel.TcpIpConnect += data =>
             {
-                Console.WriteLine(
+                Log.Information(
                     $"[TCP Connect] PID={data.ProcessID} {data.saddr}:{data.sport} -> {data.daddr}:{data.dport}");
             };
             session.Source.Kernel.TcpIpDisconnect += data =>
             {
-                Console.WriteLine(
+                Log.Information(
                     $"[TCP Disconnect] PID={data.ProcessID} {data.saddr}:{data.sport} -> {data.daddr}:{data.dport}");
             };
             session.Source.Kernel.TcpIpSend += data =>
             {
-                Console.WriteLine(
+                Log.Information(
                     $"[TCP Send] PID={data.ProcessID} {data.saddr}:{data.sport} -> {data.daddr}:{data.dport}, Size={data.size} bytes");
             };
             session.Source.Kernel.TcpIpRecv += data =>
             {
-                Console.WriteLine(
+                Log.Information(
                     $"[TCP Recv] PID={data.ProcessID} {data.saddr}:{data.sport} <- {data.daddr}:{data.dport}, Size={data.size} bytes");
             };
             session.Source.Kernel.UdpIpSend += data =>
             {
-                Console.WriteLine(
+                Log.Information(
                     $"[UDP Send] PID={data.ProcessID} {data.saddr}:{data.sport} -> {data.daddr}:{data.dport}, Size={data.size} bytes");
             };
             session.Source.Kernel.UdpIpRecv += data =>
             {
-                Console.WriteLine(
+                Log.Information(
                     $"[UDP Recv] PID={data.ProcessID} {data.saddr}:{data.sport} <- {data.daddr}:{data.dport}, Size={data.size} bytes");
             };
             session.Source.Process(); // 开始监听
@@ -108,7 +109,7 @@ public static class NetUtils
                     int localPort = ntohs((ushort)row.localPort);
                     int remotePort = ntohs((ushort)row.remotePort);
 
-                    Console.WriteLine(
+                    Log.Information(
                         $"PID: {row.owningPid}, {localIp}:{localPort} -> {remoteIp}:{remotePort}, State: {row.state}");
                     rowPtr = IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_TCPROW_OWNER_PID>());
                 }
@@ -192,7 +193,7 @@ public static class NetUtils
                     IPAddress localIp = new IPAddress(row.localAddr);
                     int localPort = ntohs1((ushort)row.localPort);
 
-                    Console.WriteLine($"PID: {row.owningPid}, UDP {localIp}:{localPort}");
+                    Log.Information($"PID: {row.owningPid}, UDP {localIp}:{localPort}");
                     rowPtr = IntPtr.Add(rowPtr, Marshal.SizeOf<MIB_UDPROW_OWNER_PID>());
                 }
             }

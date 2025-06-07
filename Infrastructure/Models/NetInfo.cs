@@ -1,5 +1,10 @@
+using Utils.ETW.Models;
+
 namespace Infrastructure.Models;
 
+/// <summary>
+/// 进程信息【软件信息】
+/// </summary>
 public class ProgramInfo
 {
     /// <summary>
@@ -81,75 +86,4 @@ public class ProgramInfo
     /// 图标
     /// </summary>
     public string IconBase64 { get; set; } = "";
-}
-
-/// <summary>
-/// 网络信息
-/// </summary>
-public class NetInfo
-{
-    /// <summary>
-    /// 进程 ID
-    /// </summary>
-    public int Pid { get; set; }
-
-    /// <summary>
-    /// 线程 ID
-    /// </summary>
-    public int Tid { get; set; }
-
-    /// <summary>
-    /// 数据方向 "Send" / "Recv"
-    /// </summary>
-    public string Direction { get; set; }
-
-    /// <summary>
-    /// 初次一次活动事件
-    /// </summary>
-    public DateTime FirstSeen { get; set; }
-
-    /// <summary>
-    /// 最近一次活动事件
-    /// </summary>
-    public DateTime LastSeen { get; set; }
-
-    /// <summary>
-    /// 连接状态
-    /// </summary>
-    public int State { get; set; }
-
-    /// <summary>
-    /// 源 IP
-    /// </summary>
-    public string SourceIp { get; set; }
-
-    /// <summary>
-    /// 源端口
-    ///</summary>
-    public int SourcePort { get; set; }
-
-    /// <summary>
-    /// 目标 IP
-    ///</summary>
-    public string DestIp { get; set; }
-
-    /// <summary>
-    /// 目标端口
-    ///</summary>
-    public int DestPort { get; set; }
-
-    /// <summary>
-    /// 协议 TCP / UDP
-    ///</summary>
-    public string Protocol { get; set; }
-
-    /// <summary>
-    /// 发送字节数
-    /// </summary>
-    public long TotalSendBytes { get; set; }
-
-    /// <summary>
-    /// 接收字节数
-    /// </summary>
-    public long TotalReceiveBytes { get; set; }
 }

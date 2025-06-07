@@ -1,5 +1,6 @@
 using Common;
 using Common.ExpandException;
+using Common.Logger;
 
 namespace Infrastructure.utils;
 
@@ -69,7 +70,7 @@ public static class SysInfoUtils
 
             #region 检查缓存
 
-            var pck = new ProcessCache.ProcessCacheKey(pid, proc.StartTime);
+            var pck = ProcessCache.GetProcessKey(pid);
             var programInfo = ProcessCache.Instance.Get(pck);
             if (programInfo != null)
             {
@@ -119,7 +120,7 @@ public static class SysInfoUtils
         // 只捕获能遇见的异常
         catch (ArgumentException ex)
         {
-            Console.WriteLine($"获取进程信息失败：{ex.Message}");
+            Log.Information($"获取进程信息失败：{ex.Message}");
             throw ExceptionEnum.ProcessGetException;
         }
     }
