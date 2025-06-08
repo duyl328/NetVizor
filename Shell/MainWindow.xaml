@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Shell"
         xmlns:views="clr-namespace:Shell.Views"
         mc:Ignorable="d"
-        Title="MainWindow" Height="618" Width="1000">
+        Title="MainWindow" Height="700" Width="1300">
     <Grid>
         <views:WebPanel/>
     </Grid>

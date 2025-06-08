@@ -9,6 +9,7 @@ using Common.Net;
 using Common.Net.WebSocketConn;
 using Infrastructure.utils;
 using Utils.ETW;
+using Utils.ETW.Core;
 using WinDivertNet.WinDivertWrapper;
 
 namespace Shell.Views;
@@ -19,9 +20,26 @@ public partial class WebPanel : UserControl
     {
         InitializeComponent();
 
-        Class1.Main2();
+        // Class1.Main2();
         
         InitWebView();
+        
+        // 注册管理 WebSocket 事件
+        WebSocketManger();
+    }
+
+    private void WebSocketManger()
+    {
+        var webSocketManager = WebSocketManager.Instance;
+        
+        // 获取网络状态
+        webSocketManager.RegisterHandler("etwNetworkManger", async (cmd, socket) =>
+        {
+            Console.WriteLine("开始测试");
+            var etwNetworkManger = new EtwNetworkManger();
+            etwNetworkManger.SetupETWHandlers();
+            etwNetworkManger.StartCapture();
+        });
     }
 
     private async void InitWebView()
