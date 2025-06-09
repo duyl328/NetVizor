@@ -36,8 +36,14 @@ public partial class WebPanel : UserControl
         webSocketManager.RegisterHandler("etwNetworkManger", async (cmd, socket) =>
         {
             Console.WriteLine("开始测试");
+            
+            // 创建监听实例
             var etwNetworkManger = new EtwNetworkManger();
-            etwNetworkManger.SetupETWHandlers();
+            
+            // 设置 ETW 监听
+            etwNetworkManger.SetupEtwHandlers();
+            
+            // 开始监听
             etwNetworkManger.StartCapture();
         });
     }
