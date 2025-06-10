@@ -2,7 +2,9 @@ using System.Net;
 
 namespace Utils.ETW.Models;
 
-// 网络事件数据结构定义
+/// <summary>
+/// 网络事件公共数据结构定义
+/// </summary>
 public class NetworkEventData
 {
     /// <summary>
@@ -46,6 +48,9 @@ public class NetworkEventData
     }
 }
 
+/// <summary>
+/// TCP 连接数据配置
+/// </summary>
 public class TcpConnectionSession : NetworkEventData
 {
     public long ConnectionId { get; set; }
@@ -72,7 +77,9 @@ public class TcpConnectionSession : NetworkEventData
     public List<string> Events { get; set; } = new List<string>();
 }
 
-// TCP连接事件数据
+/// <summary>
+/// TCP连接事件数据
+/// </summary>
 public class TcpConnectionEventData : NetworkEventData
 {
     /// <summary>
@@ -89,7 +96,9 @@ public class TcpConnectionEventData : NetworkEventData
     public string TcpFlags { get; set; }
 }
 
-// UDP数据包事件数据
+/// <summary>
+/// UDP数据包事件数据
+/// </summary>
 public class UdpPacketEventData : NetworkEventData
 {
     public int UdpLength { get; set; }
