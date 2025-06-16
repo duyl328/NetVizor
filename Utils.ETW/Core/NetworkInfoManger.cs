@@ -24,11 +24,6 @@ public sealed class NetworkInfoManger
     /// </summary>
     private readonly ConcurrentDictionary<string, NetworkModel> _activeTcpSessions = new();
     
-    /// <summary>
-    /// 活跃的 UDP 连接
-    /// </summary>
-    private readonly ConcurrentDictionary<string, NetworkModel> _activeUdpSessions = new();
-
     private static readonly Lazy<NetworkInfoManger> _instance = new(() => new NetworkInfoManger());
 
     /// <summary>
@@ -73,32 +68,6 @@ public sealed class NetworkInfoManger
         => _activeTcpSessions.Count;
 
     #endregion
-
-    
-    #region UDP 缓存信息
-    
-    public void SetUdpCache(string key, NetworkModel value)
-    {
-        _activeUdpSessions[key] = value;
-    }
-    public void SetUdpCache(NetworkModel value)
-    {
-        _activeUdpSessions[value.GetKey()] = value;
-    }
-    public (bool tryRemove, NetworkModel? session) RemoveUdpCache(NetworkModel value)
-    {
-        return RemoveUdpCache(value.GetKey());
-    }
-    public (bool tryRemove, NetworkModel? session) RemoveUdpCache(string str)
-    {
-        var tryRemove = _activeUdpSessions.TryRemove(str, out var session);
-        return (tryRemove, session);
-    }
-    public int GetUdpSize()
-        => _activeUdpSessions.Count;
-
-    #endregion
-    
     
     /// <summary>
     /// 记录动作

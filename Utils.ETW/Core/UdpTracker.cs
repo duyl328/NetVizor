@@ -16,105 +16,127 @@ public class UdpTracker : INetTracker
             Console.WriteLine($"[UDP] {udpEvent.EventType}: {udpEvent.SourceIp}:{udpEvent.SourcePort} -> " +
                               $"{udpEvent.DestinationIp}:{udpEvent.DestinationPort} ({udpEvent.DataLength} bytes)");
 
-            // UDP处理主要关注数据包本身，而不是连接状态
-            UpdateTrafficStats(udpEvent);
-
-            // 根据端口进行专门处理
-            switch (udpEvent.DestinationPort)
+            switch (udpEvent.EventType)
             {
-                case 53: // DNS
-                    ProcessDnsPacket(udpEvent);
+                // 数据发送
+                case "UdpSend":
+                    UdpSend(udpEvent);
                     break;
-                case 123: // NTP
-                    ProcessNtpPacket(udpEvent);
-                    break;
-                case 67:
-                case 68: // DHCP
-                    ProcessDhcpPacket(udpEvent);
-                    break;
-                default:
-                    ProcessGenericUdpPacket(udpEvent);
+                // 数据接收
+                case "UdpReceive":
+                    UdpReceive(udpEvent);
                     break;
             }
+
+
+            // 根据端口进行专门处理
+            // switch (udpEvent.DestinationPort)
+            // {
+            //     case 53: // DNS
+            //         ProcessDnsPacket(udpEvent);
+            //         break;
+            //     case 123: // NTP
+            //         ProcessNtpPacket(udpEvent);
+            //         break;
+            //     case 67:
+            //     case 68: // DHCP
+            //         ProcessDhcpPacket(udpEvent);
+            //         break;
+            //     default:
+            //         ProcessGenericUdpPacket(udpEvent);
+            //         break;
+            // }
         };
+    }
+
+    /// <summary>
+    /// 数据接收
+    /// </summary>
+    /// <param name="eventData"></param>
+    private void UdpSend(UdpPacketEventData eventData)
+    {
+        var key = NetworkModel.GetKey(
+            eventData.SourceIp,
+            eventData.SourcePort,
+            eventData.DestinationIp,
+            eventData.DestinationPort,
+            eventData.ProcessId,
+            ProtocolType.TCP,
+            eventData.Timestamp
+        );
+        var (tryRemove, networkModel) = NetworkInfoManger.Instance.RemoveTcpCache(key);
+
+        if (eventData.DataLength < 0)
+        {
+            throw new Exception("数据长度不可能为 0 !!");
+        }
+        // 统计端口流量
+        NetworkInfoManger.Instance.PortTrafficSent.TryAdd(eventData.DestinationPort, 0);
+        NetworkInfoManger.Instance.PortTrafficSent[eventData.DestinationPort] += (ulong)eventData.DataLength;
+
+        NetworkInfoManger.Instance.SourceTrafficSent.TryAdd(eventData.SourceIp, 0);
+        NetworkInfoManger.Instance.SourceTrafficSent[eventData.SourceIp] += (ulong)eventData.DataLength;
+
+        
+        
+        // 数据处理【UDP 数据整体处理】
+        var lastSeenTime = DateTime.Now;
+
+        var netModel = new NetworkModel
+        {
+            ConnectType = ProtocolType.UDP,
+            ProcessId = eventData.ProcessId,
+            ThreadId = eventData.ThreadId,
+            ProcessName = eventData.ProcessName,
+            SourceIp = eventData.SourceIp,
+            DestinationIp = eventData.DestinationIp,
+            LastSeenTime = lastSeenTime,
+            BytesSent = 0,
+            BytesReceived = 0,
+            State = ConnectionState.Connecting,
+            SourcePort = eventData.SourcePort,
+            DestinationPort = eventData.DestinationPort,
+            StartTime = lastSeenTime,
+            Direction = eventData.Direction,
+            RecordTime = lastSeenTime,
+            IsPartialConnection = true,
+        };
+
+        string str = $"连接建立: {networkModel.DestinationIp}:{networkModel.DestinationPort} ," +
+                     $"地址: {networkModel.SourceIp}:{networkModel.SourcePort}";
+        NetworkInfoManger.Instance.RecordEvent(str);
+
+            
+        // UDP处理主要关注数据包本身，而不是连接状态
+        UpdateTrafficStats(eventData);
+    }
+
+
+    /// <summary>
+    /// 数据接收
+    /// </summary>
+    private void UdpReceive(UdpPacketEventData eventData)
+    {
+        
     }
 
     private void UpdateTrafficStats(UdpPacketEventData udpEvent)
     {
         // 统计端口流量
-        if (!portTraffic.ContainsKey(udpEvent.DestinationPort))
-            portTraffic[udpEvent.DestinationPort] = 0;
+        portTraffic.TryAdd(udpEvent.DestinationPort, 0);
         portTraffic[udpEvent.DestinationPort] += udpEvent.DataLength;
 
         // 统计源IP流量
-        if (!sourceTraffic.ContainsKey(udpEvent.SourceIp))
-            sourceTraffic[udpEvent.SourceIp] = 0;
+        sourceTraffic.TryAdd(udpEvent.SourceIp, 0);
         sourceTraffic[udpEvent.SourceIp] += udpEvent.DataLength;
     }
 
     private void ProcessDnsPacket(UdpPacketEventData udpEvent)
     {
-        // 连接建立时间
-        var lastSeenTime = DateTime.Now;
-
-        var networkModel = new NetworkModel
-        {
-            ConnectType = ProtocolType.UDP,
-            ProcessId = udpEvent.ProcessId,
-            ThreadId = udpEvent.ThreadId,
-            ProcessName = udpEvent.ProcessName,
-            SourceIp = udpEvent.SourceIp,
-            DestinationIp = udpEvent.DestinationIp,
-            LastSeenTime = lastSeenTime,
-            BytesSent = 0,
-            BytesReceived = 0,
-            State = ConnectionState.Connecting,
-            SourcePort = udpEvent.SourcePort,
-            DestinationPort = udpEvent.DestinationPort,
-            StartTime = lastSeenTime,
-            Direction = udpEvent.Direction,
-            RecordTime = lastSeenTime,
-            IsPartialConnection = true,
-        };
-
-        NetworkInfoManger.Instance.SetUdpCache(networkModel);
-
-        string str = $"连接建立: {networkModel.DestinationIp}:{networkModel.DestinationPort} ," +
-                     $"地址: {networkModel.SourceIp}:{networkModel.SourcePort}";
-        NetworkInfoManger.Instance.RecordEvent(str);
     }
 
     private void ProcessNtpPacket(UdpPacketEventData udpEvent)
     {
-        // 连接建立时间
-        var lastSeenTime = DateTime.Now;
-
-        var networkModel = new NetworkModel
-        {
-            ConnectType = ProtocolType.UDP,
-            ProcessId = udpEvent.ProcessId,
-            ThreadId = udpEvent.ThreadId,
-            ProcessName = udpEvent.ProcessName,
-            SourceIp = udpEvent.SourceIp,
-            DestinationIp = udpEvent.DestinationIp,
-            LastSeenTime = lastSeenTime,
-            BytesSent = 0,
-            BytesReceived = 0,
-            State = ConnectionState.Connecting,
-            SourcePort = udpEvent.SourcePort,
-            DestinationPort = udpEvent.DestinationPort,
-            StartTime = lastSeenTime,
-            Direction = udpEvent.Direction,
-            RecordTime = lastSeenTime,
-            IsPartialConnection = true,
-        };
-
-        NetworkInfoManger.Instance.SetUdpCache(networkModel);
-
-        string str = $"连接建立: {networkModel.DestinationIp}:{networkModel.DestinationPort} ," +
-                     $"地址: {networkModel.SourceIp}:{networkModel.SourcePort}";
-        NetworkInfoManger.Instance.RecordEvent(str);
-        
     }
 
     private void ProcessDhcpPacket(UdpPacketEventData udpEvent)
