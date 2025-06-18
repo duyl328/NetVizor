@@ -125,7 +125,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
     {
         var parser = new KernelTraceEventParser(_source);
 
-        // TCP连接事件
+        // TCP连接事件 ETW Event ID 12
         parser.TcpIpConnect += data =>
         {
             var tcpEvent = new TcpConnectionEventData
@@ -148,7 +148,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnNetworkEvent?.Invoke(tcpEvent);
         };
 
-        // TCP断开连接事件
+        // TCP断开连接事件 ETW Event ID 13 
         parser.TcpIpDisconnect += data =>
         {
             var tcpEvent = new TcpConnectionEventData
@@ -171,7 +171,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnNetworkEvent?.Invoke(tcpEvent);
         };
 
-        // TCP数据发送事件
+        // TCP数据发送事件 ETW Event ID 10
         parser.TcpIpSend += data =>
         {
             var tcpEvent = new TcpConnectionEventData
@@ -194,8 +194,8 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnTcpConnectionEvent?.Invoke(tcpEvent);
             OnNetworkEvent?.Invoke(tcpEvent);
         };
-
-        // TCP数据接收事件
+        
+        // TCP数据接收事件 ETW Event ID 11
         parser.TcpIpRecv += data =>
         {
             var tcpEvent = new TcpConnectionEventData
@@ -219,7 +219,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnNetworkEvent?.Invoke(tcpEvent);
         };
 
-        // UDP发送事件
+        // UDP发送事件 ETW Event ID 26
         parser.UdpIpSend += data =>
         {
             var udpEvent = new UdpPacketEventData
@@ -243,7 +243,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnNetworkEvent?.Invoke(udpEvent);
         };
 
-        // UDP接收事件
+        // UDP接收事件 ETW Event ID 26
         parser.UdpIpRecv += data =>
         {
             var udpEvent = new UdpPacketEventData
@@ -266,13 +266,17 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnUdpPacketEvent?.Invoke(udpEvent);
             OnNetworkEvent?.Invoke(udpEvent);
         };
-
+// 建议添加进程事件监控以获取完整进程信息
+        parser.ProcessStart += data => {
+            // 缓存进程信息，包括完整路径、命令行等
+        };
         // 通用事件处理器，用于其他网络事件
         _source.Dynamic.All += data =>
         {
             // 处理DNS、HTTP等其他网络事件
             ProcessDynamicEvent(data);
         };
+        
     }
 
     /// <summary>
