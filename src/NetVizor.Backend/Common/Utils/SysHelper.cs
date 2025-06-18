@@ -20,4 +20,10 @@ public static class SysHelper
         listener.Stop();
         return port;
     }
+    public static bool IsAdministrator()
+    {
+        var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var principal = new System.Security.Principal.WindowsPrincipal(identity);
+        return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+    }
 }

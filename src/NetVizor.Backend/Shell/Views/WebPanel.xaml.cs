@@ -10,6 +10,7 @@ using Common.Net.WebSocketConn;
 using Infrastructure.utils;
 using Utils.ETW;
 using Utils.ETW.Core;
+using Utils.ETW.Etw;
 using WinDivertNet.WinDivertWrapper;
 
 namespace Shell.Views;
@@ -25,7 +26,31 @@ public partial class WebPanel : UserControl
         InitWebView();
 
         // 注册管理 WebSocket 事件
-        WebSocketManger();
+        // WebSocketManger();
+
+        // ETW 信息获取
+        // 检查管理员权限
+        NewMethod();
+    }
+
+    private static async Task NewMethod()
+    {
+        if (!SysHelper.IsAdministrator())
+        {
+            Console.WriteLine("此程序需要管理员权限才能运行ETW监控！");
+            Console.WriteLine("请以管理员身份重新运行程序。");
+            Console.ReadKey();
+            return;
+        }
+
+        var example = new NetworkMonitorUsageExample();
+        example.RunExample();
+
+        // 创建监听实例
+        // var etwNetworkManger = new EtwNetworkManger();
+        // // 设置 ETW 监听
+        // etwNetworkManger.SetupEtwHandlers();
+        // etwNetworkManger.StartCapture();
     }
 
     private void WebSocketManger()
@@ -38,13 +63,10 @@ public partial class WebPanel : UserControl
             Console.WriteLine("开始测试");
 
             // 创建监听实例
-            var etwNetworkManger = new EtwNetworkManger();
+            // var etwNetworkManger = new EtwNetworkManger();
 
             // 设置 ETW 监听
-            etwNetworkManger.SetupEtwHandlers();
-
-            // 开始监听
-            etwNetworkManger.StartCapture();
+            // etwNetworkManger.Initialize();
         });
     }
 

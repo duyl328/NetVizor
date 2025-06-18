@@ -9,6 +9,9 @@ namespace Utils.ETW.Core;
 // ETW网络事件处理器
 public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisposable
 {
+    /// <summary>
+    /// 此代码需要管理员权限
+    /// </summary>
     private readonly TraceEventSession _session = new(sessionName);
     private readonly ETWTraceEventSource _source = new(sessionName, TraceEventSourceType.Session);
 
@@ -271,11 +274,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             // 缓存进程信息，包括完整路径、命令行等
         };
         // 通用事件处理器，用于其他网络事件
-        _source.Dynamic.All += data =>
-        {
-            // 处理DNS、HTTP等其他网络事件
-            ProcessDynamicEvent(data);
-        };
+        _source.Dynamic.All += ProcessDynamicEvent;
         
     }
 
