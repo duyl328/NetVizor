@@ -14,9 +14,9 @@
 [English](#english) | [中文](#chinese)
 </div>
 
-目前项目正在积极开发阶段, 在 `1.0` 版本前不保证项目可用性.
-
-The project is currently in active development, and there is no guarantee of project availability until the '1.0' release.
+> **目前项目正在积极开发阶段, 在 `1.0` 版本前不保证项目可用性.**
+> 
+> **The project is currently in active development, and there is no guarantee of project availability until the '1.0' release.**
 
 ---
 
