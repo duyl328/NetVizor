@@ -6,6 +6,8 @@ import type { subRoute, subRouteList } from '@/types/devIndex'
 import app from '@/constants/app'
 import { ref, onMounted } from 'vue'
 import { NButton } from 'naive-ui'
+import { NConfigProvider, NGlobalStyle } from 'naive-ui'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 // 是否展示生成路由
@@ -69,6 +71,10 @@ if (nodeEnv !== undefined && !StringUtils.isBlank(nodeEnv) && nodeEnv === app.DE
 }
 // endregion
 
+// 主题样式
+const themeStore = useThemeStore()
+const theme = themeStore.theme
+
 // 拖拽相关函数
 function startDrag(event) {
   if (event.target.closest('.drag-handle')) {
@@ -116,7 +122,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="app-wrapper">
+  <n-config-provider class="app-wrapper" :theme="theme">
+    <n-global-style />
+
     <!-- 可拖动的导航栏 -->
     <div
       v-if="isShowGenerateRouter"
@@ -129,11 +137,7 @@ onMounted(() => {
         <span class="drag-icon">≡</span>
       </div>
       <ul class="route-list">
-        <li
-          v-for="(subRoute, index) in subRouteLists"
-          :key="index"
-          class="route-item"
-        >
+        <li v-for="(subRoute, index) in subRouteLists" :key="index" class="route-item">
           <n-button
             :type="isActive(subRoute.path) ? 'primary' : 'default'"
             @click="listClickJump(subRoute)"
@@ -148,7 +152,7 @@ onMounted(() => {
     <div class="main-content">
       <router-view />
     </div>
-  </div>
+  </n-config-provider>
 </template>
 
 <style scoped>
@@ -163,7 +167,9 @@ onMounted(() => {
   z-index: 9999;
   background-color: white;
   border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   padding: 0.375rem;
   min-width: 300px;
   cursor: move;
@@ -195,6 +201,7 @@ onMounted(() => {
 .route-item {
   text-align: center;
   margin: 0.5rem;
+  background: green;
 }
 
 .main-content {

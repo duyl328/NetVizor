@@ -8,6 +8,7 @@ import router from './router'
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 import websocketPlugin from '@/plugins/websocketPlugin'
 import { useWebSocketStore } from '@/stores/websocketStore'
+import { createNaiveUI } from './naive'
 
 const app = createApp(App)
 
@@ -16,6 +17,9 @@ app.use(router)
 
 app.mount('#app')
 app.use(websocketPlugin)
+
+// 使用 主题 支持
+app.use(createNaiveUI())
 
 // 注册 C# 函数
 window.externalFunctions = {}
@@ -31,9 +35,10 @@ const intervalId = setInterval(() => {
     clearInterval(intervalId)
     return
   }
-
-  bridge.send('GetWebSocketPath', {}, (data) => {
-    webSocketStore.initialize(data)
-    console.log(data, '======')
-  })
+  if (bridge){
+    bridge.send('GetWebSocketPath', {}, (data) => {
+      webSocketStore.initialize(data)
+      console.log(data, '======')
+    })
+  }
 }, 500)

@@ -9,8 +9,8 @@ export class WebSocketManager {
   private subscriptions: Map<string, { interval: number; timer?: NodeJS.Timeout }> = new Map()
   private messageQueue: WebSocketMessage[] = []
   private state = WebSocketState.DISCONNECTED
-  private isReconnecting = false;
-  private heartbeatTimer: number | null = null;
+  private isReconnecting = false
+  private heartbeatTimer: number | null = null
 
   public isInitialized: boolean = false
   private heartbeatInterval = 30000
@@ -26,9 +26,11 @@ export class WebSocketManager {
   get connectionState() {
     return this.state
   }
+
   get reconnecting() {
-    return this.isReconnecting;
+    return this.isReconnecting
   }
+
   // 初始化WebSocket连接
   public initialize(url: string) {
     console.log('initialize', url)
@@ -53,7 +55,7 @@ export class WebSocketManager {
       // 重新激活订阅
       this.reactivateSubscriptions()
       // 启动心跳
-      this.startHeartbeat();
+      this.startHeartbeat()
     }
 
     this.socket.onmessage = (event) => {
@@ -92,11 +94,13 @@ export class WebSocketManager {
     if (isConnected1) return
     setTimeout(() => {
       if (!this.isManuallyClosed) {
-        bridge.send('GetWebSocketPath', {}, (data) => {
-          this.initialize(data)
-          console.log(data, '======')
-          this.retryConnect()
-        })
+        if (bridge) {
+          bridge.send('GetWebSocketPath', {}, (data) => {
+            this.initialize(data)
+            console.log(data, '======')
+            this.retryConnect()
+          })
+        }
       }
     }, delay)
   }
@@ -105,9 +109,9 @@ export class WebSocketManager {
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.send({ command: 'ping', data: null });
+        this.send({ command: 'ping', data: null })
       }
-    }, this.heartbeatInterval);
+    }, this.heartbeatInterval)
   }
 
   // 注册命令处理器
