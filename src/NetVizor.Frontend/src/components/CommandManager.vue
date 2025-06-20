@@ -4,6 +4,7 @@ import type { CommandType } from '@/types/command'
 import { logN } from '@/utils/logHelper/logUtils.ts'
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 import { useWebSocketStore } from '@/stores/websocketStore'
+import { NButton, NInput, NCheckbox } from 'naive-ui'
 
 // 传递参数
 const props = defineProps({
@@ -48,55 +49,56 @@ const invokeCommand = async (module: CommandType) => {
 </script>
 
 <template>
-  <div class="p-6 font-sans">
-    <div class="flex flex-wrap gap-6 w-full justify-center">
+  <div class="command-manager">
+    <div class="modules-container">
       <div
         v-for="(module, index) in modules"
         :key="index"
-        class="w-full border shadow-lg p-4 shadow-md rounded-md"
+        class="module-card"
       >
-        <h2 class="text-lg font-semibold mb-2 select-text pointer-events-auto">
+        <h2 class="module-name">
           {{ module.name }}
         </h2>
-        <p class="text-gray-600 mb-4">{{ module.description }}</p>
+        <p class="module-description">{{ module.description }}</p>
 
-        <div class="w-full flex flex-row">
+        <div class="params-container">
           <div
             v-for="(param, paramIndex) in module.params"
             :key="paramIndex"
-            class="flex flex-col gap-1 w-full m-2"
+            class="param-item"
           >
-            <label :for="`${module.name}-${param.name}`" class="block font-bold text-red-400">
+            <label :for="`${module.name}-${param.name}`" class="param-label">
               {{ param.label }}
             </label>
-            <input
+            <n-input
               v-if="param.type === 'text'"
               :id="`${module.name}-${param.name}`"
-              v-model="param.value"
+              v-model:value="param.value"
               :placeholder="param.placeholder"
               type="text"
-              class="w-full px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-300"
+              class="param-input"
             />
-            <input
+            <n-checkbox
               v-if="param.type === 'checkbox'"
               :id="`${module.name}-${param.name}`"
-              v-model="param.value"
-              type="checkbox"
-              class="rounded checked:bg-blue-500"
+              v-model:checked="param.value"
+              class="param-checkbox"
             />
           </div>
         </div>
 
-        <button
+        <n-button
+          type="primary"
+          block
           @click="invokeCommand(module)"
-          class="mt-4 w-full py-2 bg-blue-700 text-white rounded-md border-none cursor-pointer hover:bg-blue-600"
+          class="trigger-button"
         >
           触发 {{ module.name }}
-        </button>
+        </n-button>
 
-        <div v-if="module.result" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded-md">
-          <div class="font-semibold mb-2">结果</div>
-          <div class="text-sm whitespace-pre-wrap select-text pointer-events-auto">
+        <div v-if="module.result" class="result-container">
+          <div class="result-title">结果</div>
+          <div class="result-content">
             {{ module.result }}
           </div>
         </div>
@@ -104,3 +106,92 @@ const invokeCommand = async (module: CommandType) => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.command-manager {
+  padding: 1.5rem;
+  font-family: sans-serif;
+}
+
+.modules-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.module-card {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1rem;
+  border-radius: 0.375rem;
+}
+
+.module-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  user-select: text;
+  pointer-events: auto;
+}
+
+.module-description {
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.params-container {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+.param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0.5rem;
+}
+
+.param-label {
+  display: block;
+  font-weight: bold;
+  color: #ef4444;
+}
+
+.param-input {
+  width: 100%;
+}
+
+.param-checkbox {
+  margin-top: 0.25rem;
+}
+
+.trigger-button {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.result-container {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}
+
+.result-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.result-content {
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  user-select: text;
+  pointer-events: auto;
+}
+</style>

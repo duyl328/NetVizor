@@ -5,6 +5,7 @@ import StringUtils from '@/utils/stringUtils'
 import type { subRoute, subRouteList } from '@/types/devIndex'
 import app from '@/constants/app'
 import { ref, onMounted } from 'vue'
+import { NButton } from 'naive-ui'
 
 const router = useRouter()
 // 是否展示生成路由
@@ -115,37 +116,89 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative w-full h-full">
+  <div class="app-wrapper">
     <!-- 可拖动的导航栏 -->
     <div
       v-if="isShowGenerateRouter"
       ref="navRef"
-      class="fixed z-[9999] bg-white rounded-lg shadow-lg p-1.5 min-w-[300px] cursor-move"
+      class="nav-container"
       :style="{ left: `${navPosition.x}px`, top: `${navPosition.y}px` }"
       @mousedown="startDrag"
     >
-      <div class="bg-red:10 p-1.5 text-center border-b border-[#eee] text-lg cursor-move drag-handle">
-        <span class="inline-block px-2">≡</span>
+      <div class="drag-handle">
+        <span class="drag-icon">≡</span>
       </div>
-      <ul class="flex flex-wrap justify-start p-1.5 m-0">
+      <ul class="route-list">
         <li
           v-for="(subRoute, index) in subRouteLists"
           :key="index"
-          class="text-center m-2"
+          class="route-item"
         >
-          <el-button
-            :type="isActive(subRoute.path) ? 'primary' : ''"
+          <n-button
+            :type="isActive(subRoute.path) ? 'primary' : 'default'"
             @click="listClickJump(subRoute)"
           >
             {{ subRoute.displayName }}
-          </el-button>
+          </n-button>
         </li>
       </ul>
     </div>
 
     <!-- 展示主要内容 -->
-    <div class="w-full h-full">
+    <div class="main-content">
       <router-view />
     </div>
   </div>
 </template>
+
+<style scoped>
+.app-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.nav-container {
+  position: fixed;
+  z-index: 9999;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 0.375rem;
+  min-width: 300px;
+  cursor: move;
+}
+
+.drag-handle {
+  background-color: rgba(255, 0, 0, 0.1);
+  padding: 0.375rem;
+  text-align: center;
+  border-bottom: 1px solid #eeeeee;
+  font-size: 1.125rem;
+  cursor: move;
+}
+
+.drag-icon {
+  display: inline-block;
+  padding: 0 0.5rem;
+}
+
+.route-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  padding: 0.375rem;
+  margin: 0;
+  list-style: none;
+}
+
+.route-item {
+  text-align: center;
+  margin: 0.5rem;
+}
+
+.main-content {
+  width: 100%;
+  height: 100%;
+}
+</style>

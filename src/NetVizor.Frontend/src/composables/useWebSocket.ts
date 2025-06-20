@@ -393,6 +393,11 @@ export function useWebSocket(config?: WebSocketConfig) {
     // 订阅连接信息
     subscribeConnectionInfo(callback: SubscriptionCallback): () => void {
       return wsManager!.subscribe('network:connections', callback);
+    },
+
+    // ============================ 真实业务 ===============================
+    subscribeNetInfo(callback: SubscriptionCallback): () => void {
+      return wsManager!.subscribe('network:NetInfo', callback);
     }
   };
 

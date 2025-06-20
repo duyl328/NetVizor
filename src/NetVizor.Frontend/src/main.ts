@@ -1,13 +1,10 @@
 import './assets/main.css'
-import 'virtual:uno.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
 
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 import websocketPlugin from '@/plugins/websocketPlugin'
 import { useWebSocketStore } from '@/stores/websocketStore'
@@ -16,7 +13,6 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
-app.use(ElementPlus)
 
 app.mount('#app')
 app.use(websocketPlugin)

@@ -4,10 +4,9 @@ import PathUtils from '@/utils/pathUtils'
 import type { subRoute, subRouteList } from '@/types/devIndex'
 import StringUtils from '@/utils/stringUtils'
 import ArrayUtils from '@/utils/arrayUtils'
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import gsap from 'gsap'
 import { TextPlugin } from 'gsap/TextPlugin'
-import { computed } from 'vue'
 
 gsap.registerPlugin(TextPlugin)
 
@@ -94,46 +93,157 @@ function jumpToHome() {
 // endregion
 </script>
 <template>
-  <div class="h-auto select-none">
-    <h1 class="text-blue-900 font-bold font-sans text-[3rem] text-center py-10">Dev</h1>
-    <hr />
+  <div class="dev-container">
+    <h1 class="dev-title">Dev</h1>
+    <hr class="divider" />
 
-    <div v-if="routerListIsEmpty" class="bg-slate-50 overflow-hidden">
-      <div class="text-center font-serif text-red-500 text-[3.75rem] pb-[20rem]">
+    <div v-if="routerListIsEmpty" class="empty-container">
+      <div class="empty-content">
         无数据!
         <br />
-        <div
-          class="inline-flex translate-x-[-20rem] translate-y-10 text-[1.5rem] min-h-[10rem] h-[10rem] max-h-[10rem] text-blue-900 justify-center items-center"
-        >
-          <div class="h-[6rem] overflow-hidden text-center">
-            <p id="animated-text" class="text-[2.25rem]">9</p>
+        <div class="countdown-container">
+          <div class="countdown-number-wrapper">
+            <p id="animated-text" class="countdown-number">9</p>
           </div>
-          <p class="ml-4">
+          <p class="countdown-text">
             <span>秒后跳转至</span>
-            <span class="underline cursor-pointer ml-1.5" @click="jumpToHome">主页</span>
+            <span class="home-link" @click="jumpToHome">主页</span>
           </p>
         </div>
       </div>
     </div>
 
-    <div v-else class="flex flex-col mt-5 mx-auto w-9/12">
-      <ul class="hidden lg:block mr-20">
+    <div v-else class="content-wrapper">
+      <ul class="route-list">
         <li
           v-for="(subRoute, index) in subRouteLists"
           :key="index"
-          :class="[
-            'list-none p-1 m-1 transition-all duration-300 ease-in-out select-none cursor-pointer text-gray-700 hover:text-yellow-300',
-            isActive(subRoute.path) && 'font-bold underline text-[1.5rem]',
-          ]"
+          :class="['route-item', { active: isActive(subRoute.path) }]"
           @click="listClickJump(subRoute)"
         >
           {{ subRoute.displayName }}
         </li>
       </ul>
 
-      <main class="flex flex-col mt-5 overflow-y-auto">
+      <main class="main-content">
         <router-view />
       </main>
     </div>
   </div>
 </template>
+
+<style scoped>
+.dev-container {
+  height: auto;
+  user-select: none;
+}
+
+.dev-title {
+  color: #1e3a8a;
+  font-weight: bold;
+  font-family: sans-serif;
+  font-size: 3rem;
+  text-align: center;
+  padding: 2.5rem 0;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 0;
+}
+
+.empty-container {
+  background-color: #f8fafc;
+  overflow: hidden;
+}
+
+.empty-content {
+  text-align: center;
+  font-family: serif;
+  color: #ef4444;
+  font-size: 3.75rem;
+  padding-bottom: 20rem;
+}
+
+.countdown-container {
+  display: inline-flex;
+  transform: translate(-20rem, 2.5rem);
+  font-size: 1.5rem;
+  min-height: 10rem;
+  height: 10rem;
+  max-height: 10rem;
+  color: #1e3a8a;
+  justify-content: center;
+  align-items: center;
+}
+
+.countdown-number-wrapper {
+  height: 6rem;
+  overflow: hidden;
+  text-align: center;
+}
+
+.countdown-number {
+  font-size: 2.25rem;
+}
+
+.countdown-text {
+  margin-left: 1rem;
+}
+
+.home-link {
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 0.375rem;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+  margin-left: auto;
+  margin-right: auto;
+  width: 75%;
+}
+
+.route-list {
+  display: none;
+  margin-right: 5rem;
+  list-style: none;
+  padding: 0;
+}
+
+@media (min-width: 1024px) {
+  .route-list {
+    display: block;
+  }
+}
+
+.route-item {
+  list-style: none;
+  padding: 0.25rem;
+  margin: 0.25rem;
+  transition: all 0.3s ease-in-out;
+  user-select: none;
+  cursor: pointer;
+  color: #374151;
+}
+
+.route-item:hover {
+  color: #fbbf24;
+}
+
+.route-item.active {
+  font-weight: bold;
+  text-decoration: underline;
+  font-size: 1.5rem;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.25rem;
+  overflow-y: auto;
+}
+</style>

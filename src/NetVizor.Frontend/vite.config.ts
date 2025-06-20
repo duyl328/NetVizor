@@ -5,9 +5,8 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import AutoImport from 'unplugin-auto-import/vite'
+import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import UnoCSS from 'unocss/vite'
 
 
 export default defineConfig(({ mode }) => {
@@ -16,16 +15,22 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      vueJsx(),
-      vueDevTools(),
-      // Element 自动导入
       AutoImport({
-        resolvers: [ElementPlusResolver()],
+        imports: [
+          'vue',
+          {
+            'naive-ui': [
+              'useDialog',
+              'useMessage',
+              'useNotification',
+              'useLoadingBar'
+            ]
+          }
+        ]
       }),
       Components({
-        resolvers: [ElementPlusResolver()],
-      }),
-      UnoCSS()
+        resolvers: [NaiveUiResolver()]
+      })
     ],
     // 防止 Vite 掩盖 Rust 错误
     clearScreen: false,
