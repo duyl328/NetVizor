@@ -9,17 +9,24 @@ import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 import websocketPlugin from '@/plugins/websocketPlugin'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { createNaiveUI } from './naive'
+import { useThemeStore } from '@/stores/theme'
 
 const app = createApp(App)
-
 app.use(createPinia())
+
+
 app.use(router)
 
-app.mount('#app')
 app.use(websocketPlugin)
+
 
 // 使用 主题 支持
 app.use(createNaiveUI())
+
+// 这行代码会触发 store 的初始化，从而立即应用主题
+useThemeStore()
+
+app.mount('#app')
 
 // 注册 C# 函数
 window.externalFunctions = {}

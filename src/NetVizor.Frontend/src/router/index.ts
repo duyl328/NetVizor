@@ -10,6 +10,9 @@ import StringUtils from '@/utils/stringUtils'
 import PathUtils from '@/utils/pathUtils'
 import NotFound from '@/views/NotFoundView.vue'
 import AboutView from '@/views/AboutView.vue'
+import FirewallView from '@/views/FirewallView.vue'
+import AnalyseView from '@/views/AnalyseView.vue'
+import MonitorView from '@/views/MonitorView.vue'
 
 // 导入所有 .vue 文件
 const routes = import.meta.glob('@/views/dev/**/*.vue')
@@ -43,7 +46,7 @@ const router = createRouter({
       // component: HomeView,
       // children: children,
       // 重定向到主页
-      redirect: '/home',
+      redirect: '/monitor',
     },
     {
       path: '/home',
@@ -55,6 +58,24 @@ const router = createRouter({
           component: NotFound, // 任何其他路径都跳转到默认页面
         },
       ],
+    },
+    // 实时监控
+    {
+      path: '/monitor',
+      name: 'monitor',
+      component: MonitorView,
+    },
+    // 防火墙
+    {
+      path: '/firewall',
+      name: 'firewall',
+      component: FirewallView,
+    },
+    // 网络分析
+    {
+      path: '/analyse',
+      name: 'analyse',
+      component: AnalyseView,
     },
 
     {

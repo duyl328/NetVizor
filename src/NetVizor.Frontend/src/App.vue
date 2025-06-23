@@ -4,7 +4,7 @@ import PathUtils from '@/utils/pathUtils'
 import StringUtils from '@/utils/stringUtils'
 import type { subRoute, subRouteList } from '@/types/devIndex'
 import app from '@/constants/app'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, provide } from 'vue'
 import { NButton } from 'naive-ui'
 import { NConfigProvider, NGlobalStyle } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
@@ -13,11 +13,9 @@ const router = useRouter()
 // 是否展示生成路由
 const isShowGenerateRouter = ref(false)
 
-// 添加拖拽相关状态
-const isDragging = ref(false)
-const navPosition = ref({ x: 10, y: 10 }) // 默认位置
-const dragOffset = ref({ x: 0, y: 0 })
 const navRef = ref(null) // 用于获取导航栏元素
+
+console.log('App.Vue')
 
 // region 获取路由列表
 // 自动获取路由列表
@@ -73,7 +71,19 @@ if (nodeEnv !== undefined && !StringUtils.isBlank(nodeEnv) && nodeEnv === app.DE
 
 // 主题样式
 const themeStore = useThemeStore()
-const theme = themeStore.theme
+// 提供主题给子组件
+provide('theme', themeStore.theme)
+// 初始化主题
+onMounted(() => {
+  themeStore.initTheme()
+  // 标记页面已准备好，启用过渡动画
+  document.body.classList.add('theme-ready')
+})
+// region 拖拽 tab
+// 添加拖拽相关状态
+const isDragging = ref(false)
+const navPosition = ref({ x: 10, y: 10 }) // 默认位置
+const dragOffset = ref({ x: 0, y: 0 })
 
 // 拖拽相关函数
 function startDrag(event) {
@@ -108,6 +118,8 @@ function endDrag() {
   isDragging.value = false
 }
 
+// endregion
+
 // 添加全局事件监听
 onMounted(() => {
   window.addEventListener('mousemove', onDrag)
@@ -122,7 +134,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <n-config-provider class="app-wrapper" :theme="theme">
+  <n-config-provider
+    class="app-wrapper"
+    :theme-overrides="themeStore.themeOverrides"
+    :theme="themeStore.theme"
+  >
     <n-global-style />
 
     <!-- 可拖动的导航栏 -->

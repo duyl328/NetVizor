@@ -1,5 +1,29 @@
 @import './base.css';
 
+/* 在你的全局 CSS 文件中 */
+:root {
+  --bg-primary: #ffffff;
+  --text-primary: #000000;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+:root.dark {
+  --bg-primary: #0c0c0c;
+  --text-primary: #ffffff;
+}
+
+html, body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#app {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
 
 li{
   list-style: none;
