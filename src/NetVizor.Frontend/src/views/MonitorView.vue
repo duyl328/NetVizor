@@ -1,12 +1,9 @@
 <template>
-  <div ref="appContainer" class="app-container">
-    <!-- 顶部标题栏组件 -->
-    <TitleBar />
-
+  <div class="monitor-view">
     <!-- 主内容区域 - 可拖拽布局 -->
     <div class="main-content">
       <!-- 左侧边栏 -->
-      <div class="sidebar" :style="{ width: sidebarWidth + 'px' }">
+      <div class="sidebar scrollbar-primary scrollbar-thin" :style="{ width: sidebarWidth + 'px' }">
         <div class="sidebar-content">
           <div class="sidebar-header">
             <h3 class="sidebar-title">系统概览</h3>
@@ -110,7 +107,7 @@
                 <div class="table-column">流量</div>
               </div>
 
-              <div class="table-body">
+              <div class="table-body scrollbar-success scrollbar-glow">
                 <div
                   v-for="i in 15"
                   :key="i"
@@ -157,7 +154,7 @@
             </div>
           </div>
 
-          <div class="timeline-content">
+          <div class="timeline-content scrollbar-warning scrollbar-animated">
             <div class="events-container">
               <div
                 v-for="i in 12"
@@ -183,7 +180,7 @@
       </div>
 
       <!-- 右侧检查器面板 -->
-      <div class="inspector" :style="{ width: inspectorWidth + 'px' }">
+      <div class="inspector scrollbar-purple scrollbar-glow" :style="{ width: inspectorWidth + 'px' }">
         <div class="inspector-content">
           <div class="inspector-header">
             <h3 class="inspector-title">
@@ -289,38 +286,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { NButton, NInput, NIcon } from 'naive-ui'
 import { SearchOutline } from '@vicons/ionicons5'
-import { useThemeStore } from '@/stores/theme'
-import TitleBar from '@/components/TitleBar.vue'
-
-const themeStore = useThemeStore()
-const isDark = computed({
-  get: () => themeStore.isDark,
-  set: (val) => (themeStore.isDark = val),
-})
-
-// 引用app容器元素
-const appContainer = ref<HTMLElement | null>(null)
 
 // 响应式数据
-const currentView = ref('monitor')
 const searchQuery = ref('')
 
 // 布局尺寸控制
 const sidebarWidth = ref(300)
 const inspectorWidth = ref(350)
-const timelineHeight = ref(200)
+const timelineHeight = ref(500)
 const mainHeaderHeight = ref(80)
 
-// 最小尺寸限制
-const MIN_SIDEBAR_WIDTH = 250
-const MAX_SIDEBAR_WIDTH = 450
-const MIN_INSPECTOR_WIDTH = 300
-const MAX_INSPECTOR_WIDTH = 500
-const MIN_TIMELINE_HEIGHT = 150
-const MAX_TIMELINE_HEIGHT = 350
+// 调整分割条范围限制 - 放宽范围
+const MIN_SIDEBAR_WIDTH = 200
+const MAX_SIDEBAR_WIDTH = 600
+const MIN_INSPECTOR_WIDTH = 250
+const MAX_INSPECTOR_WIDTH = 650
+const MIN_TIMELINE_HEIGHT = 100
+const MAX_TIMELINE_HEIGHT = 800
 
 // 模拟数据
 const mockData = ref({
@@ -403,31 +388,15 @@ const stopResize = () => {
   document.body.style.userSelect = ''
 }
 
-// 方法
-const openSettings = () => {
-  console.log('打开设置')
-}
-
-const toggleDarkMode = () => {
-  isDark.value = !isDark.value
-  console.log('切换暗色模式:', isDark.value)
-}
-
-// 键盘快捷键 - 重置布局
+// 重置布局
 const resetLayout = () => {
   sidebarWidth.value = 300
-  inspectorWidth.value = 350
+  inspectorWidth.value = 450
   timelineHeight.value = 200
 }
 
-// 监听键盘事件和主题切换
+// 键盘快捷键
 onMounted(() => {
-  // 获取app容器元素引用
-  appContainer.value = document.querySelector('.app-container')
-
-  // 初始化主题类
-  updateThemeClass()
-
   const handleKeydown = (event: KeyboardEvent) => {
     if (event.ctrlKey && event.key === 'r') {
       event.preventDefault()
@@ -443,119 +412,27 @@ onMounted(() => {
     document.removeEventListener('mouseup', stopResize)
   })
 })
-
-// 监听主题变化并更新CSS类
-watch(isDark, () => {
-  nextTick(() => {
-    updateThemeClass()
-  })
-}, { immediate: true })
-
-// 更新主题CSS类
-const updateThemeClass = () => {
-  if (appContainer.value) {
-    if (isDark.value) {
-      appContainer.value.classList.add('dark-theme')
-    } else {
-      appContainer.value.classList.remove('dark-theme')
-    }
-  }
-}
 </script>
 
 <style scoped>
-/* 主题色彩变量 */
-.app-container {
-  /* 暗色主题 */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-quaternary: #475569;
-  --bg-overlay: rgba(15, 23, 42, 0.95);
-  --bg-glass: rgba(30, 41, 59, 0.8);
-  --bg-card: rgba(51, 65, 85, 0.5);
-  --bg-hover: rgba(59, 130, 246, 0.1);
-  --bg-selected: rgba(59, 130, 246, 0.2);
-
-  --text-primary: #f8fafc;
-  --text-secondary: #f1f5f9;
-  --text-tertiary: #e2e8f0;
-  --text-quaternary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-disabled: #64748b;
-
-  --border-primary: #334155;
-  --border-secondary: rgba(51, 65, 85, 0.3);
-  --border-tertiary: rgba(71, 85, 105, 0.3);
-  --border-hover: rgba(59, 130, 246, 0.5);
-  --border-focus: #3b82f6;
-
-  --accent-primary: #3b82f6;
-  --accent-secondary: #06b6d4;
-  --accent-success: #22c55e;
-  --accent-warning: #f59e0b;
-  --accent-error: #ef4444;
-  --accent-purple: #8b5cf6;
-
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-
-  --backdrop-blur: blur(20px);
-  --transition: all 0.2s ease;
-}
-
-/* 亮色主题变量 */
-.app-container:not(.dark-theme) {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --bg-quaternary: #e2e8f0;
-  --bg-overlay: rgba(255, 255, 255, 0.95);
-  --bg-glass: rgba(248, 250, 252, 0.8);
-  --bg-card: rgba(241, 245, 249, 0.8);
-  --bg-hover: rgba(59, 130, 246, 0.08);
-  --bg-selected: rgba(59, 130, 246, 0.15);
-
-  --text-primary: #0f172a;
-  --text-secondary: #1e293b;
-  --text-tertiary: #334155;
-  --text-quaternary: #475569;
-  --text-muted: #64748b;
-  --text-disabled: #94a3b8;
-
-  --border-primary: #e2e8f0;
-  --border-secondary: rgba(226, 232, 240, 0.8);
-  --border-tertiary: rgba(203, 213, 225, 0.6);
-  --border-hover: rgba(59, 130, 246, 0.3);
-  --border-focus: #3b82f6;
-
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-/* 根据主题状态添加类 */
-.app-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-  color: var(--text-primary);
-  user-select: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  transition: var(--transition);
-}
-
-/* 当暗色主题时添加 dark-theme 类 */
-.app-container:global(.dark-theme) {
-  /* 暗色主题的额外样式 */
+/* 监控视图容器 - 防止整体滚动 */
+.monitor-view {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 /* 主内容区域 */
 .main-content {
-  height: calc(100vh - 60px);
+  flex: 1;
   display: flex;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* 侧边栏 */
@@ -566,12 +443,14 @@ const updateThemeClass = () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .sidebar-content {
   padding: 24px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .sidebar-header {
@@ -684,6 +563,7 @@ const updateThemeClass = () => {
   transition: background-color 0.2s;
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .resize-handle-vertical:hover {
@@ -702,6 +582,7 @@ const updateThemeClass = () => {
   transition: background-color 0.2s;
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .resize-handle-horizontal:hover {
@@ -719,7 +600,9 @@ const updateThemeClass = () => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--bg-card);
+  overflow: hidden;
 }
 
 .main-header {
@@ -727,6 +610,7 @@ const updateThemeClass = () => {
   backdrop-filter: var(--backdrop-blur);
   border-bottom: 1px solid var(--border-primary);
   padding: 0 24px;
+  flex-shrink: 0;
 }
 
 .header-content {
@@ -776,6 +660,7 @@ const updateThemeClass = () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .connections-header {
@@ -785,6 +670,7 @@ const updateThemeClass = () => {
   align-items: center;
   justify-content: space-between;
   background: var(--bg-card);
+  flex-shrink: 0;
 }
 
 .connections-title {
@@ -812,12 +698,14 @@ const updateThemeClass = () => {
   flex: 1;
   overflow: hidden;
   padding: 0;
+  min-height: 0;
 }
 
 .table-container {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .table-header {
@@ -830,6 +718,7 @@ const updateThemeClass = () => {
   color: var(--text-quaternary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .table-column {
@@ -844,6 +733,7 @@ const updateThemeClass = () => {
 .table-body {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .table-row {
@@ -914,6 +804,7 @@ const updateThemeClass = () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .timeline-header {
@@ -923,6 +814,7 @@ const updateThemeClass = () => {
   align-items: center;
   justify-content: space-between;
   background: var(--bg-card);
+  flex-shrink: 0;
 }
 
 .timeline-title {
@@ -944,6 +836,7 @@ const updateThemeClass = () => {
   flex: 1;
   overflow-y: auto;
   padding: 12px 24px;
+  min-height: 0;
 }
 
 .events-container {
@@ -1029,6 +922,7 @@ const updateThemeClass = () => {
   backdrop-filter: var(--backdrop-blur);
   border-left: 1px solid var(--border-primary);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .inspector-content {
@@ -1042,6 +936,7 @@ const updateThemeClass = () => {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border-secondary);
   background: var(--bg-card);
+  flex-shrink: 0;
 }
 
 .inspector-title {
@@ -1057,6 +952,8 @@ const updateThemeClass = () => {
 .inspector-body {
   flex: 1;
   padding: 24px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .detail-section {
@@ -1244,51 +1141,6 @@ const updateThemeClass = () => {
   margin-top: 2px;
 }
 
-/* 滚动条样式 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-tertiary);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
-}
-
-/* 拖拽时的视觉反馈 */
-.resize-handle-vertical:active,
-.resize-handle-horizontal:active {
-  background-color: var(--accent-primary) !important;
-}
-
-/* 响应式调整 */
-@media (max-width: 1200px) {
-  .search-area {
-    width: 250px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 确保内容不会溢出 */
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.min-w-0 {
-  min-width: 0;
-}
-
 /* 自定义Naive UI组件样式 */
 :deep(.n-input .n-input__input-el) {
   background: var(--bg-card);
@@ -1314,91 +1166,20 @@ const updateThemeClass = () => {
   color: var(--text-secondary);
 }
 
-:deep(.n-button--primary-type) {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: white;
-}
-
-:deep(.n-button--primary-type:hover) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-}
-
-:deep(.n-button--info-type) {
-  background: var(--accent-secondary);
-  border-color: var(--accent-secondary);
-  color: white;
-}
-
-:deep(.n-button--info-type:hover) {
-  background: #0891b2;
-  border-color: #0891b2;
-}
-
-:deep(.n-button--warning-type) {
-  background: var(--accent-warning);
-  border-color: var(--accent-warning);
-  color: white;
-}
-
-:deep(.n-button--warning-type:hover) {
-  background: #d97706;
-  border-color: #d97706;
-}
-
-/* 主题切换过渡效果 */
-* {
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease,
-    color 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-/* 动态主题类切换 */
-.app-container {
-  &.dark-theme {
-    /* 暗色主题时的额外样式 */
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .search-area {
+    width: 250px;
   }
 
-  &:not(.dark-theme) {
-    /* 亮色主题时的额外样式 */
-    .chart-bar {
-      opacity: 0.9;
-    }
-
-    .status-dot {
-      box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
-    }
-
-    .app-icon {
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-    }
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-/* 主题切换过渡效果 - 只在页面加载完成后启用 */
-body.theme-ready * {
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease,
-    color 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-/* 初始加载时禁用所有过渡 */
-body:not(.theme-ready) * {
-  transition: none !important;
-}
-
-/* 针对拖拽操作的过渡保持独立 */
-.resize-handle-vertical,
-.resize-handle-horizontal,
-.table-row,
-.stat-card,
-.action-item,
-.event-item {
-  transition: var(--transition) !important;
+/* 拖拽时的视觉反馈 */
+.resize-handle-vertical:active,
+.resize-handle-horizontal:active {
+  background-color: var(--accent-primary) !important;
 }
 </style>

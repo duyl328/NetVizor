@@ -273,4 +273,16 @@ const openSettings = () => {
     display: none;
   }
 }
+
+/* 为特定组件添加过渡效果 */
+.n-tabs,
+.n-button,
+.n-input {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 确保 tabs 的所有子元素都有过渡 */
+.n-tabs * {
+  transition: inherit !important;
+}
 </style>

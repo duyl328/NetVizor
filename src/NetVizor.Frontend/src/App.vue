@@ -8,6 +8,7 @@ import { ref, onMounted, provide } from 'vue'
 import { NButton } from 'naive-ui'
 import { NConfigProvider, NGlobalStyle } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
+import MainLayout from '@/layouts/MainLayout.vue'
 
 const router = useRouter()
 // 是否展示生成路由
@@ -166,7 +167,13 @@ onMounted(() => {
 
     <!-- 展示主要内容 -->
     <div class="main-content">
-      <router-view />
+      <MainLayout>
+        <router-view v-slot="{ Component }">
+          <transition name="fade-slide" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </MainLayout>
     </div>
   </n-config-provider>
 </template>

@@ -28,3 +28,359 @@ html, body {
 li{
   list-style: none;
 }
+
+
+/* ==================== 全局滚动条样式 ==================== */
+/* ==================== 全局滚动条样式 ==================== */
+/* 放置在 src/styles/scrollbar.css 或 src/assets/styles/scrollbar.css */
+
+/* 基础滚动条样式 */
+* {
+  /* Firefox 滚动条样式 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+/* Webkit 滚动条整体 */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* 滚动条轨道 */
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 5px;
+  margin: 2px;
+}
+
+/* 滚动条滑块 - 增强黑暗模式下的可见性 */
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* 滚动条滑块悬停效果 - 更明显的反馈 */
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+/* 滚动条滑块激活效果 */
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.3);
+}
+
+/* 滚动条角落 */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ==================== 主题色滚动条样式 ==================== */
+/* ==================== 全局滚动条样式 ==================== */
+
+/* 基础滚动条配置 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.05);
+}
+
+/* Webkit 滚动条整体配置 */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* 滚动条轨道 */
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  margin: 2px;
+}
+
+/* 滚动条滑块 - 默认状态 */
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.25) 100%
+  );
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 滚动条滑块 - 悬停状态 */
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  transform: scaleY(1.05);
+}
+
+/* 滚动条滑块 - 激活状态 */
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scaleY(1.1);
+}
+
+/* 滚动条角落 */
+*::-webkit-scrollbar-corner {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ==================== 主题化滚动条变体 ==================== */
+
+/* 主题色滚动条 - 蓝色系 */
+.scrollbar-primary::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(99, 102, 241, 0.3) 0%,
+    rgba(99, 102, 241, 0.2) 50%,
+    rgba(99, 102, 241, 0.35) 100%
+  );
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.scrollbar-primary::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(99, 102, 241, 0.5) 0%,
+    rgba(99, 102, 241, 0.35) 50%,
+    rgba(99, 102, 241, 0.55) 100%
+  );
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* 成功色滚动条 - 绿色系 */
+.scrollbar-success::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 0.3) 0%,
+    rgba(34, 197, 94, 0.2) 50%,
+    rgba(34, 197, 94, 0.35) 100%
+  );
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.scrollbar-success::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 0.5) 0%,
+    rgba(34, 197, 94, 0.35) 50%,
+    rgba(34, 197, 94, 0.55) 100%
+  );
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* 警告色滚动条 - 橙色系 */
+.scrollbar-warning::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.3) 0%,
+    rgba(245, 158, 11, 0.2) 50%,
+    rgba(245, 158, 11, 0.35) 100%
+  );
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.scrollbar-warning::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.5) 0%,
+    rgba(245, 158, 11, 0.35) 50%,
+    rgba(245, 158, 11, 0.55) 100%
+  );
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* 紫色滚动条 */
+.scrollbar-purple::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(168, 85, 247, 0.3) 0%,
+    rgba(168, 85, 247, 0.2) 50%,
+    rgba(168, 85, 247, 0.35) 100%
+  );
+  border-color: rgba(168, 85, 247, 0.2);
+}
+
+.scrollbar-purple::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(168, 85, 247, 0.5) 0%,
+    rgba(168, 85, 247, 0.35) 50%,
+    rgba(168, 85, 247, 0.55) 100%
+  );
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+/* ==================== 尺寸变体 ==================== */
+
+/* 细滚动条 */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* 宽滚动条 */
+.scrollbar-wide::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+/* ==================== 浅色模式适配 ==================== */
+@media (prefers-color-scheme: light) {
+  * {
+    scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.08);
+  }
+
+  *::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.15) 0%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0.2) 50%,
+      rgba(0, 0, 0, 0.3) 100%
+    );
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.35) 0%,
+      rgba(0, 0, 0, 0.3) 50%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* ==================== 特殊状态 ==================== */
+
+/* 禁用状态 */
+.scrollbar-disabled::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.02) !important;
+  cursor: not-allowed;
+}
+
+/* 隐藏滚动条但保持滚动功能 */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==================== 动画增强 ==================== */
+
+/* 滚动时的轨道高亮效果 */
+@keyframes scrollTrackPulse {
+  0%, 100% {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  50% {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.scrollbar-animated::-webkit-scrollbar-track:hover {
+  animation: scrollTrackPulse 1.5s ease-in-out infinite;
+}
+
+/* 滑块的呼吸效果 */
+@keyframes thumbBreathe {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      0 0 8px rgba(255, 255, 255, 0.1);
+  }
+}
+
+.scrollbar-glow::-webkit-scrollbar-thumb:hover {
+  animation: thumbBreathe 2s ease-in-out infinite;
+}
+
+/* ==================== 使用说明（CSS 注释） ==================== */
+
+/*
+使用方法：
+
+1. 基础用法：
+   直接引入此 CSS 文件，所有元素将自动应用默认滚动条样式
+
+2. 主题化用法：
+   <div class="scrollbar-primary">...</div>    // 蓝色主题
+   <div class="scrollbar-success">...</div>    // 绿色主题
+   <div class="scrollbar-warning">...</div>    // 橙色主题
+   <div class="scrollbar-purple">...</div>     // 紫色主题
+
+3. 尺寸变体：
+   <div class="scrollbar-thin">...</div>       // 细滚动条
+   <div class="scrollbar-wide">...</div>       // 宽滚动条
+
+4. 特效增强：
+   <div class="scrollbar-animated">...</div>   // 动画效果
+   <div class="scrollbar-glow">...</div>       // 发光效果
+
+5. 组合使用：
+   <div class="scrollbar-primary scrollbar-wide scrollbar-glow">...</div>
+
+6. 隐藏滚动条：
+   <div class="scrollbar-hidden">...</div>
+
+注意：此样式自动适配浅色/深色模式
+*/
