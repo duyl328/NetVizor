@@ -1,5 +1,3 @@
-// 引入主题变量（放在其他样式之前）
-import './assets/theme-variables.css'
 import './assets/main.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

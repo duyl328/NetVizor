@@ -12,7 +12,7 @@ import NotFound from '@/views/NotFoundView.vue'
 import AboutView from '@/views/AboutView.vue'
 import FirewallView from '@/views/FirewallView.vue'
 import AnalyseView from '@/views/AnalyseView.vue'
-import MonitorView from '@/views/MonitorView.vue'
+import MonitorView from '@/views/MonitorView/index.vue'
 
 // 导入所有 .vue 文件
 const routes = import.meta.glob('@/views/dev/**/*.vue')

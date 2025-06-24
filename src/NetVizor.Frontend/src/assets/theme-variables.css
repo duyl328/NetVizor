@@ -2,8 +2,31 @@
 
 /* ==================== 主题切换的根选择器 ==================== */
 :root {
-  /* ========== 颜色定义 - 亮色主题（默认） ========== */
+  /* ========== 基础颜色定义 ========== */
+  /* Vue主题色板 */
+  --vt-c-white: #ffffff;
+  --vt-c-white-soft: #f8f8f8;
+  --vt-c-white-mute: #f2f2f2;
 
+  --vt-c-black: #181818;
+  --vt-c-black-soft: #222222;
+  --vt-c-black-mute: #282828;
+
+  --vt-c-indigo: #2c3e50;
+
+  /* 分割线颜色 */
+  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
+  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
+  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
+  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+
+  /* 文本颜色 */
+  --vt-c-text-light-1: var(--vt-c-indigo);
+  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
+  --vt-c-text-dark-1: var(--vt-c-white);
+  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+
+  /* ========== 颜色定义 - 亮色主题（默认） ========== */
   /* 背景色层级 */
   --bg-primary: #ffffff;           /* 主背景色 */
   --bg-secondary: #f8fafc;         /* 次级背景 */
@@ -47,6 +70,30 @@
   /* 其他效果 */
   --backdrop-blur: blur(20px);
   --transition: all 0.2s ease;
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.3s ease;
+
+  /* 滚动条颜色 - 亮色主题 */
+  --scrollbar-track-bg: rgba(0, 0, 0, 0.04);
+  --scrollbar-thumb-bg: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-bg-hover: rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb-bg-active: rgba(0, 0, 0, 0.35);
+  --scrollbar-thumb-border: rgba(0, 0, 0, 0.1);
+  --scrollbar-thumb-border-hover: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-border-active: rgba(0, 0, 0, 0.2);
+  --scrollbar-corner-bg: rgba(0, 0, 0, 0.04);
+
+  /* 语义化颜色变量（向后兼容）*/
+  --color-background: var(--bg-primary);
+  --color-background-soft: var(--bg-secondary);
+  --color-background-mute: var(--bg-tertiary);
+  --color-border: var(--border-primary);
+  --color-border-hover: var(--border-hover);
+  --color-heading: var(--text-primary);
+  --color-text: var(--text-secondary);
+
+  /* 布局 */
+  --section-gap: 160px;
 }
 
 /* ==================== 暗色主题 - .dark 类名方式 ==================== */
@@ -78,10 +125,29 @@
   --border-focus: #3b82f6;
 
   /* 阴影 - 暗色模式 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+  /* 滚动条颜色 - 暗色主题 */
+  --scrollbar-track-bg: rgba(255, 255, 255, 0.03);
+  --scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-bg-hover: rgba(255, 255, 255, 0.35);
+  --scrollbar-thumb-bg-active: rgba(255, 255, 255, 0.45);
+  --scrollbar-thumb-border: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-border-hover: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-border-active: rgba(255, 255, 255, 0.3);
+  --scrollbar-corner-bg: rgba(255, 255, 255, 0.03);
+
+  /* 语义化颜色变量（向后兼容）*/
+  --color-background: var(--bg-primary);
+  --color-background-soft: var(--bg-secondary);
+  --color-background-mute: var(--bg-tertiary);
+  --color-border: var(--border-primary);
+  --color-border-hover: var(--border-hover);
+  --color-heading: var(--text-primary);
+  --color-text: var(--text-secondary);
 }
 
 /* ==================== 暗色主题 - data-theme 属性方式（向后兼容） ==================== */
@@ -112,11 +178,86 @@
   --border-hover: rgba(59, 130, 246, 0.5);
   --border-focus: #3b82f6;
 
-  /* 阴影 - 暗色模式下的阴影更深 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  /* 阴影 - 暗色模式 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+  /* 滚动条颜色 - 暗色主题 */
+  --scrollbar-track-bg: rgba(255, 255, 255, 0.03);
+  --scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-bg-hover: rgba(255, 255, 255, 0.35);
+  --scrollbar-thumb-bg-active: rgba(255, 255, 255, 0.45);
+  --scrollbar-thumb-border: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-border-hover: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-border-active: rgba(255, 255, 255, 0.3);
+  --scrollbar-corner-bg: rgba(255, 255, 255, 0.03);
+
+  /* 语义化颜色变量（向后兼容）*/
+  --color-background: var(--bg-primary);
+  --color-background-soft: var(--bg-secondary);
+  --color-background-mute: var(--bg-tertiary);
+  --color-border: var(--border-primary);
+  --color-border-hover: var(--border-hover);
+  --color-heading: var(--text-primary);
+  --color-text: var(--text-secondary);
+}
+
+/* ==================== 媒体查询 - 系统主题偏好 ==================== */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    /* 背景色层级 - 暗色 */
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-quaternary: #475569;
+    --bg-overlay: rgba(15, 23, 42, 0.95);
+    --bg-glass: rgba(30, 41, 59, 0.8);
+    --bg-card: rgba(51, 65, 85, 0.5);
+    --bg-hover: rgba(59, 130, 246, 0.1);
+    --bg-selected: rgba(59, 130, 246, 0.2);
+
+    /* 文字色层级 - 暗色 */
+    --text-primary: #f8fafc;
+    --text-secondary: #f1f5f9;
+    --text-tertiary: #e2e8f0;
+    --text-quaternary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-disabled: #64748b;
+
+    /* 边框色层级 - 暗色 */
+    --border-primary: #334155;
+    --border-secondary: rgba(51, 65, 85, 0.3);
+    --border-tertiary: rgba(71, 85, 105, 0.3);
+    --border-hover: rgba(59, 130, 246, 0.5);
+    --border-focus: #3b82f6;
+
+    /* 阴影 - 暗色模式 */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+
+    /* 滚动条颜色 - 暗色主题 */
+    --scrollbar-track-bg: rgba(255, 255, 255, 0.03);
+    --scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb-bg-hover: rgba(255, 255, 255, 0.35);
+    --scrollbar-thumb-bg-active: rgba(255, 255, 255, 0.45);
+    --scrollbar-thumb-border: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb-border-hover: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb-border-active: rgba(255, 255, 255, 0.3);
+    --scrollbar-corner-bg: rgba(255, 255, 255, 0.03);
+
+    /* 语义化颜色变量（向后兼容）*/
+    --color-background: var(--bg-primary);
+    --color-background-soft: var(--bg-secondary);
+    --color-background-mute: var(--bg-tertiary);
+    --color-border: var(--border-primary);
+    --color-border-hover: var(--border-hover);
+    --color-heading: var(--text-primary);
+    --color-text: var(--text-secondary);
+  }
 }
 
 /* ==================== 主题切换过渡效果 ==================== */
