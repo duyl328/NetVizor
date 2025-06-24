@@ -1,0 +1,180 @@
+/* theme-variables.css - 统一的主题变量管理 */
+
+/* ==================== 主题切换的根选择器 ==================== */
+:root {
+  /* ========== 颜色定义 - 亮色主题（默认） ========== */
+
+  /* 背景色层级 */
+  --bg-primary: #ffffff;           /* 主背景色 */
+  --bg-secondary: #f8fafc;         /* 次级背景 */
+  --bg-tertiary: #f1f5f9;          /* 三级背景 */
+  --bg-quaternary: #e2e8f0;        /* 四级背景 */
+  --bg-overlay: rgba(255, 255, 255, 0.95);  /* 遮罩层 */
+  --bg-glass: rgba(248, 250, 252, 0.8);     /* 玻璃效果 */
+  --bg-card: rgba(241, 245, 249, 0.8);      /* 卡片背景 */
+  --bg-hover: rgba(59, 130, 246, 0.08);     /* 悬停背景 */
+  --bg-selected: rgba(59, 130, 246, 0.15);  /* 选中背景 */
+
+  /* 文字色层级 */
+  --text-primary: #0f172a;         /* 主文字色 */
+  --text-secondary: #1e293b;       /* 次级文字 */
+  --text-tertiary: #334155;        /* 三级文字 */
+  --text-quaternary: #475569;      /* 四级文字 */
+  --text-muted: #64748b;           /* 柔和文字 */
+  --text-disabled: #94a3b8;        /* 禁用文字 */
+
+  /* 边框色层级 */
+  --border-primary: #e2e8f0;
+  --border-secondary: rgba(226, 232, 240, 0.8);
+  --border-tertiary: rgba(203, 213, 225, 0.6);
+  --border-hover: rgba(59, 130, 246, 0.3);
+  --border-focus: #3b82f6;
+
+  /* 主题色 - 这些在明暗主题中保持一致 */
+  --accent-primary: #3b82f6;       /* 主要强调色 - 蓝色 */
+  --accent-secondary: #06b6d4;     /* 次要强调色 - 青色 */
+  --accent-success: #22c55e;       /* 成功 - 绿色 */
+  --accent-warning: #f59e0b;       /* 警告 - 橙色 */
+  --accent-error: #ef4444;         /* 错误 - 红色 */
+  --accent-purple: #8b5cf6;        /* 紫色 */
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* 其他效果 */
+  --backdrop-blur: blur(20px);
+  --transition: all 0.2s ease;
+}
+
+/* ==================== 暗色主题 - .dark 类名方式 ==================== */
+.dark {
+  /* 背景色层级 - 暗色 */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-quaternary: #475569;
+  --bg-overlay: rgba(15, 23, 42, 0.95);
+  --bg-glass: rgba(30, 41, 59, 0.8);
+  --bg-card: rgba(51, 65, 85, 0.5);
+  --bg-hover: rgba(59, 130, 246, 0.1);
+  --bg-selected: rgba(59, 130, 246, 0.2);
+
+  /* 文字色层级 - 暗色 */
+  --text-primary: #f8fafc;
+  --text-secondary: #f1f5f9;
+  --text-tertiary: #e2e8f0;
+  --text-quaternary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
+
+  /* 边框色层级 - 暗色 */
+  --border-primary: #334155;
+  --border-secondary: rgba(51, 65, 85, 0.3);
+  --border-tertiary: rgba(71, 85, 105, 0.3);
+  --border-hover: rgba(59, 130, 246, 0.5);
+  --border-focus: #3b82f6;
+
+  /* 阴影 - 暗色模式 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== 暗色主题 - data-theme 属性方式（向后兼容） ==================== */
+[data-theme="dark"] {
+  /* 背景色层级 - 暗色 */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-quaternary: #475569;
+  --bg-overlay: rgba(15, 23, 42, 0.95);
+  --bg-glass: rgba(30, 41, 59, 0.8);
+  --bg-card: rgba(51, 65, 85, 0.5);
+  --bg-hover: rgba(59, 130, 246, 0.1);
+  --bg-selected: rgba(59, 130, 246, 0.2);
+
+  /* 文字色层级 - 暗色 */
+  --text-primary: #f8fafc;
+  --text-secondary: #f1f5f9;
+  --text-tertiary: #e2e8f0;
+  --text-quaternary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
+
+  /* 边框色层级 - 暗色 */
+  --border-primary: #334155;
+  --border-secondary: rgba(51, 65, 85, 0.3);
+  --border-tertiary: rgba(71, 85, 105, 0.3);
+  --border-hover: rgba(59, 130, 246, 0.5);
+  --border-focus: #3b82f6;
+
+  /* 阴影 - 暗色模式下的阴影更深 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== 主题切换过渡效果 ==================== */
+* {
+  /* 确保所有元素都使用主题过渡 */
+  transition: background-color 0.2s ease,
+  border-color 0.2s ease,
+  color 0.2s ease;
+}
+
+/* 防止页面初始加载时的闪烁 */
+body:not(.theme-ready) * {
+  transition: none !important;
+}
+
+/* ==================== 应用主题到根元素 ==================== */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+}
+
+/* ==================== 工具类 ==================== */
+/* 快速应用背景色 */
+.bg-primary { background-color: var(--bg-primary); }
+.bg-secondary { background-color: var(--bg-secondary); }
+.bg-tertiary { background-color: var(--bg-tertiary); }
+.bg-quaternary { background-color: var(--bg-quaternary); }
+.bg-card { background-color: var(--bg-card); }
+.bg-glass { background-color: var(--bg-glass); }
+.bg-overlay { background-color: var(--bg-overlay); }
+
+/* 快速应用文字色 */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+.text-quaternary { color: var(--text-quaternary); }
+.text-muted { color: var(--text-muted); }
+.text-disabled { color: var(--text-disabled); }
+
+/* 快速应用边框 */
+.border-primary { border-color: var(--border-primary); }
+.border-secondary { border-color: var(--border-secondary); }
+.border-tertiary { border-color: var(--border-tertiary); }
+.border-hover { border-color: var(--border-hover); }
+.border-focus { border-color: var(--border-focus); }
+
+/* 快速应用主题色 */
+.accent-primary { color: var(--accent-primary); }
+.accent-secondary { color: var(--accent-secondary); }
+.accent-success { color: var(--accent-success); }
+.accent-warning { color: var(--accent-warning); }
+.accent-error { color: var(--accent-error); }
+.accent-purple { color: var(--accent-purple); }
+
+/* 快速应用阴影 */
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }

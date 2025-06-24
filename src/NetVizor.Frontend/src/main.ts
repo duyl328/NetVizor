@@ -1,3 +1,5 @@
+// 引入主题变量（放在其他样式之前）
+import './assets/theme-variables.css'
 import './assets/main.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -13,13 +15,8 @@ import { useThemeStore } from '@/stores/theme'
 
 const app = createApp(App)
 app.use(createPinia())
-
-
 app.use(router)
-
 app.use(websocketPlugin)
-
-
 // 使用 主题 支持
 app.use(createNaiveUI())
 
