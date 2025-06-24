@@ -154,7 +154,8 @@ const openSettings = () => {
 
 /* 顶部标题栏 */
 .title-bar {
-  height: 60px;
+  height: 100%;
+  min-height: 60px;
   border-bottom: 1px solid var(--border-primary);
   background: var(--bg-overlay);
   backdrop-filter: var(--backdrop-blur);

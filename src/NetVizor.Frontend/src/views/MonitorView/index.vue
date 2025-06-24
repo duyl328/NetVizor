@@ -12,6 +12,7 @@
 
       <!-- 中间主视图区域 -->
       <MonitorMainPanel
+        v-show="false"
         :headerHeight="mainHeaderHeight"
         :timelineHeight="timelineHeight"
         :searchQuery="searchQuery"
@@ -28,7 +29,11 @@
       </div>
 
       <!-- 右侧检查器面板 -->
-      <MonitorInspector :width="inspectorWidth" :selectedConnection="selectedConnection" />
+      <MonitorInspector
+        v-show="false"
+        :width="inspectorWidth"
+        :selectedConnection="selectedConnection"
+      />
     </div>
   </div>
 </template>
@@ -204,14 +209,11 @@ onMounted(() => {
 <style scoped>
 /* 监控视图容器 */
 .monitor-view {
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  position: fixed;
-  top: 0;
-  left: 0;
+  /*  overflow: hidden;*/
 }
 
 /* 主内容区域 */

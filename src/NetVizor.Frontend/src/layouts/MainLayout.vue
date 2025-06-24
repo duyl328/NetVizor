@@ -1,11 +1,12 @@
 <template>
   <div class="app-container">
     <!-- 顶部标题栏组件 -->
-    <TitleBar />
+    <TitleBar class="title-bar-style" />
 
     <!-- 路由视图区域 -->
-    <main>
-      <slot /> <!-- 页面内容会被插入到这里 -->
+    <main class="main">
+      <slot />
+      <!-- 页面内容会被插入到这里 -->
     </main>
   </div>
 </template>
@@ -29,6 +30,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 顶部 bar 高度 */
+.title-bar-style {
+  height: 60px;
+}
+
 /* 主容器样式 */
 .app-container {
   min-height: 100vh;
@@ -39,8 +45,13 @@ onMounted(() => {
 }
 
 /* 主内容区域 */
-main {
+.main {
   min-height: calc(100vh - 60px); /* 减去标题栏高度 */
+  height: calc(100vh - 60px);
+  width: 100vw;
+  position: fixed;
+  top: 60px;
+  left: 0;
 }
 
 /* 滚动条样式 - 使用 CSS 变量 */
