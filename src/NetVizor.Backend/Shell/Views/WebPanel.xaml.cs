@@ -11,7 +11,6 @@ using Infrastructure.utils;
 using Utils.ETW;
 using Utils.ETW.Core;
 using Utils.ETW.Etw;
-using WinDivertNet.WinDivertWrapper;
 
 namespace Shell.Views;
 
@@ -112,9 +111,9 @@ public partial class WebPanel : UserControl
                 case "GetAllTcpConnections":
                     NetUtils.GetAllTcpConnections();
                     break;
-                case "PacketSnifferStart":
-                    PacketSniffer.Start();
-                    break;
+                // case "PacketSnifferStart":
+                //     PacketSniffer.Start();
+                //     break;
                 case "GetWebSocketPath":
                     WebSocketPath();
                     break;

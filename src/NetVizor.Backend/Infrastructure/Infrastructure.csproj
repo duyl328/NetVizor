@@ -14,8 +14,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Common\Common.csproj" />
-      <ProjectReference Include="..\Utils.ETW\Utils.ETW.csproj" />
-      <ProjectReference Include="..\WinDivertNet\WinDivertNet.csproj" />
     </ItemGroup>
 
 </Project>

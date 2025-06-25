@@ -1,11 +1,17 @@
 ﻿using System.Configuration;
 using System.Data;
+using System.IO;
+using System.Net;
 using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 using Application.Utils;
 using Common;
 using Common.Logger;
+using Common.Net.HttpConn;
+using Common.Net.Models;
 using Common.Net.WebSocketConn;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
@@ -120,9 +126,76 @@ public partial class App : System.Windows.Application
         AppConfig.Instance.WebSocketPath = $"ws://127.0.0.1:{port}";
         Log.Information4Ctx($"服务启动在端口: {AppConfig.Instance.WebSocketPort}");
         Log.Information($"服务完整地址: {AppConfig.Instance.WebSocketPath}");
-        // TODO 2025年5月28日 22点25分 ：开启 Http 网络本地服务，提供网页访问    
 
         // 启动WebSocket服务器
         WebSocketManager.Instance.Start(AppConfig.Instance.WebSocketPath);
+
+        // 启动 http 服务
+        Task.Run(() => { _ = StartHttpServer(); });
+    }
+
+    private static async Task StartHttpServer()
+    {
+        // 开启 http 服务
+        var server = new HttpServer("http://localhost:8268/");
+        // 添加中间件
+        server.UseMiddleware(Middlewares.RequestLogging);
+        server.UseMiddleware(Middlewares.Cors);
+
+        // 添加路由
+        server.Get("/api",
+            async (context) => { await context.Response.WriteJsonAsync(new { message = "Hi!" }); });
+
+        // 订阅软件列表
+        server.Post("/api/subscribe", async (context) =>
+        {
+            // 正确的做法：只处理请求体数据
+            if (string.IsNullOrEmpty(context.RequestBody))
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = "请求体不能为空",
+                });
+                return;
+            }
+
+            // 解析请求数据
+            try
+            {
+                var request = context.GetRequestBody<string>();
+                Log.Warning(request);
+            }
+            catch (JsonException ex)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"请求数据格式错误: {ex.Message}",
+                });
+                return;
+            }
+
+            // 返回响应 - 只序列化纯数据对象
+            context.Response.StatusCode = 200;
+            await context.Response.WriteJsonAsync(new ResponseModel<string>
+            {
+                Success = true,
+                Data = "成功",
+                Message = "订阅成功",
+            });
+        });
+
+        // 启动服务器
+        try
+        {
+            await server.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Server error: {ex.Message}");
+        }
     }
 }

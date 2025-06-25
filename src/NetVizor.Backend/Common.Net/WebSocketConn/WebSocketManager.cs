@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text.Json;
+using System.Web;
 using Common.Logger;
 using Fleck;
 
@@ -13,7 +14,17 @@ public class WebSocketManager
     public static WebSocketManager Instance => _instance.Value;
 
     private WebSocketServer _server;
-    private readonly ConcurrentDictionary<Guid, IWebSocketConnection> _connections;
+
+    /// <summary>
+    /// 所有建立客户端连接
+    /// </summary>
+    private readonly ConcurrentDictionary<Guid, ClientConnection> _connections;
+
+    /// <summary>
+    /// 客户端私有 ID 与 socket id 对应表
+    /// </summary>
+    private readonly ConcurrentDictionary<string, Guid> _uuidToSocketId = new();
+
     private readonly object _lockObject = new();
     private bool _isStarted;
 
@@ -22,7 +33,7 @@ public class WebSocketManager
 
     private WebSocketManager()
     {
-        _connections = new ConcurrentDictionary<Guid, IWebSocketConnection>();
+        _connections = new ConcurrentDictionary<Guid, ClientConnection>();
         _messageHandlers = new ConcurrentDictionary<string, Func<CommandMessage, IWebSocketConnection, Task>>();
         RegisterDefaultHandlers();
     }
@@ -57,37 +68,93 @@ public class WebSocketManager
             _server?.Dispose();
             CloseAllSocketsAsync();
             _connections.Clear();
+            _uuidToSocketId.Clear();
             _isStarted = false;
             Log.Information("WebSocket服务器已停止");
         }
     }
+
     public async Task CloseAllSocketsAsync()
     {
         foreach (var webSocketConnection in _connections)
         {
-            webSocketConnection.Value.Close();
+            var socketConnection = webSocketConnection.Value.Socket;
+            socketConnection.Close();
+            var valueUuid = webSocketConnection.Value.Uuid;
+            _uuidToSocketId.TryRemove(valueUuid, out _);
         }
     }
-    // 连接建立
+
+    /// <summary>
+    /// 连接建立
+    /// </summary>
+    /// <param name="socket"></param>
     private void OnConnectionOpen(IWebSocketConnection socket)
     {
-        _connections.TryAdd(socket.ConnectionInfo.Id, socket);
-        Log.Information($"客户端连接: {socket.ConnectionInfo.Id}");
+        // 从Path中解析查询参数
+        var path = socket.ConnectionInfo.Path;
+        var userId = ExtractUserIdFromPath(path, "uuid");
 
-        // 发送欢迎消息
-        _ = SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
+        if (!string.IsNullOrEmpty(userId))
         {
-            Type = "welcome",
-            Success = true,
-            Message = "连接成功",
-            Data = new { ClientId = socket.ConnectionInfo.Id }
-        });
+            var conn = new ClientConnection
+            {
+                SocketId = socket.ConnectionInfo.Id,
+                Uuid = userId,
+                Socket = socket
+            };
+            _connections.TryAdd(socket.ConnectionInfo.Id, conn);
+            Log.Info($"客户端连接: {socket.ConnectionInfo.Id}, 私有 id : {userId}");
+            _uuidToSocketId.TryAdd(userId, socket.ConnectionInfo.Id);
+
+            // 发送欢迎消息
+            _ = SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
+            {
+                Type = "welcome",
+                Success = true,
+                Message = "连接成功",
+                Data = new { ClientId = socket.ConnectionInfo.Id }
+            });
+        }
+        else
+        {
+            Console.WriteLine("连接缺少userId参数");
+            socket.Close();
+        }
+    }
+
+    /// <summary>
+    /// 解析参数
+    /// </summary>
+    /// <param name="path">要解析的路径</param>
+    /// <param name="key">想要获取的目标 value </param>
+    /// <returns></returns>
+    private string? ExtractUserIdFromPath(string path, string key)
+    {
+        try
+        {
+            // 解析类似 "/?userId=123456" 的路径
+            if (path.Contains("?"))
+            {
+                var queryString = path.Split('?')[1];
+                var queryParams = HttpUtility.ParseQueryString(queryString);
+                return queryParams[key];
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"解析userId时出错: {ex.Message}");
+        }
+
+        return null;
     }
 
     // 连接关闭
     private void OnConnectionClose(IWebSocketConnection socket)
     {
-        _connections.TryRemove(socket.ConnectionInfo.Id, out _);
+        _connections.TryRemove(socket.ConnectionInfo.Id, out var conn);
+        if (conn?.Uuid != null)
+            _uuidToSocketId.TryRemove(conn.Uuid, out _);
         Log.Information($"客户端断开: {socket.ConnectionInfo.Id}");
     }
 
@@ -132,59 +199,6 @@ public class WebSocketManager
     // 注册默认处理器
     private void RegisterDefaultHandlers()
     {
-        // 获取网络状态
-        RegisterHandler("getNetworkStatus", async (cmd, socket) =>
-        {
-            // cmd.Command;
-            // 这里应该调用你的网络状态获取逻辑
-            var networkStatus = GetNetworkStatus();
-            await SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
-            {
-                Type = "networkStatus",
-                Success = true,
-                Data = networkStatus
-            });
-        });
-
-        // 获取防火墙规则
-        RegisterHandler("getFirewallRules", async (cmd, socket) =>
-        {
-            var firewallRules = GetFirewallRules();
-            await SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
-            {
-                Type = "firewallRules",
-                Success = true,
-                Data = firewallRules
-            });
-        });
-
-        // 添加防火墙规则
-        RegisterHandler("addFirewallRule", async (cmd, socket) =>
-        {
-            try
-            {
-                var ruleData = JsonSerializer.Deserialize<FirewallRuleMessage>(cmd.Data.ToString());
-                var success = AddFirewallRule(ruleData);
-
-                await SendToClient(socket.ConnectionInfo.Id, new ResponseMessage
-                {
-                    Type = "addFirewallRuleResponse",
-                    Success = success,
-                    Message = success ? "规则添加成功" : "规则添加失败"
-                });
-
-                // 广播更新给所有客户端
-                if (success)
-                {
-                    await BroadcastFirewallUpdate();
-                }
-            }
-            catch (Exception ex)
-            {
-                await SendErrorResponse(socket, $"添加规则失败: {ex.Message}");
-            }
-        });
-
         // 心跳检测
         RegisterHandler("ping", async (cmd, socket) =>
         {
@@ -197,7 +211,9 @@ public class WebSocketManager
         });
     }
 
-    // 发送消息给指定客户端
+    /// <summary>
+    /// 发送消息给指定客户端
+    /// </summary>
     public async Task<bool> SendToClient(Guid clientId, ResponseMessage message)
     {
         if (_connections.TryGetValue(clientId, out var socket))
@@ -205,7 +221,7 @@ public class WebSocketManager
             try
             {
                 var json = JsonSerializer.Serialize(message);
-                await socket.Send(json);
+                await socket.Socket.Send(json);
                 return true;
             }
             catch (Exception ex)
@@ -218,7 +234,28 @@ public class WebSocketManager
         return false;
     }
 
-    // 广播消息给所有客户端
+    /// <summary>
+    /// 发送消息给指定客户端
+    /// </summary>
+    public async Task<bool> SendToClient(string uuid, ResponseMessage message)
+    {
+        var tryGetValue = _uuidToSocketId.TryGetValue(uuid, out var socketId);
+        var ans = false;
+        if (tryGetValue)
+        {
+            ans = await SendToClient(socketId, message);
+        }
+        else
+        {
+            Log.Error4Ctx("无法获取有效客户端 uuid !");
+        }
+
+        return ans;
+    }
+
+    /// <summary>
+    /// 广播消息给所有客户端
+    /// </summary>
     public async Task BroadcastMessage(ResponseMessage message)
     {
         var json = JsonSerializer.Serialize(message);
@@ -226,7 +263,7 @@ public class WebSocketManager
 
         foreach (var connection in _connections.Values)
         {
-            tasks.Add(connection.Send(json));
+            tasks.Add(connection.Socket.Send(json));
         }
 
         try
@@ -311,4 +348,11 @@ public class WebSocketManager
     }
 
     #endregion
+}
+
+public class ClientConnection
+{
+    public Guid SocketId { get; init; }
+    public string Uuid { get; init; }
+    public IWebSocketConnection Socket { get; init; }
 }

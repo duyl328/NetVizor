@@ -1,4 +1,3 @@
-using Utils.ETW.Models;
 
 namespace Infrastructure.Models;
 

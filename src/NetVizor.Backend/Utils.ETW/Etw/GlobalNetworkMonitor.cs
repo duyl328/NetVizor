@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using Infrastructure.Models;
 using Utils.ETW.Models;
 
 namespace Utils.ETW.Etw;
@@ -63,7 +64,7 @@ public sealed class GlobalNetworkMonitor
     /// <summary>
     /// 更新应用程序信息
     /// </summary>
-    public void UpdateApplicationInfo(int processId, string appName, string appPath, string version = null)
+    public void UpdateApplicationInfo(int processId, ProgramInfo info)
     {
         _lock.EnterWriteLock();
         try
@@ -72,17 +73,13 @@ public sealed class GlobalNetworkMonitor
                 new ApplicationInfo
                 {
                     ProcessId = processId,
-                    ApplicationName = appName,
-                    ApplicationPath = appPath,
-                    Version = version,
+                    ProgramInfo = info,
                     FirstSeenTime = DateTime.Now,
                     LastUpdateTime = DateTime.Now
                 },
                 (key, existing) =>
                 {
                     existing.LastUpdateTime = DateTime.Now;
-                    if (!string.IsNullOrEmpty(version))
-                        existing.Version = version;
                     return existing;
                 });
         }
@@ -283,10 +280,7 @@ public sealed class GlobalNetworkMonitor
                 var appSnapshot = new ApplicationSnapshot
                 {
                     ProcessId = processId,
-                    ApplicationName = appInfo?.ApplicationName ?? processInfo.ProcessName,
-                    ApplicationPath = appInfo?.ApplicationPath ?? "Unknown",
-                    Version = appInfo?.Version ?? "Unknown",
-                    ProcessName = processInfo.ProcessName,
+                    ProgramInfo = appInfo?.ProgramInfo,
                     FirstSeenTime = processInfo.FirstSeenTime,
                     LastActiveTime = processInfo.LastActiveTime,
                     Connections = new List<ConnectionSnapshot>()
@@ -384,6 +378,15 @@ public sealed class GlobalNetworkMonitor
         {
             _lock.ExitReadLock();
         }
+    }
+
+    /// <summary>
+    /// 获取所有应用程序【有网络活动】
+    /// </summary>
+    /// <returns></returns>
+    public List<ProgramInfo> GetAllPrograms()
+    {
+        return _applications.Values.ToList().Select(applicationInfo => applicationInfo.ProgramInfo).ToList();
     }
 
     #endregion

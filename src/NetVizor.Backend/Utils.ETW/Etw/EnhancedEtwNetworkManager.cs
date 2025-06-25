@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using Infrastructure.utils;
 using Utils.ETW.Core;
 using Utils.ETW.Models;
 
@@ -13,13 +14,13 @@ public class EnhancedEtwNetworkManager : IDisposable
 {
     private readonly EtwNetworkCapture _networkCapture = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    
+
     // 进程信息缓存
     private readonly ConcurrentDictionary<int, ProcessInfo> _processCache = new();
-    
+
     // DNS反向查询任务队列
     private readonly ConcurrentQueue<string> _dnsLookupQueue = new();
-    
+
     private bool _isRunning = false;
 
     public EnhancedEtwNetworkManager()
@@ -34,13 +35,13 @@ public class EnhancedEtwNetworkManager : IDisposable
     {
         // TCP事件处理
         _networkCapture.OnTcpConnectionEvent += HandleTcpEvent;
-        
+
         // UDP事件处理
         _networkCapture.OnUdpPacketEvent += HandleUdpEvent;
-        
+
         // DNS事件处理
         _networkCapture.OnDnsEvent += HandleDnsEvent;
-        
+
         // HTTP事件处理
         _networkCapture.OnHttpEvent += HandleHttpEvent;
     }
@@ -51,17 +52,17 @@ public class EnhancedEtwNetworkManager : IDisposable
     public void StartMonitoring()
     {
         if (_isRunning) return;
-        
+
         _isRunning = true;
-        
+
         // 启动ETW捕获
         _networkCapture.StartCapture();
-        
+
         // 启动辅助任务
         Task.Run(() => ProcessApplicationInfoAsync(_cancellationTokenSource.Token));
         Task.Run(() => ProcessDnsLookupsAsync(_cancellationTokenSource.Token));
         Task.Run(() => CleanupExpiredDataAsync(_cancellationTokenSource.Token));
-        
+
         Console.WriteLine("增强型网络监控已启动");
     }
 
@@ -71,11 +72,11 @@ public class EnhancedEtwNetworkManager : IDisposable
     public void StopMonitoring()
     {
         if (!_isRunning) return;
-        
+
         _isRunning = false;
         _cancellationTokenSource.Cancel();
         _networkCapture.StopCapture();
-        
+
         Console.WriteLine("增强型网络监控已停止");
     }
 
@@ -87,7 +88,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         {
             // 更新进程信息
             UpdateProcessInfo(tcpEvent.ProcessId, tcpEvent.ProcessName, tcpEvent.ThreadId);
-            
+
             // 创建或更新网络模型
             var networkModel = new NetworkModel
             {
@@ -113,17 +114,17 @@ public class EnhancedEtwNetworkManager : IDisposable
                     networkModel.StartTime = tcpEvent.Timestamp;
                     networkModel.State = ConnectionState.Connecting;
                     break;
-                    
+
                 case "TcpDisconnect":
                     networkModel.EndTime = tcpEvent.Timestamp;
                     networkModel.State = ConnectionState.Disconnected;
                     break;
-                    
+
                 case "TcpSend":
                     networkModel.BytesSent = tcpEvent.DataLength;
                     networkModel.State = ConnectionState.Connected;
                     break;
-                    
+
                 case "TcpReceive":
                     networkModel.BytesReceived = tcpEvent.DataLength;
                     networkModel.State = ConnectionState.Connected;
@@ -132,7 +133,7 @@ public class EnhancedEtwNetworkManager : IDisposable
 
             // 更新到全局监控器
             GlobalNetworkMonitor.Instance.UpdateConnectionInfo(networkModel);
-            
+
             // 添加到DNS查询队列
             if (!IsPrivateIp(tcpEvent.DestinationIp))
             {
@@ -151,7 +152,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         {
             // 更新进程信息
             UpdateProcessInfo(udpEvent.ProcessId, udpEvent.ProcessName, udpEvent.ThreadId);
-            
+
             var networkModel = new NetworkModel
             {
                 ConnectType = ProtocolType.UDP,
@@ -181,7 +182,7 @@ public class EnhancedEtwNetworkManager : IDisposable
 
             // 更新到全局监控器
             GlobalNetworkMonitor.Instance.UpdateConnectionInfo(networkModel);
-            
+
             // 添加到DNS查询队列
             if (!IsPrivateIp(udpEvent.DestinationIp))
             {
@@ -236,13 +237,13 @@ public class EnhancedEtwNetworkManager : IDisposable
         {
             // 更新进程网络信息
             GlobalNetworkMonitor.Instance.UpdateProcessNetworkInfo(processId, processName, threadId);
-            
+
             // 如果进程信息不在缓存中，添加到缓存并获取详细信息
             if (!_processCache.ContainsKey(processId))
             {
-                _processCache.TryAdd(processId, new ProcessInfo 
-                { 
-                    ProcessId = processId, 
+                _processCache.TryAdd(processId, new ProcessInfo
+                {
+                    ProcessId = processId,
                     ProcessName = processName,
                     NeedsUpdate = true
                 });
@@ -266,31 +267,19 @@ public class EnhancedEtwNetworkManager : IDisposable
                 foreach (var kvp in _processCache.Where(p => p.Value.NeedsUpdate))
                 {
                     var processInfo = kvp.Value;
-                    
+
                     try
                     {
                         // 获取进程详细信息
-                        using (var process = Process.GetProcessById(processInfo.ProcessId))
-                        {
-                            var mainModule = process.MainModule;
-                            if (mainModule != null)
-                            {
-                                var appPath = mainModule.FileName;
-                                var appName = Path.GetFileNameWithoutExtension(appPath);
-                                var version = mainModule.FileVersionInfo.FileVersion;
-                                var company = mainModule.FileVersionInfo.CompanyName;
-                                
-                                // 更新应用程序信息
-                                GlobalNetworkMonitor.Instance.UpdateApplicationInfo(
-                                    processInfo.ProcessId, 
-                                    appName, 
-                                    appPath, 
-                                    version
-                                );
-                                
-                                processInfo.NeedsUpdate = false;
-                            }
-                        }
+                        var inspectProcess = SysInfoUtils.InspectProcess(processInfo.ProcessId);
+
+                        // 更新应用程序信息
+                        GlobalNetworkMonitor.Instance.UpdateApplicationInfo(
+                            processInfo.ProcessId,
+                            inspectProcess
+                        );
+
+                        processInfo.NeedsUpdate = false;
                     }
                     catch (Exception ex)
                     {
@@ -299,7 +288,7 @@ public class EnhancedEtwNetworkManager : IDisposable
                         processInfo.NeedsUpdate = false;
                     }
                 }
-                
+
                 await Task.Delay(1000, cancellationToken);
             }
             catch (Exception ex)
@@ -315,7 +304,7 @@ public class EnhancedEtwNetworkManager : IDisposable
     private async Task ProcessDnsLookupsAsync(CancellationToken cancellationToken)
     {
         var processedIps = new HashSet<string>();
-        
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -325,7 +314,7 @@ public class EnhancedEtwNetworkManager : IDisposable
                     if (!processedIps.Contains(ip))
                     {
                         processedIps.Add(ip);
-                        
+
                         try
                         {
                             // 执行反向DNS查询
@@ -366,13 +355,14 @@ public class EnhancedEtwNetworkManager : IDisposable
                 var snapshot = GlobalNetworkMonitor.Instance.GetSnapshot();
                 foreach (var app in snapshot.Applications)
                 {
-                    foreach (var conn in app.Connections.Where(c => !c.IsActive && c.Duration > TimeSpan.FromMinutes(5)))
+                    foreach (var conn in app.Connections.Where(c =>
+                                 !c.IsActive && c.Duration > TimeSpan.FromMinutes(5)))
                     {
                         // 这里可以添加清理逻辑
-                        Console.WriteLine($"清理过期连接: {app.ProcessName} - {conn.RemoteIp}:{conn.RemotePort}");
+                        Console.WriteLine($"清理过期连接: {app.ProgramInfo?.ProductName} - {conn.RemoteIp}:{conn.RemotePort}");
                     }
                 }
-                
+
                 await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
             }
             catch (Exception ex)
@@ -385,21 +375,21 @@ public class EnhancedEtwNetworkManager : IDisposable
     private bool IsPrivateIp(IPAddress ip)
     {
         if (ip == null) return true;
-        
+
         var bytes = ip.GetAddressBytes();
-        
+
         // 10.0.0.0 - 10.255.255.255
         if (bytes[0] == 10) return true;
-        
+
         // 172.16.0.0 - 172.31.255.255
         if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
-        
+
         // 192.168.0.0 - 192.168.255.255
         if (bytes[0] == 192 && bytes[1] == 168) return true;
-        
+
         // 127.0.0.0 - 127.255.255.255 (loopback)
         if (bytes[0] == 127) return true;
-        
+
         return false;
     }
 

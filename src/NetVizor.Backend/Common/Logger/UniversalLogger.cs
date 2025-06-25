@@ -398,6 +398,13 @@ public static class Log
         var str = GetLog(callerMemberName, Path.GetFileName(filePath), callerLineNumber, message);
         Debug(str);
     }
+    public static void Info(string message, params object[] args) => Information(message, args);
+
+    public static void Info4Ctx(string message, [CallerMemberName] string callerMemberName = "",
+        [CallerFilePath] string filePath = "", [CallerLineNumber] int callerLineNumber = 0)
+    {
+        Information4Ctx(message,callerMemberName,filePath,callerLineNumber);
+    }
 
     public static void Information(string message, params object[] args) => Instance.LogInformation(message, args);
 

@@ -1,4 +1,5 @@
 using System.Net;
+using Infrastructure.Models;
 using Utils.ETW.Models;
 
 namespace Utils.ETW.Etw;
@@ -9,11 +10,7 @@ namespace Utils.ETW.Etw;
 public class ApplicationInfo
 {
     public int ProcessId { get; set; }
-    public string ApplicationName { get; set; }
-    public string ApplicationPath { get; set; }
-    public string Version { get; set; }
-    public string Company { get; set; }
-    public string Description { get; set; }
+    public ProgramInfo ProgramInfo { get; set; }
     public DateTime FirstSeenTime { get; set; }
     public DateTime LastUpdateTime { get; set; }
 }
@@ -115,10 +112,7 @@ public class NetworkMonitorSnapshot
 public class ApplicationSnapshot
 {
     public int ProcessId { get; set; }
-    public string ApplicationName { get; set; }
-    public string ApplicationPath { get; set; }
-    public string Version { get; set; }
-    public string ProcessName { get; set; }
+    public ProgramInfo? ProgramInfo { get; set; }
     public DateTime FirstSeenTime { get; set; }
     public DateTime LastActiveTime { get; set; }
     public List<ConnectionSnapshot> Connections { get; set; }
