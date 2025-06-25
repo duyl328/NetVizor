@@ -28,23 +28,23 @@
 
   /* ========== 颜色定义 - 亮色主题（默认） ========== */
   /* 背景色层级 */
-  --bg-primary: #ffffff;           /* 主背景色 */
-  --bg-secondary: #f8fafc;         /* 次级背景 */
-  --bg-tertiary: #f1f5f9;          /* 三级背景 */
-  --bg-quaternary: #e2e8f0;        /* 四级背景 */
-  --bg-overlay: rgba(255, 255, 255, 0.95);  /* 遮罩层 */
-  --bg-glass: rgba(248, 250, 252, 0.8);     /* 玻璃效果 */
-  --bg-card: rgba(241, 245, 249, 0.8);      /* 卡片背景 */
-  --bg-hover: rgba(59, 130, 246, 0.08);     /* 悬停背景 */
-  --bg-selected: rgba(59, 130, 246, 0.15);  /* 选中背景 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-quaternary: #e2e8f0;
+  --bg-overlay: rgba(255, 255, 255, 0.95);
+  --bg-glass: rgba(248, 250, 252, 0.8);
+  --bg-card: rgba(241, 245, 249, 0.8);
+  --bg-hover: rgba(59, 130, 246, 0.08);
+  --bg-selected: rgba(59, 130, 246, 0.15);
 
   /* 文字色层级 */
-  --text-primary: #0f172a;         /* 主文字色 */
-  --text-secondary: #1e293b;       /* 次级文字 */
-  --text-tertiary: #334155;        /* 三级文字 */
-  --text-quaternary: #475569;      /* 四级文字 */
-  --text-muted: #64748b;           /* 柔和文字 */
-  --text-disabled: #94a3b8;        /* 禁用文字 */
+  --text-primary: #0f172a;
+  --text-secondary: #1e293b;
+  --text-tertiary: #334155;
+  --text-quaternary: #475569;
+  --text-muted: #64748b;
+  --text-disabled: #94a3b8;
 
   /* 边框色层级 */
   --border-primary: #e2e8f0;
@@ -54,12 +54,12 @@
   --border-focus: #3b82f6;
 
   /* 主题色 - 这些在明暗主题中保持一致 */
-  --accent-primary: #3b82f6;       /* 主要强调色 - 蓝色 */
-  --accent-secondary: #06b6d4;     /* 次要强调色 - 青色 */
-  --accent-success: #22c55e;       /* 成功 - 绿色 */
-  --accent-warning: #f59e0b;       /* 警告 - 橙色 */
-  --accent-error: #ef4444;         /* 错误 - 红色 */
-  --accent-purple: #8b5cf6;        /* 紫色 */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #06b6d4;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+  --accent-error: #ef4444;
+  --accent-purple: #8b5cf6;
 
   /* 阴影 */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -94,63 +94,16 @@
 
   /* 布局 */
   --section-gap: 160px;
+
+  /* 监控页面软件列表选中样式颜色 */
+  --monitor-bg-card-selected: rgba(var(--accent-primary), 0.05);
+  --monitor-accent-primary-alpha: rgba(var(--accent-primary), 0.2);
 }
 
-/* ==================== 暗色主题 - .dark 类名方式 ==================== */
-.dark {
-  /* 背景色层级 - 暗色 */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-quaternary: #475569;
-  --bg-overlay: rgba(15, 23, 42, 0.95);
-  --bg-glass: rgba(30, 41, 59, 0.8);
-  --bg-card: rgba(51, 65, 85, 0.5);
-  --bg-hover: rgba(59, 130, 246, 0.1);
-  --bg-selected: rgba(59, 130, 246, 0.2);
-
-  /* 文字色层级 - 暗色 */
-  --text-primary: #f8fafc;
-  --text-secondary: #f1f5f9;
-  --text-tertiary: #e2e8f0;
-  --text-quaternary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-disabled: #64748b;
-
-  /* 边框色层级 - 暗色 */
-  --border-primary: #334155;
-  --border-secondary: rgba(51, 65, 85, 0.3);
-  --border-tertiary: rgba(71, 85, 105, 0.3);
-  --border-hover: rgba(59, 130, 246, 0.5);
-  --border-focus: #3b82f6;
-
-  /* 阴影 - 暗色模式 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
-
-  /* 滚动条颜色 - 暗色主题 */
-  --scrollbar-track-bg: rgba(255, 255, 255, 0.03);
-  --scrollbar-thumb-bg: rgba(255, 255, 255, 0.2);
-  --scrollbar-thumb-bg-hover: rgba(255, 255, 255, 0.35);
-  --scrollbar-thumb-bg-active: rgba(255, 255, 255, 0.45);
-  --scrollbar-thumb-border: rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-border-hover: rgba(255, 255, 255, 0.2);
-  --scrollbar-thumb-border-active: rgba(255, 255, 255, 0.3);
-  --scrollbar-corner-bg: rgba(255, 255, 255, 0.03);
-
-  /* 语义化颜色变量（向后兼容）*/
-  --color-background: var(--bg-primary);
-  --color-background-soft: var(--bg-secondary);
-  --color-background-mute: var(--bg-tertiary);
-  --color-border: var(--border-primary);
-  --color-border-hover: var(--border-hover);
-  --color-heading: var(--text-primary);
-  --color-text: var(--text-secondary);
-}
-
-/* ==================== 暗色主题 - data-theme 属性方式（向后兼容） ==================== */
+/* ==================== 暗色主题变量定义 ==================== */
+/* 暗色主题 - .dark 类名方式 */
+.dark,
+  /* 暗色主题 - data-theme 属性方式（向后兼容） */
 [data-theme="dark"] {
   /* 背景色层级 - 暗色 */
   --bg-primary: #0f172a;
@@ -202,6 +155,10 @@
   --color-border-hover: var(--border-hover);
   --color-heading: var(--text-primary);
   --color-text: var(--text-secondary);
+
+  /* 监控页面软件列表选中样式颜色 */
+  --monitor-bg-card-selected: rgba(var(--accent-primary), 0.1);
+
 }
 
 /* ==================== 媒体查询 - 系统主题偏好 ==================== */
@@ -257,15 +214,16 @@
     --color-border-hover: var(--border-hover);
     --color-heading: var(--text-primary);
     --color-text: var(--text-secondary);
+
+    /* 监控页面软件列表选中样式颜色 */
+    --monitor-bg-card-selected: rgba(var(--accent-primary), 0.1);
   }
 }
 
 /* ==================== 主题切换过渡效果 ==================== */
 * {
   /* 确保所有元素都使用主题过渡 */
-  transition: background-color 0.2s ease,
-  border-color 0.2s ease,
-  color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 /* 防止页面初始加载时的闪烁 */

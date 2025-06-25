@@ -2,6 +2,8 @@ import { CommandHandler, SubscriptionRequest, WebSocketMessage, WebSocketRespons
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 import { ref } from 'vue'
 import { WebSocketState } from '@/types/websocket'
+import { logB } from '@/utils/logHelper/logUtils'
+import { useUuidStore } from '@/stores/uuidStore'
 
 export class WebSocketManager {
   private socket: WebSocket | null = null
@@ -33,15 +35,21 @@ export class WebSocketManager {
 
   // 初始化WebSocket连接
   public initialize(url: string) {
-    console.log('initialize', url)
+    logB.info('进入 web Socket 初始化, url:', url)
     if (url.trim() === '') return
     if (this.socket) return
     this.state = WebSocketState.CONNECTING
-    this.socket = new WebSocket(url)
+    const useUuidStore1 = useUuidStore()
+    logB.info('准备建立连接, uuid:', useUuidStore1.uuid)
+
+    const url1 = url + '?uuid=' + useUuidStore1.uuid
+    logB.info('拼接链接:', url1)
+    this.socket = new WebSocket(url1)
+
     this.isInitialized = true
 
     this.registerHandler('welcome', (data: WebSocketResponse) => {
-      if (data.success) console.log('WebSocket 连接建立成功 !! ')
+      if (data.success) logB.success('WebSocket 连接建立成功 !! ')
       else console.error('收到WbeSocket 欢迎信息，但是解析失败!!1')
     })
 
@@ -49,7 +57,7 @@ export class WebSocketManager {
       this.state = WebSocketState.CONNECTED
       this.isReconnecting = true
       this.reconnectAttempts = 0
-      console.log('WebSocket connected')
+      logB.success('WebSocket connected')
       // 发送队列中的消息
       this.flushMessageQueue()
       // 重新激活订阅

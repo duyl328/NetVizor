@@ -3,7 +3,7 @@
     <!-- 主内容区域 - 可拖拽布局 -->
     <div class="main-content">
       <!-- 左侧边栏 -->
-      <MonitorSidebar :width="sidebarWidth" :data="mockData" />
+      <MonitorSidebar :width="sidebarWidth"  />
 
       <!-- 左侧分割线 -->
       <div class="resize-handle-vertical" @mousedown="startResize('sidebar', $event)">
@@ -49,7 +49,7 @@ import MonitorMainPanel from './MonitorMainPanel.vue'
 import MonitorInspector from './MonitorInspector.vue'
 
 // 布局尺寸控制
-const sidebarWidth = ref(300)
+const sidebarWidth = ref(400)
 const inspectorWidth = ref(350)
 const timelineHeight = ref(500)
 const mainHeaderHeight = ref(80)
@@ -65,14 +65,6 @@ const MAX_TIMELINE_HEIGHT = 800
 // 响应式数据
 const searchQuery = ref('')
 const selectedConnection = ref<any>(null)
-
-// 模拟数据
-const mockData = ref({
-  activeConnections: 247,
-  processCount: 43,
-  networkSpeed: '5.2 MB/s',
-  ruleCount: 156,
-})
 
 const mockConnections = ref([
   {

@@ -10,6 +10,8 @@ import websocketPlugin from '@/plugins/websocketPlugin'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { createNaiveUI } from './naive'
 import { useThemeStore } from '@/stores/theme'
+import { useUuidStore } from '@/stores/uuidStore'
+import { logB } from '@/utils/logHelper/logUtils'
 
 const app = createApp(App)
 app.use(createPinia())
@@ -21,6 +23,14 @@ app.use(createNaiveUI())
 // 这行代码会触发 store 的初始化，从而立即应用主题
 useThemeStore()
 
+// 获取全局 UUID
+const useUuidStore1 = useUuidStore()
+logB.success('全局 ID :', useUuidStore1.uuid)
+
+// http 注册
+import httpPlugin from './plugins/http';
+app.use(httpPlugin);
+
 app.mount('#app')
 
 // 注册 C# 函数
@@ -31,16 +41,20 @@ const webSocketStore = useWebSocketStore()
 
 // 监听WebSocket地址
 const bridge = CSharpBridgeV2?.getBridge()
-
-const intervalId = setInterval(() => {
-  if (webSocketStore.isInitialized) {
-    clearInterval(intervalId)
-    return
-  }
-  if (bridge){
-    bridge.send('GetWebSocketPath', {}, (data) => {
-      webSocketStore.initialize(data)
-      console.log(data, '======')
-    })
-  }
-}, 500)
+if (bridge) {
+  const intervalId = setInterval(() => {
+    if (webSocketStore.isInitialized) {
+      clearInterval(intervalId)
+      return
+    }
+    if (bridge) {
+      bridge.send('GetWebSocketPath', {}, (data) => {
+        webSocketStore.initialize(data)
+        console.log(data, '======')
+      })
+    }
+  }, 500)
+} else {
+  // todo: 2025/6/25 08:32 开发阶段直接使用固定节点
+  webSocketStore.initialize('ws://127.0.0.1:8267')
+}
