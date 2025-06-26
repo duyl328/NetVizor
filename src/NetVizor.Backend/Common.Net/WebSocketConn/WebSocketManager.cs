@@ -154,7 +154,13 @@ public class WebSocketManager
     {
         _connections.TryRemove(socket.ConnectionInfo.Id, out var conn);
         if (conn?.Uuid != null)
+        {
             _uuidToSocketId.TryRemove(conn.Uuid, out _);
+            // 清空订阅
+            // conn.Uuid;
+            
+        }
+
         Log.Information($"客户端断开: {socket.ConnectionInfo.Id}");
     }
 

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 using System.Windows;
 using System.Windows.Threading;
 using Application.Utils;
@@ -130,6 +131,9 @@ public partial class App : System.Windows.Application
         // 启动WebSocket服务器
         WebSocketManager.Instance.Start(AppConfig.Instance.WebSocketPath);
 
+        // 开启 WebSocket 定时发送服务
+        DispatchEngine.Instance.ApplicationInfoDistribute();
+
         // 启动 http 服务
         Task.Run(() => { _ = StartHttpServer(); });
     }
@@ -164,8 +168,35 @@ public partial class App : System.Windows.Application
             // 解析请求数据
             try
             {
-                var request = context.GetRequestBody<string>();
-                Log.Warning(request);
+                // 直接使用已经读取的数据
+                string requestData = context.RequestBody;
+
+                // 打印原始数据用于调试
+                string? uuid = context.Request.Headers["uuid"];
+                Log.Warning($"接收到的数据: {requestData}, 用户 Id: {uuid}");
+
+                var subscriptionInfo = JsonSerializer.Deserialize<SubscriptionInfo>(requestData);
+                if (subscriptionInfo != null && !string.IsNullOrWhiteSpace(uuid))
+                {
+                    if (AppConfig.ApplicationInfoSubscribe.Equals(subscriptionInfo.SubscriptionType))
+                    {
+                        DispatchEngine.Instance.AddApplicationInfo(uuid, new DispatchModel
+                        {
+                            Interval = subscriptionInfo.Interval
+                        });
+                    }
+
+                    Log.Warning($"名称: {subscriptionInfo.SubscriptionType}");
+                    Log.Warning($"时间: {subscriptionInfo.Interval}");
+                }
+
+                // 打印字节数据用于调试编码问题
+                // var bytes = Encoding.UTF8.GetBytes(requestData);
+                // Log.Warning($"字节数据: {BitConverter.ToString(bytes)}");
+                //
+                // // 如果需要解析 URL 编码的数据
+                // var decodedData = HttpUtility.UrlDecode(requestData);
+                // Log.Warning($"解码后的数据: {decodedData}");
             }
             catch (JsonException ex)
             {

@@ -317,9 +317,26 @@ public static class Middlewares
     // CORS 中间件
     public static async Task<bool> Cors(HttpContext context)
     {
-        context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        
+        // 允许所有来源（生产环境应该指定具体域名）
+        string? origin = context.Request.Headers["Origin"];
+        context.Response.Headers.Add("Access-Control-Allow-Origin", !string.IsNullOrEmpty(origin) ? origin : "*");
+
+        // 允许的HTTP方法
+        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+
+        // 关键：允许的请求头（包括你的uuid头）
+        context.Response.Headers.Add("Access-Control-Allow-Headers", 
+            "Content-Type, Authorization, X-Requested-With, uuid, Accept, Origin");
+
+        // 允许携带凭据（如果需要）
+        context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
+
+        // 预检请求缓存时间（秒）
+        context.Response.Headers.Add("Access-Control-Max-Age", "86400");
+
+        // 允许前端访问的响应头
+        context.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Length, Content-Type");
 
         if (context.Request.HttpMethod == "OPTIONS")
         {

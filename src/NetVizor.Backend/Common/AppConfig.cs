@@ -31,4 +31,9 @@ public sealed class AppConfig
     /// WebSocket 连接地址
     /// </summary>
     public string? WebSocketPath { get; set; }
+
+    /// <summary>
+    /// 订阅字符串
+    /// </summary>
+    public static readonly string ApplicationInfoSubscribe= "ApplicationInfo";
 }
