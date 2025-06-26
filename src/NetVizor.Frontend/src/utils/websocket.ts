@@ -1,7 +1,12 @@
-import { CommandHandler, SubscriptionRequest, WebSocketMessage, WebSocketResponse } from './types'
+import {
+  CommandHandler,
+  SubscriptionRequest,
+  WebSocketMessage,
+  WebSocketResponse,
+  WebSocketState,
+} from '@/types/websocket'
 import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
-import { ref } from 'vue'
-import { WebSocketState } from '@/types/websocket'
+import { ref, Ref } from 'vue'
 import { logB } from '@/utils/logHelper/logUtils'
 import { useUuidStore } from '@/stores/uuidStore'
 
@@ -10,54 +15,85 @@ export class WebSocketManager {
   private handlers: Map<string, CommandHandler[]> = new Map()
   private subscriptions: Map<string, { interval: number; timer?: NodeJS.Timeout }> = new Map()
   private messageQueue: WebSocketMessage[] = []
-  private state = WebSocketState.DISCONNECTED
-  private isReconnecting = false
-  private heartbeatTimer: number | null = null
 
-  public isInitialized: boolean = false
+  // 响应式状态 - 修复：使用 shallowRef 或强制创建正确的 ref
+  public state: Ref<WebSocketState>
+  public isReconnecting: Ref<boolean>
+  public isConnected: Ref<boolean>
+  public isInit: Ref<boolean>
+  public isOpen: Ref<boolean>
+
+  constructor() {
+    // 初始化响应式状态
+    this.state = ref(WebSocketState.DISCONNECTED)
+    this.isReconnecting = ref(false)
+    this.isConnected = ref(false)
+    this.isInit = ref(false)
+    this.isOpen = ref(false)
+  }
+
+  private heartbeatTimer: NodeJS.Timeout | null = null
+  private reconnectTimer: NodeJS.Timeout | null = null
   private heartbeatInterval = 30000
+
   // 可配置参数
-  maxDelay = 3000 // 最大重连间隔 30s
-  baseDelay = 500 // 初始间隔 1s
+  maxDelay = 30000 // 最大重连间隔 30s
+  baseDelay = 500 // 初始间隔 0.5s
   reconnectAttempts = 0
   isManuallyClosed = false
-  // 定时检测
-  timedDetection = 0
 
-  // 获取状态的响应式引用
-  get connectionState() {
-    return this.state
-  }
-
-  get reconnecting() {
-    return this.isReconnecting
-  }
+  private url: string = ''
 
   // 初始化WebSocket连接
   public initialize(url: string) {
-    logB.info('进入 web Socket 初始化, url:', url)
+    logB.info('进入 WebSocket 初始化，url:', url)
     if (url.trim() === '') return
-    if (this.socket) return
-    this.state = WebSocketState.CONNECTING
-    const useUuidStore1 = useUuidStore()
-    logB.info('准备建立连接, uuid:', useUuidStore1.uuid)
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      logB.warning('WebSocket 已经连接，跳过初始化')
+      return
+    }
 
-    const url1 = url + '?uuid=' + useUuidStore1.uuid
-    logB.info('拼接链接:', url1)
-    this.socket = new WebSocket(url1)
+    this.url = url
+    this.state.value = WebSocketState.CONNECTING
+    this.isManuallyClosed = false
 
-    this.isInitialized = true
+    const uuidStore = useUuidStore()
+    logB.info('准备建立连接, uuid:', uuidStore.uuid)
 
+    const fullUrl = url + '?uuid=' + uuidStore.uuid
+    logB.info('拼接链接:', fullUrl)
+
+    try {
+      this.socket = new WebSocket(fullUrl)
+      this.isInit.value = true
+      this.setupSocketHandlers()
+    } catch (error) {
+      console.error('创建WebSocket失败:', error)
+      this.state.value = WebSocketState.ERROR
+      this.retryConnect()
+    }
+  }
+
+  private setupSocketHandlers() {
+    if (!this.socket) return
+
+    // 注册欢迎消息处理器
     this.registerHandler('welcome', (data: WebSocketResponse) => {
       if (data.success) logB.success('WebSocket 连接建立成功 !! ')
-      else console.error('收到WbeSocket 欢迎信息，但是解析失败!!1')
+      else console.error('收到WebSocket 欢迎信息，但是解析失败!!')
+    })
+    this.registerHandler('pong', (data: WebSocketResponse) => {
+      console.log("接收到服务器心跳");
     })
 
     this.socket.onopen = () => {
-      this.state = WebSocketState.CONNECTED
-      this.isReconnecting = true
+      this.state.value = WebSocketState.CONNECTED
+      this.isConnected.value = true
+      this.isReconnecting.value = false
       this.reconnectAttempts = 0
       logB.success('WebSocket connected')
+      this.isOpen.value = true
+
       // 发送队列中的消息
       this.flushMessageQueue()
       // 重新激活订阅
@@ -68,46 +104,75 @@ export class WebSocketManager {
 
     this.socket.onmessage = (event) => {
       try {
-        const message: WebSocketMessage = JSON.parse(event.data)
+        const message: WebSocketResponse = JSON.parse(event.data)
+        console.log('收到消息:', message)
         this.handleMessage(message)
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
       }
     }
 
-    this.socket.onclose = () => {
+    this.socket.onclose = (event) => {
+      this.isOpen.value = false
       this.socket = null
-      this.state = WebSocketState.DISCONNECTED
-      this.isReconnecting = false
-      console.log('WebSocket disconnected')
-      // 尝试重连
-      this.retryConnect()
+      this.state.value = WebSocketState.DISCONNECTED
+      this.isConnected.value = false
+      this.stopHeartbeat()
+
+      console.log('WebSocket disconnected', event.code, event.reason)
+
+      // 如果不是主动关闭，尝试重连
+      if (!this.isManuallyClosed) {
+        this.retryConnect()
+      }
     }
 
     this.socket.onerror = (error) => {
       console.error('WebSocket error:', error)
-      this.state = WebSocketState.ERROR
+      this.state.value = WebSocketState.ERROR
     }
   }
 
-  retryConnect() {
+  private retryConnect() {
+    // 如果已经在重连中，不重复执行
+    if (this.isReconnecting.value) {
+      logB.info('已经在重连中，跳过')
+      return
+    }
+
+    this.isReconnecting.value = true
     this.reconnectAttempts++
     const delay = Math.min(this.baseDelay * 2 ** (this.reconnectAttempts - 1), this.maxDelay)
 
-    console.log(`[WebSocket] Attempting reconnect in ${delay / 1000}s`)
-    const bridge = CSharpBridgeV2?.getBridge()
-    // 监听获取 WebSocket 链接
-    const isConnected1 = this.isReconnecting
-    console.log(isConnected1)
-    if (isConnected1) return
-    setTimeout(() => {
+    console.log(
+      `[WebSocket] Attempting reconnect in ${delay / 1000}s (attempt ${this.reconnectAttempts})`,
+    )
+
+    // 清除之前的重连定时器
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+    }
+
+    this.reconnectTimer = setTimeout(() => {
       if (!this.isManuallyClosed) {
+        const bridge = CSharpBridgeV2?.getBridge()
         if (bridge) {
-          bridge.send('GetWebSocketPath', {}, (data) => {
-            this.initialize(data)
-            console.log(data, '======')
-            this.retryConnect()
+          bridge.send('GetWebSocketPath', {}, (data: string) => {
+            if (data && data.trim()) {
+              this.initialize(data)
+            } else {
+              console.error('获取WebSocket路径失败')
+              this.isReconnecting.value = false
+              // 继续重试
+              this.retryConnect()
+            }
           })
+        } else if (this.url) {
+          // 如果没有bridge，使用原来的URL重连
+          this.initialize(this.url)
+        } else {
+          console.error('无法获取WebSocket连接地址')
+          this.isReconnecting.value = false
         }
       }
     }, delay)
@@ -115,11 +180,19 @@ export class WebSocketManager {
 
   // 心跳机制
   private startHeartbeat(): void {
+    this.stopHeartbeat() // 先清理之前的
     this.heartbeatTimer = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.send({ command: 'ping', data: null })
+      if (this.socket?.readyState === WebSocket.OPEN) {
+        this.send('ping', null)
       }
     }, this.heartbeatInterval)
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
   }
 
   // 注册命令处理器
@@ -149,9 +222,10 @@ export class WebSocketManager {
       timestamp: new Date().toISOString(),
     }
 
-    // 如果未连接或连接中，将消息加入队列
-    if (!this.isReconnecting || !this.socket) {
-      this.messageQueue.push(message)
+    // 如果未连接，将消息加入队列
+    if (!this.isConnected.value || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      this.messageQueue.push(message as WebSocketMessage)
+      logB.warning('WebSocket未连接，消息已加入队列:', command)
       return
     }
 
@@ -159,7 +233,7 @@ export class WebSocketManager {
       this.socket.send(JSON.stringify(message))
     } catch (error) {
       console.error('Error sending WebSocket message:', error)
-      this.messageQueue.push(message)
+      this.messageQueue.push(message as WebSocketMessage)
     }
   }
 
@@ -176,20 +250,26 @@ export class WebSocketManager {
   // 取消订阅
   public unsubscribe(type: string) {
     this.send('UNSUBSCRIBE', { type })
+
+    // 清除定时器
+    const sub = this.subscriptions.get(type)
+    if (sub?.timer) {
+      clearInterval(sub.timer)
+    }
     this.subscriptions.delete(type)
   }
 
   // 重新激活所有订阅
   private reactivateSubscriptions() {
-    this.subscriptions.forEach((_, type) => {
-      this.subscribe({ type })
+    this.subscriptions.forEach((sub, type) => {
+      this.subscribe({ type, interval: sub.interval })
     })
   }
 
   // 处理接收到的消息
   private handleMessage(message: WebSocketResponse) {
     const handlers = this.handlers.get(message.type)
-    if (handlers) {
+    if (handlers && handlers.length > 0) {
       handlers.forEach((handler) => {
         try {
           handler(message)
@@ -197,6 +277,8 @@ export class WebSocketManager {
           console.error(`Error handling command '${message.type}':`, error)
         }
       })
+    } else {
+      logB.warning(`No handler registered for message type: ${message.type}`)
     }
   }
 
@@ -212,13 +294,30 @@ export class WebSocketManager {
 
   // 关闭连接
   public disconnect() {
+    this.isManuallyClosed = true
+
+    // 清理定时器
+    this.stopHeartbeat()
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+
+    // 关闭socket
     if (this.socket) {
       this.socket.close()
       this.socket = null
     }
-    this.isReconnecting = false
-    this.state = WebSocketState.DISCONNECTED
 
-    this.isInitialized.value = false
+    // 重置状态
+    this.isReconnecting.value = false
+    this.isConnected.value = false
+    this.state.value = WebSocketState.DISCONNECTED
+    this.isInit.value = false
+    this.isOpen.value = false
+    this.reconnectAttempts = 0
+
+    // 清空消息队列
+    this.messageQueue = []
   }
 }

@@ -12,6 +12,7 @@ import { createNaiveUI } from './naive'
 import { useThemeStore } from '@/stores/theme'
 import { useUuidStore } from '@/stores/uuidStore'
 import { logB } from '@/utils/logHelper/logUtils'
+import { httpConfig } from '@/config/httpConfig'
 
 const app = createApp(App)
 app.use(createPinia())
@@ -26,10 +27,19 @@ useThemeStore()
 // 获取全局 UUID
 const useUuidStore1 = useUuidStore()
 logB.success('全局 ID :', useUuidStore1.uuid)
+// 设置所有请求头
+httpConfig.setConfig({
+  headers: {
+    uuid: useUuidStore1.uuid,
+  },
+})
 
 // http 注册
-import httpPlugin from './plugins/http';
-app.use(httpPlugin);
+import httpPlugin from './plugins/http'
+
+// httpPlugin.install(app)
+
+app.use(httpPlugin)
 
 app.mount('#app')
 

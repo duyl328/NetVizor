@@ -63,12 +63,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineEmits, defineProps } from 'vue'
+import { ref, defineEmits, defineProps, onMounted, watch } from 'vue'
 import { NIcon } from 'naive-ui'
+import { storeToRefs } from 'pinia'
 import { CheckmarkOutline, DesktopOutline } from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http.ts'
-import { ResponseModel } from '@/types/response'
-
+import { ResponseModel, SubscriptionInfo } from '@/types/response'
+import { useWebSocketStore,getIsConnected } from '@/stores/websocketStore'
 // 定义应用数据类型
 interface Application {
   id: string
@@ -87,11 +88,23 @@ interface Application {
 const emit = defineEmits<{
   'app-selected': [app: Application | null]
 }>()
-
-// 发送请求
-httpClient.post(`/subscribe`, '发送的测试例子').then((res:ResponseModel) => {
-  console.log(res)
-})
+const webSocketStore = useWebSocketStore()
+const { isOpen } = storeToRefs(webSocketStore)
+console.log(isOpen);
+watch(isOpen,(oldValue, newValue) => {
+  if (oldValue || newValue) {
+    console.log("触发！！！！！！！！");
+    // 发送请求【请求订阅软件列表】
+    // const subAppInfo: SubscriptionInfo = {
+    //   subscriptionType: 'ApplicationInfo',
+    //   interval: 1000,
+    // }
+    //
+    // httpClient.post(`/subscribe`, JSON.stringify(subAppInfo)).then((res: ResponseModel) => {
+    //   console.log(res)
+    // })
+  }
+},{immediate:true})
 
 // 选中的应用
 const selectedApp = ref<Application | null>(null)

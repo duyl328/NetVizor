@@ -1,19 +1,19 @@
 // types/websocket.ts
 
 // 基础消息格式
-export interface WebSocketMessage<T = unknown> {
-  type: string;
-  data: T;
-  requestId?: string; // 用于请求-响应匹配
-  timestamp?: number;
+export interface WebSocketMessage<T = any> {
+  command: string
+  data?: T
+  timestamp?: string
 }
 
 // 响应消息格式
-export interface WebSocketResponse<T = unknown> extends WebSocketMessage<T> {
-  success: boolean;
-  error?: string;
-  message?: string;
-  messageId?: string;
+export interface WebSocketResponse<T = any> {
+  type: string
+  data?: T
+  success?: boolean
+  error?: string
+  timestamp?: string
 }
 
 // 订阅相关
@@ -51,9 +51,9 @@ export interface CommandRequest {
 
 // WebSocket连接状态
 export enum WebSocketState {
+  DISCONNECTED = 'disconnected',
   CONNECTING = 'connecting',
   CONNECTED = 'connected',
-  DISCONNECTED = 'disconnected',
   ERROR = 'error'
 }
 
@@ -79,10 +79,20 @@ export interface WebSocketConfig {
 
 // 订阅请求格式
 export interface SubscriptionRequest {
-  type: string;
-  interval?: number; // 更新间隔(ms)
-  // 可添加其他订阅参数
+  type: string
+  interval?: number
+  params?: Record<string, any>
 }
+// 命令处理器类型
+export type CommandHandler = (data: WebSocketResponse) => void
 
+// WebSocket 配置选项
+export interface WebSocketOptions {
+  url: string
+  heartbeatInterval?: number
+  maxReconnectDelay?: number
+  baseReconnectDelay?: number
+  autoReconnect?: boolean
+}
 // 命令处理函数类型
 export type CommandHandler = (data: unknown) => void | Promise<void>;
