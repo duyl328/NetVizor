@@ -33,7 +33,11 @@
 
             <!-- 应用图标 -->
             <div class="app-icon">
-              <img v-if="!lodash.isEmpty(app.IconBase64)" :src="'data:image/jpeg;base64,' + app.IconBase64" :alt="app.ProductName" />
+              <img
+                v-if="!lodash.isEmpty(app.IconBase64)"
+                :src="'data:image/jpeg;base64,' + app.IconBase64"
+                :alt="app.ProductName"
+              />
               <div v-else>
                 <div class="app-icon-span" :style="getGradientColor(getFirstChar(app.ProductName))">
                   <span>{{ getFirstChar(app.ProductName) }}</span>
@@ -73,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, watch } from 'vue'
+import { ref, defineProps, watch, onMounted, onUnmounted } from 'vue'
 import { NIcon } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { DesktopOutline } from '@vicons/ionicons5'
@@ -85,7 +89,7 @@ import { ApplicationType } from '@/types/infoModel'
 import { convertFileSize } from '@/utils/fileUtil'
 import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
 import lodash from 'lodash'
-import {getGradientColor} from "@/utils/colorUtils"
+import { getGradientColor } from '@/utils/colorUtils'
 
 // Props
 const props = defineProps<{
@@ -102,25 +106,46 @@ const { appInfos } = storeToRefs(applicationStore)
 const selectedApp = ref<ApplicationType | null>(null)
 
 // 监听 WebSocket 连接状态
-watch(
-  isOpen,
-  (newValue) => {
-    if (newValue) {
-      // 发送请求【请求订阅软件列表】
-      const subAppInfo: SubscriptionInfo = {
-        subscriptionType: 'ApplicationInfo',
-        interval: 1000,
-      }
+onMounted(() => {
+  watch(
+    isOpen,
+    (newValue) => {
+      if (newValue) {
+        // 发送请求【请求订阅软件列表】
+        const subAppInfo: SubscriptionInfo = {
+          subscriptionType: 'ApplicationInfo',
+          interval: 1000,
+        }
 
-      httpClient.post(`/subscribe`, JSON.stringify(subAppInfo)).then((res: ResponseModel) => {
-        console.log('订阅应用信息成功:', res)
-      }).catch(err => {
-        console.error('订阅应用信息失败:', err)
-      })
-    }
-  },
-  { immediate: true },
-)
+        httpClient
+          .post(`/subscribe`, JSON.stringify(subAppInfo))
+          .then((res: ResponseModel) => {
+            console.log('订阅应用信息成功:', res)
+          })
+          .catch((err) => {
+            console.error('订阅应用信息失败:', err)
+          })
+      }
+    },
+    { immediate: true },
+  )
+})
+
+onUnmounted(() => {
+  const subAppInfo: SubscriptionInfo = {
+    subscriptionType: 'ApplicationInfo',
+    interval: 1,
+  }
+
+  httpClient
+    .post(`/unsubscribe`, JSON.stringify(subAppInfo))
+    .then((res: ResponseModel) => {
+      console.log('取消订阅应用信息成功:', res)
+    })
+    .catch((err) => {
+      console.error('取消订阅应用信息失败:', err)
+    })
+})
 
 // 格式化内存显示
 const formatMemory = (memoryInBytes: number): string => {
@@ -131,7 +156,7 @@ const formatMemory = (memoryInBytes: number): string => {
 // 获取软件名称的第一个字符
 const getFirstChar = (name: string): string => {
   if (lodash.isEmpty(name)) {
-    return "?"
+    return '?'
   }
   return name.charAt(0).toUpperCase()
 }
@@ -162,7 +187,7 @@ defineExpose({
     }
   },
   // 新增获取当前选中应用的方法
-  getSelectedApp: () => selectedApp.value
+  getSelectedApp: () => selectedApp.value,
 })
 </script>
 
@@ -525,7 +550,7 @@ defineExpose({
   }
   100% {
     filter: drop-shadow(1px 1px 3px rgba(0, 0, 0, 0.15))
-    drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+      drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
   }
 }
 
