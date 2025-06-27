@@ -35,7 +35,7 @@
             <div class="app-icon">
               <img v-if="!lodash.isEmpty(app.IconBase64)" :src="'data:image/jpeg;base64,' + app.IconBase64" :alt="app.ProductName" />
               <div v-else>
-                <div class="app-icon-span">
+                <div class="app-icon-span" :style="getGradientColor(getFirstChar(app.ProductName))">
                   <span>{{ getFirstChar(app.ProductName) }}</span>
                 </div>
               </div>
@@ -85,6 +85,7 @@ import { ApplicationType } from '@/types/infoModel'
 import { convertFileSize } from '@/utils/fileUtil'
 import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
 import lodash from 'lodash'
+import {getGradientColor} from "@/utils/colorUtils"
 
 // Props
 const props = defineProps<{
