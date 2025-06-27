@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Common;
+using Common.Logger;
 using Common.Net.WebSocketConn;
+using Infrastructure.Models;
 using Utils.ETW.Etw;
 
 namespace Shell;
@@ -50,12 +53,15 @@ public class DispatchEngine
         ApplicationInfoDispatch.TryRemove(clientId, out _);
     }
 
+    // 添加这个字段来保持Timer的强引用；Timer 对象没有强引用，会被垃圾回收器回收。
+    private Timer _applicationInfoTimer;
+
     /// <summary>
     /// 软件信息分发
     /// </summary>
     public void ApplicationInfoDistribute()
     {
-        var timer = new Timer(state =>
+        _applicationInfoTimer = new Timer(state =>
         {
             if (ApplicationInfoDispatch.Count == 0)
             {
@@ -64,7 +70,71 @@ public class DispatchEngine
 
             // 获取信息
             var programInfos = GlobalNetworkMonitor.Instance.GetAllPrograms();
-            var serialize = JsonSerializer.Serialize(programInfos);
+            var grouped = programInfos
+                .GroupBy(p => p.MainModulePath ?? p.ProcessName)
+                .ToDictionary(g => g.Key, g => g.ToList());
+            var list = grouped.Values.ToList();
+
+            var appInfoList = new List<ApplicationInfoModel>();
+            foreach (var infose in list)
+            {
+                if (infose.Count == 0)
+                {
+                    continue;
+                }
+
+                ApplicationInfoModel pi = new ApplicationInfoModel
+                {
+                    Id = "null"
+                };
+                var pids = new List<int>();
+                var startTime = DateTime.Now;
+                var isExit = true;
+                var useMemory = 0L;
+                var threadCount = 0;
+                var id = "";
+                foreach (var programInfo in infose)
+                {
+                    pi.ProcessName ??= programInfo.ProcessName;
+                    pi.ExitTime ??= programInfo.ExitTime;
+                    pi.ExitCode ??= programInfo.ExitCode;
+                    pi.MainModulePath ??= programInfo.MainModulePath;
+                    pi.MainModuleName ??= programInfo.MainModuleName;
+                    pi.FileDescription ??= programInfo.FileDescription;
+                    pi.ProductName ??= programInfo.ProductName;
+                    pi.CompanyName ??= programInfo.CompanyName;
+                    pi.Version ??= programInfo.Version;
+                    pi.LegalCopyright ??= programInfo.LegalCopyright;
+                    pi.IconBase64 = programInfo.IconBase64;
+                    id += programInfo.ProcessId;
+                    pids.Add(programInfo.ProcessId);
+                    // 只记录最早的时间
+                    if (programInfo.StartTime < startTime)
+                    {
+                        startTime = programInfo.StartTime;
+                    }
+
+                    // 全部退出才算退出
+                    if (!programInfo.HasExited && isExit)
+                    {
+                        isExit = programInfo.HasExited;
+                    }
+
+                    useMemory += programInfo.UseMemory;
+                    threadCount += programInfo.ThreadCount;
+                }
+
+                pi.Id = id;
+                pi.ProcessIds = pids;
+                pi.StartTime = startTime;
+                pi.HasExited = isExit;
+                pi.UseMemory = useMemory;
+                pi.ThreadCount = threadCount;
+
+                appInfoList.Add(pi);
+            }
+
+            var serialize = JsonSerializer.Serialize(appInfoList);
 
             foreach (var keyValuePair in ApplicationInfoDispatch)
             {
@@ -96,8 +166,9 @@ public class DispatchEngine
                     {
                         Success = true,
                         Data = serialize,
-                        Message = "数据发送",
-                        Timestamp = AppInfoLastSendTime[keyValuePair.Key]
+                        Message = "数据发送123",
+                        Timestamp = AppInfoLastSendTime[keyValuePair.Key],
+                        Type = AppConfig.ApplicationInfoSubscribe
                     };
                     WebSocketManager.Instance.SendToClient(keyValuePair.Key, rm);
                 }
@@ -127,4 +198,3 @@ public class SubscriptionInfo
     [JsonPropertyName("subscriptionType")] public string SubscriptionType { get; set; }
     [JsonPropertyName("interval")] public int Interval { get; set; }
 }
-

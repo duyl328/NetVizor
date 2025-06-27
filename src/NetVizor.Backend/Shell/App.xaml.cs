@@ -16,6 +16,7 @@ using Common.Net.Models;
 using Common.Net.WebSocketConn;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
+using Utils.ETW.Etw;
 
 namespace Shell;
 
@@ -131,11 +132,34 @@ public partial class App : System.Windows.Application
         // 启动WebSocket服务器
         WebSocketManager.Instance.Start(AppConfig.Instance.WebSocketPath);
 
+        // 订阅信息关闭服务
+        WebSocketManager.Instance.SubscribeConnectionClosed((args =>
+                {
+                    if (args.Uuid != null) DispatchEngine.Instance.DeleteApplicationInfo(args.Uuid);
+                }
+            ));
         // 开启 WebSocket 定时发送服务
         DispatchEngine.Instance.ApplicationInfoDistribute();
 
         // 启动 http 服务
         Task.Run(() => { _ = StartHttpServer(); });
+
+        // 开启监听
+        NewMethod();
+    }
+
+    private static async Task NewMethod()
+    {
+        if (!SysHelper.IsAdministrator())
+        {
+            Console.WriteLine("此程序需要管理员权限才能运行ETW监控！");
+            Console.WriteLine("请以管理员身份重新运行程序。");
+            Console.ReadKey();
+            return;
+        }
+
+        var _networkManager = new EnhancedEtwNetworkManager();
+        _networkManager.StartMonitoring();
     }
 
     private static async Task StartHttpServer()

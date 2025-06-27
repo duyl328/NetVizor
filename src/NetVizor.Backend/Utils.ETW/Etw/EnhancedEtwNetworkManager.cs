@@ -264,7 +264,8 @@ public class EnhancedEtwNetworkManager : IDisposable
         {
             try
             {
-                foreach (var kvp in _processCache.Where(p => p.Value.NeedsUpdate))
+                var keyValuePairs = _processCache.Where(p => p.Value.NeedsUpdate);
+                foreach (var kvp in keyValuePairs)
                 {
                     var processInfo = kvp.Value;
 

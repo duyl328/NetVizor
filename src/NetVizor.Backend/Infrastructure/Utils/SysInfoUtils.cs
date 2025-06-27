@@ -62,6 +62,12 @@ public static class SysInfoUtils
     /// <param name="pid"></param>
     /// <returns></returns>
     /// <exception cref="ExceptionExpand"></exception>
+    /// <summary>
+    /// 获取指定进程的信息
+    /// </summary>
+    /// <param name="pid"></param>
+    /// <returns></returns>
+    /// <exception cref="ExceptionExpand"></exception>
     public static ProgramInfo InspectProcess(int pid)
     {
         try
@@ -84,46 +90,184 @@ public static class SysInfoUtils
             var exeInfo = new ProgramInfo
             {
                 ProcessName = proc.ProcessName,
-                ProcessId = proc.Id,
-                StartTime = proc.StartTime,
-                HasExited = proc.HasExited,
-                ExitTime = proc.ExitTime,
-                ExitCode = proc.ExitCode,
-                UseMemory = proc.WorkingSet64,
-                ThreadCount = proc.Threads.Count,
-                MainModulePath = proc.MainModule?.FileName,
-                MainModuleName = proc.MainModule?.ModuleName
+                ProcessId = proc.Id
             };
 
-            // MainModule 是一个涉及 native 调用的属性，不建议频繁调用，尤其在枚举大量进程时可能影响性能。
+            // 安全获取启动时间
+            try
+            {
+                exeInfo.StartTime = proc.StartTime;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的启动时间: {ex.Message}");
+                exeInfo.StartTime = DateTime.MinValue;
+            }
 
+            // 安全获取退出状态
+            try
+            {
+                exeInfo.HasExited = proc.HasExited;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的退出状态: {ex.Message}");
+                exeInfo.HasExited = false;
+            }
+
+            // 安全获取内存使用量
+            try
+            {
+                exeInfo.UseMemory = proc.WorkingSet64;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的内存信息: {ex.Message}");
+                exeInfo.UseMemory = 0;
+            }
+
+            // 安全获取线程数
+            try
+            {
+                exeInfo.ThreadCount = proc.Threads.Count;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的线程信息: {ex.Message}");
+                exeInfo.ThreadCount = 0;
+            }
+
+            // 安全获取主模块信息
+            try
+            {
+                var mainModule = proc.MainModule;
+                exeInfo.MainModulePath = mainModule?.FileName;
+                exeInfo.MainModuleName = mainModule?.ModuleName;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的模块信息！: {ex.Message}");
+                exeInfo.MainModulePath = null;
+                exeInfo.MainModuleName = proc.ProcessName; // 使用进程名作为备用
+            }
+
+            // 只有在进程已退出时才能访问 ExitTime 和 ExitCode
+            if (exeInfo.HasExited)
+            {
+                try
+                {
+                    exeInfo.ExitTime = proc.ExitTime;
+                    exeInfo.ExitCode = proc.ExitCode;
+                }
+                catch (Exception ex)
+                {
+                    // 如果仍然无法获取退出信息，记录日志但不抛出异常
+                    Log.Information($"无法获取进程 {pid} 的退出信息: {ex.Message}");
+                    exeInfo.ExitTime = null;
+                    exeInfo.ExitCode = null;
+                }
+            }
+            else
+            {
+                // 对于正在运行的进程，设置默认值
+                exeInfo.ExitTime = null; // 或者 DateTime.MinValue，取决于 ProgramInfo.ExitTime 的类型
+                exeInfo.ExitCode = null; // 或者 0，取决于 ProgramInfo.ExitCode 的类型
+            }
+
+            // MainModule 是一个涉及 native 调用的属性，不建议频繁调用，尤其在枚举大量进程时可能影响性能。
             if (exeInfo.MainModulePath != null)
             {
-                var versionInfo = FileVersionInfo.GetVersionInfo(exeInfo.MainModulePath);
+                try
+                {
+                    var versionInfo = FileVersionInfo.GetVersionInfo(exeInfo.MainModulePath);
 
-                exeInfo.FileDescription = versionInfo.FileDescription;
-                exeInfo.ProductName = versionInfo.ProductName;
-                exeInfo.CompanyName = versionInfo.CompanyName;
-                exeInfo.Version = versionInfo.FileVersion;
-                exeInfo.LegalCopyright = versionInfo.LegalCopyright;
+                    exeInfo.FileDescription = versionInfo.FileDescription;
+                    exeInfo.ProductName = versionInfo.ProductName;
+                    exeInfo.CompanyName = versionInfo.CompanyName;
+                    exeInfo.Version = versionInfo.FileVersion;
+                    exeInfo.LegalCopyright = versionInfo.LegalCopyright;
+                }
+                catch (Exception ex)
+                {
+                    Log.Information($"无法获取进程 {pid} 的版本信息: {ex.Message}");
+                }
             }
 
             // 获取软件 Icon 【不一定存在】
-            var iconBase64 = IconHelper.GetIconBase64(exeInfo.MainModulePath);
-            exeInfo.IconBase64 = iconBase64;
+            try
+            {
+                var iconBase64 = IconHelper.GetIconBase64(exeInfo.MainModulePath);
+                exeInfo.IconBase64 = iconBase64;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的图标: {ex.Message}");
+            }
 
             #endregion
 
             ProcessCache.Instance.Set(pck, exeInfo);
             return exeInfo;
         }
-        // 只捕获能遇见的异常
+        // 捕获各种可能的异常
         catch (ArgumentException ex)
         {
             Log.Information($"获取进程信息失败：{ex.Message}");
             throw ExceptionEnum.ProcessGetException;
         }
+        catch (InvalidOperationException ex)
+        {
+            Log.Information($"进程 {pid} 已退出或无法访问：{ex.Message}");
+            throw ExceptionEnum.ProcessGetException;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            Log.Information($"无权限访问进程 {pid}：{ex.Message}");
+            throw ExceptionEnum.ProcessGetException;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Log.Information($"拒绝访问进程 {pid}：{ex.Message}");
+            throw ExceptionEnum.ProcessGetException;
+        }
+        catch (Exception ex)
+        {
+            Log.Information($"获取进程 {pid} 信息时发生未知错误：{ex.Message}");
+            throw ExceptionEnum.ProcessGetException;
+        }
     }
+
+    /// <summary>
+    /// 获取程序路径（名称）
+    /// </summary>
+    /// <param name="pid"></param>
+    /// <returns></returns>
+    public static string GetProcessPath(int pid)
+    {
+        var proc = Process.GetProcessById(pid);
+        var mainModule = proc.MainModule;
+        if (mainModule == null)
+        {
+            return proc.ProcessName;
+        }
+        else
+        {
+            return mainModule.FileName;
+        }
+    }
+    // WMI 查询（能拿到路径，但性能稍差）
+    // static string GetProcessPathWmi(int pid)
+    //  {
+    //      using var searcher = new ManagementObjectSearcher(
+    //          $"SELECT ExecutablePath FROM Win32_Process WHERE ProcessId = {pid}");
+    //
+    //      foreach (ManagementObject obj in searcher.Get())
+    //      {
+    //          return obj["ExecutablePath"]?.ToString();
+    //      }
+    //
+    //      return null;
+    //  }
 
     private static string FormatBytes(long bytes)
     {

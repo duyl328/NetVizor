@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Infrastructure.Models;
+using Infrastructure.utils;
 using Utils.ETW.Models;
 
 namespace Utils.ETW.Etw;

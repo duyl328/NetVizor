@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Common.Net\Common.Net.csproj" />
       <ProjectReference Include="..\Utils.ETW\Utils.ETW.csproj" />
     </ItemGroup>
 
