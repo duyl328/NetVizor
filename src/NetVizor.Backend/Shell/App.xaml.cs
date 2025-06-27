@@ -132,7 +132,7 @@ public partial class App : System.Windows.Application
         // 启动WebSocket服务器
         WebSocketManager.Instance.Start(AppConfig.Instance.WebSocketPath);
 
-        // 订阅信息关闭服务
+        // 订阅 websocket 关闭服务
         WebSocketManager.Instance.SubscribeConnectionClosed((args =>
                 {
                     if (args.Uuid != null) DispatchEngine.Instance.DeleteApplicationInfo(args.Uuid);
@@ -174,7 +174,7 @@ public partial class App : System.Windows.Application
         server.Get("/api",
             async (context) => { await context.Response.WriteJsonAsync(new { message = "Hi!" }); });
 
-        // 订阅软件列表
+        // 订阅某信息
         server.Post("/api/subscribe", async (context) =>
         {
             // 正确的做法：只处理请求体数据
@@ -213,14 +213,6 @@ public partial class App : System.Windows.Application
                     Log.Warning($"名称: {subscriptionInfo.SubscriptionType}");
                     Log.Warning($"时间: {subscriptionInfo.Interval}");
                 }
-
-                // 打印字节数据用于调试编码问题
-                // var bytes = Encoding.UTF8.GetBytes(requestData);
-                // Log.Warning($"字节数据: {BitConverter.ToString(bytes)}");
-                //
-                // // 如果需要解析 URL 编码的数据
-                // var decodedData = HttpUtility.UrlDecode(requestData);
-                // Log.Warning($"解码后的数据: {decodedData}");
             }
             catch (JsonException ex)
             {
@@ -242,6 +234,64 @@ public partial class App : System.Windows.Application
                 Message = "订阅成功",
             });
         });
+
+        // 取消订阅
+        server.Post("/api/unsubscribe", async (context) =>
+        {
+            // 正确的做法：只处理请求体数据
+            if (string.IsNullOrEmpty(context.RequestBody))
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = "请求体不能为空",
+                });
+                return;
+            }
+
+            // 解析请求数据
+            try
+            {
+                // 直接使用已经读取的数据
+                string requestData = context.RequestBody;
+
+                // 打印原始数据用于调试
+                string? uuid = context.Request.Headers["uuid"];
+                Log.Warning($"接收到的数据: {requestData}, 用户 Id: {uuid}");
+
+                var subscriptionInfo = JsonSerializer.Deserialize<SubscriptionInfo>(requestData);
+                if (subscriptionInfo != null && !string.IsNullOrWhiteSpace(uuid))
+                {
+                    if (AppConfig.ApplicationInfoSubscribe.Equals(subscriptionInfo.SubscriptionType))
+                    {
+                        DispatchEngine.Instance.DeleteApplicationInfo(uuid);
+                    }
+
+                    Log.Warning($"取消订阅的 名称: {subscriptionInfo.SubscriptionType}");
+                }
+            }
+            catch (JsonException ex)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"请求数据格式错误: {ex.Message}",
+                });
+                return;
+            }
+
+            // 返回响应 - 只序列化纯数据对象
+            context.Response.StatusCode = 200;
+            await context.Response.WriteJsonAsync(new ResponseModel<string>
+            {
+                Success = true,
+                Data = "成功",
+                Message = "取消订阅成功",
+            });
+        });
+
 
         // 启动服务器
         try
