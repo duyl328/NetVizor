@@ -12,7 +12,6 @@
 
       <!-- 中间主视图区域 -->
       <MonitorMainPanel
-        v-show="false"
         :headerHeight="mainHeaderHeight"
         :timelineHeight="timelineHeight"
         :searchQuery="searchQuery"

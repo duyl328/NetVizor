@@ -18,10 +18,16 @@
 
       <!-- 应用列表容器 - 添加独立滚动 -->
       <div class="app-list-container">
-        <div class="app-list scrollbar-primary scrollbar-thin">
+        <div
+          class="app-list scrollbar-primary scrollbar-thin"
+          ref="appListRef"
+          tabindex="0"
+          @keydown="handleKeyDown"
+        >
           <div
-            v-for="app in appInfos"
+            v-for="(app, index) in appInfos"
             :key="app.Id"
+            :ref="el => setAppItemRef(el, index)"
             class="app-item"
             :class="{ 'app-item--selected': selectedApp?.Id === app.Id }"
             @click="selectApp(app)"
@@ -77,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, watch, onMounted, onUnmounted } from 'vue'
+import { ref, defineProps, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { NIcon } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { DesktopOutline } from '@vicons/ionicons5'
@@ -100,13 +106,22 @@ const props = defineProps<{
 const webSocketStore = useWebSocketStore()
 const applicationStore = useApplicationStore()
 const { isOpen } = storeToRefs(webSocketStore)
-const { appInfos } = storeToRefs(applicationStore)
+const { appInfos, selectedApp } = storeToRefs(applicationStore)
 
-// 选中的应用
-const selectedApp = ref<ApplicationType | null>(null)
+// Refs
+const appListRef = ref<HTMLDivElement>()
+const appItemRefs = ref<(HTMLDivElement | null)[]>([])
+
+// 设置应用项目的 ref
+const setAppItemRef = (el: unknown, index: number) => {
+  if (el) {
+    appItemRefs.value[index] = el
+  }
+}
 
 // 监听 WebSocket 连接状态
 onMounted(() => {
+  // 监听 WebSocket 状态
   watch(
     isOpen,
     (newValue) => {
@@ -129,6 +144,34 @@ onMounted(() => {
     },
     { immediate: true },
   )
+
+  // 监听应用列表变化，自动选中第一个
+  watch(
+    appInfos,
+    async (newAppInfos) => {
+      // 如果有应用且当前没有选中的应用
+      if (newAppInfos.length > 0 && !selectedApp.value) {
+        await nextTick()
+        selectApp(newAppInfos[0])
+      }
+      // 如果当前选中的应用不在列表中了，选中第一个
+      else if (newAppInfos.length > 0 && selectedApp.value &&
+        !newAppInfos.find(app => app.Id === selectedApp.value?.Id)) {
+        await nextTick()
+        selectApp(newAppInfos[0])
+      }
+      // 如果没有应用了，清空选中
+      else if (newAppInfos.length === 0) {
+        applicationStore.setSelectedApp(null)
+      }
+    },
+    { immediate: true }
+  )
+
+  // 自动聚焦到列表容器
+  nextTick(() => {
+    appListRef.value?.focus()
+  })
 })
 
 onUnmounted(() => {
@@ -147,6 +190,77 @@ onUnmounted(() => {
     })
 })
 
+// 处理键盘事件
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (appInfos.value.length === 0) return
+
+  const currentIndex = selectedApp.value
+    ? appInfos.value.findIndex(app => app.Id === selectedApp.value?.Id)
+    : -1
+
+  let newIndex = currentIndex
+
+  switch (event.key) {
+    case 'ArrowUp':
+      event.preventDefault()
+      // 如果当前没有选中或者是第一个，则选中最后一个
+      if (currentIndex <= 0) {
+        newIndex = appInfos.value.length - 1
+      } else {
+        newIndex = currentIndex - 1
+      }
+      break
+
+    case 'ArrowDown':
+      event.preventDefault()
+      // 如果当前没有选中或者是最后一个，则选中第一个
+      if (currentIndex === -1 || currentIndex >= appInfos.value.length - 1) {
+        newIndex = 0
+      } else {
+        newIndex = currentIndex + 1
+      }
+      break
+
+    case 'Enter':
+      event.preventDefault()
+      // 如果有选中的应用，可以在这里触发某些操作
+      if (selectedApp.value) {
+        console.log('Enter pressed on:', selectedApp.value.ProductName)
+        // 可以触发一个事件或执行某个操作
+      }
+      break
+
+    default:
+      return
+  }
+
+  // 选择新的应用
+  if (newIndex !== currentIndex && newIndex >= 0 && newIndex < appInfos.value.length) {
+    selectApp(appInfos.value[newIndex])
+    // 滚动到可见区域
+    scrollToSelectedItem(newIndex)
+  }
+}
+
+// 滚动到选中的项目
+const scrollToSelectedItem = (index: number) => {
+  nextTick(() => {
+    const itemEl = appItemRefs.value[index]
+    if (itemEl && appListRef.value) {
+      const listRect = appListRef.value.getBoundingClientRect()
+      const itemRect = itemEl.getBoundingClientRect()
+
+      // 如果项目不在可见区域内，滚动到中心位置
+      if (itemRect.top < listRect.top || itemRect.bottom > listRect.bottom) {
+        itemEl.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+      }
+    }
+  })
+}
+
 // 格式化内存显示
 const formatMemory = (memoryInBytes: number): string => {
   const result = convertFileSize(memoryInBytes, FILE_SIZE_UNIT_ENUM.B)
@@ -163,7 +277,7 @@ const getFirstChar = (name: string): string => {
 
 // 选择应用
 const selectApp = (app: ApplicationType) => {
-  selectedApp.value = app
+  applicationStore.setSelectedApp(app)
 }
 
 // 鼠标悬停事件（预留扩展）
@@ -174,21 +288,6 @@ const handleMouseEnter = () => {
 const handleMouseLeave = () => {
   // 可以在这里添加额外的离开逻辑
 }
-
-// 暴露方法给父组件
-defineExpose({
-  clearSelection: () => {
-    selectedApp.value = null
-  },
-  selectById: (id: string) => {
-    const app = appInfos.value.find((a) => a.Id === id)
-    if (app) {
-      selectApp(app)
-    }
-  },
-  // 新增获取当前选中应用的方法
-  getSelectedApp: () => selectedApp.value,
-})
 </script>
 
 <style scoped>
@@ -267,6 +366,13 @@ defineExpose({
   padding-left: 4px;
   padding-right: 8px; /* 为滚动条留出空间 */
   margin-right: -8px; /* 抵消padding */
+  outline: none; /* 移除聚焦时的默认轮廓 */
+}
+
+/* 聚焦时的样式 */
+.app-item:focus {
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+  border-radius: 8px;
 }
 
 /* 自定义滚动条样式 */
@@ -550,7 +656,7 @@ defineExpose({
   }
   100% {
     filter: drop-shadow(1px 1px 3px rgba(0, 0, 0, 0.15))
-      drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+    drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
   }
 }
 
