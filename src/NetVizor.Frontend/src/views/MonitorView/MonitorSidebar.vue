@@ -23,15 +23,19 @@
           ref="appListRef"
           tabindex="0"
           @keydown="handleKeyDown"
+          @blur="handleListBlur"
         >
           <div
             v-for="(app, index) in appInfos"
             :key="app.Id"
             :ref="el => setAppItemRef(el, index)"
             class="app-item"
-            :class="{ 'app-item--selected': selectedApp?.Id === app.Id }"
+            :class="{
+              'app-item--selected': selectedApp?.Id === app.Id,
+              'app-item--focused': focusedIndex === index
+            }"
             @click="selectApp(app)"
-            @mouseenter="handleMouseEnter"
+            @mouseenter="handleMouseEnter(index)"
             @mouseleave="handleMouseLeave"
           >
             <!-- 书角折叠效果 -->
@@ -111,6 +115,7 @@ const { appInfos, selectedApp } = storeToRefs(applicationStore)
 // Refs
 const appListRef = ref<HTMLDivElement>()
 const appItemRefs = ref<(HTMLDivElement | null)[]>([])
+const focusedIndex = ref<number>(-1) // 添加聚焦索引
 
 // 设置应用项目的 ref
 const setAppItemRef = (el: unknown, index: number) => {
@@ -149,6 +154,9 @@ onMounted(() => {
   watch(
     appInfos,
     async (newAppInfos) => {
+      // 重置聚焦索引
+      // focusedIndex.value = -1
+
       // 如果有应用且当前没有选中的应用
       if (newAppInfos.length > 0 && !selectedApp.value) {
         await nextTick()
@@ -194,56 +202,75 @@ onUnmounted(() => {
 const handleKeyDown = (event: KeyboardEvent) => {
   if (appInfos.value.length === 0) return
 
-  const currentIndex = selectedApp.value
-    ? appInfos.value.findIndex(app => app.Id === selectedApp.value?.Id)
-    : -1
-
-  let newIndex = currentIndex
+  let newFocusedIndex = focusedIndex.value
 
   switch (event.key) {
     case 'ArrowUp':
       event.preventDefault()
-      // 如果当前没有选中或者是第一个，则选中最后一个
-      if (currentIndex <= 0) {
-        newIndex = appInfos.value.length - 1
+      // 如果当前没有聚焦，从选中项开始
+      if (focusedIndex.value === -1 && selectedApp.value) {
+        const selectedIndex = appInfos.value.findIndex(app => app.Id === selectedApp.value?.Id)
+        newFocusedIndex = selectedIndex > 0 ? selectedIndex - 1 : appInfos.value.length - 1
+      }
+      // 如果没有聚焦也没有选中，从最后一个开始
+      else if (focusedIndex.value === -1) {
+        newFocusedIndex = appInfos.value.length - 1
+      }
+      // 正常向上移动
+      else if (focusedIndex.value === 0) {
+        newFocusedIndex = appInfos.value.length - 1
       } else {
-        newIndex = currentIndex - 1
+        newFocusedIndex = focusedIndex.value - 1
       }
       break
 
     case 'ArrowDown':
       event.preventDefault()
-      // 如果当前没有选中或者是最后一个，则选中第一个
-      if (currentIndex === -1 || currentIndex >= appInfos.value.length - 1) {
-        newIndex = 0
+      // 如果当前没有聚焦，从选中项开始
+      if (focusedIndex.value === -1 && selectedApp.value) {
+        const selectedIndex = appInfos.value.findIndex(app => app.Id === selectedApp.value?.Id)
+        newFocusedIndex = selectedIndex < appInfos.value.length - 1 ? selectedIndex + 1 : 0
+      }
+      // 如果没有聚焦也没有选中，从第一个开始
+      else if (focusedIndex.value === -1) {
+        newFocusedIndex = 0
+      }
+      // 正常向下移动
+      else if (focusedIndex.value >= appInfos.value.length - 1) {
+        newFocusedIndex = 0
       } else {
-        newIndex = currentIndex + 1
+        newFocusedIndex = focusedIndex.value + 1
       }
       break
 
     case 'Enter':
       event.preventDefault()
-      // 如果有选中的应用，可以在这里触发某些操作
-      if (selectedApp.value) {
-        console.log('Enter pressed on:', selectedApp.value.ProductName)
-        // 可以触发一个事件或执行某个操作
+      // 如果有聚焦的应用，选中它
+      if (focusedIndex.value >= 0 && focusedIndex.value < appInfos.value.length) {
+        selectApp(appInfos.value[focusedIndex.value])
       }
+      break
+
+    case 'Escape':
+      event.preventDefault()
+      // ESC 键清除聚焦
+      focusedIndex.value = -1
       break
 
     default:
       return
   }
 
-  // 选择新的应用
-  if (newIndex !== currentIndex && newIndex >= 0 && newIndex < appInfos.value.length) {
-    selectApp(appInfos.value[newIndex])
+  // 更新聚焦索引
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    focusedIndex.value = newFocusedIndex
     // 滚动到可见区域
-    scrollToSelectedItem(newIndex)
+    scrollToFocusedItem(newFocusedIndex)
   }
 }
 
-// 滚动到选中的项目
-const scrollToSelectedItem = (index: number) => {
+// 滚动到聚焦的项目
+const scrollToFocusedItem = (index: number) => {
   nextTick(() => {
     const itemEl = appItemRefs.value[index]
     if (itemEl && appListRef.value) {
@@ -259,6 +286,14 @@ const scrollToSelectedItem = (index: number) => {
       }
     }
   })
+}
+
+// 列表失去焦点时的处理
+const handleListBlur = () => {
+  // 延迟清除聚焦，避免点击列表项时立即清除
+  // setTimeout(() => {
+  //   focusedIndex.value = -1
+  // }, 200)
 }
 
 // 格式化内存显示
@@ -278,15 +313,26 @@ const getFirstChar = (name: string): string => {
 // 选择应用
 const selectApp = (app: ApplicationType) => {
   applicationStore.setSelectedApp(app)
+  // 选中后，如果是通过键盘选中的，保持聚焦在当前项
+  // 如果是通过鼠标点击的，会在 mouseLeave 时自动清除聚焦
+  const selectedIndex = appInfos.value.findIndex(a => a.Id === app.Id)
+  if (focusedIndex.value === selectedIndex) {
+    // 通过键盘选中的，保持聚焦
+  } else {
+    // 通过鼠标选中的，清除聚焦
+    focusedIndex.value = -1
+  }
 }
 
-// 鼠标悬停事件（预留扩展）
-const handleMouseEnter = () => {
-  // 可以在这里添加额外的悬停逻辑
+// 鼠标悬停事件
+const handleMouseEnter = (index: number) => {
+  // 鼠标悬停时更新聚焦索引
+  focusedIndex.value = index
 }
 
 const handleMouseLeave = () => {
-  // 可以在这里添加额外的离开逻辑
+  // 鼠标离开时清除聚焦
+  focusedIndex.value = -1
 }
 </script>
 
@@ -369,12 +415,6 @@ const handleMouseLeave = () => {
   outline: none; /* 移除聚焦时的默认轮廓 */
 }
 
-/* 聚焦时的样式 */
-.app-item:focus {
-  box-shadow: inset 0 0 0 1px var(--accent-primary);
-  border-radius: 8px;
-}
-
 /* 自定义滚动条样式 */
 .app-list::-webkit-scrollbar {
   width: 6px;
@@ -433,6 +473,27 @@ const handleMouseLeave = () => {
   transform: translateY(-1px) scale(1.01);
   position: relative;
   z-index: 5;
+}
+
+/* 键盘导航聚焦状态 */
+.app-item--focused {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover, var(--bg-card));
+  box-shadow:
+    inset 0 0 0 2px var(--accent-primary),
+    0 4px 12px rgba(59, 130, 246, 0.2);
+  transform: translateY(-1px);
+  animation: focusPulse 1.5s ease-in-out infinite;
+}
+
+/* 同时聚焦和选中的状态 */
+.app-item--focused.app-item--selected {
+  border-color: var(--accent-primary);
+  box-shadow:
+    inset 0 0 0 2px var(--accent-primary),
+    0 0 0 4px var(--monitor-accent-primary-alpha),
+    0 8px 25px -5px rgba(59, 130, 246, 0.3);
+  animation: none;
 }
 
 /* 选中元素的左侧强调边框 */
@@ -669,6 +730,24 @@ const handleMouseLeave = () => {
   50% {
     opacity: 0.8;
     transform: scale(1.2);
+  }
+}
+
+@keyframes focusPulse {
+  0% {
+    box-shadow:
+      inset 0 0 0 2px var(--accent-primary),
+      0 4px 12px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2px var(--accent-primary),
+      0 4px 16px rgba(59, 130, 246, 0.35);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 2px var(--accent-primary),
+      0 4px 12px rgba(59, 130, 246, 0.2);
   }
 }
 

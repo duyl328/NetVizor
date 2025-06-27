@@ -29,7 +29,6 @@
 
       <!-- 右侧检查器面板 -->
       <MonitorInspector
-        v-show="false"
         :width="inspectorWidth"
         :selectedConnection="selectedConnection"
       />
