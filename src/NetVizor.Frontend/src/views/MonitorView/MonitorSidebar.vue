@@ -19,35 +19,44 @@
       <!-- 应用列表 -->
       <div class="app-list">
         <div
-          v-for="app in applications"
-          :key="app.id"
+          v-for="app in useApplicationStore1.appInfos"
+          :key="app.Id"
           class="app-item"
-          :class="{ 'app-item--selected': selectedApp?.id === app.id }"
+          :class="{ 'app-item--selected': selectedApp?.Id === app.Id }"
           @click="selectApp(app)"
           @mouseenter="handleMouseEnter"
           @mouseleave="handleMouseLeave"
         >
           <!-- 书角折叠效果 -->
-          <div v-if="selectedApp?.id === app.id" class="folded-corner"></div>
+          <div v-if="selectedApp?.Id === app.Id" class="folded-corner"></div>
 
           <!-- 应用图标 -->
           <div class="app-icon">
-            <img :src="app.icon" :alt="app.name" />
+
+            <img v-if="!lodash.isEmpty(app.IconBase64)" :src="'data:image/jpeg;base64,' + app.IconBase64" :alt="app.ProductName" />
+            <div v-else>
+              <div class="app-icon-span">
+                <span>{{getFirstByte(app.ProductName)}}</span>
+              </div>
+            </div>
           </div>
 
           <!-- 应用信息 -->
           <div class="app-info">
-            <div class="app-name">{{ app.name }}</div>
+            <div class="app-name">{{ app.ProductName }}</div>
             <div class="app-details">
-              <span class="app-detail">PID: {{ app.pid }}</span>
-              <span class="app-detail">内存: {{ app.memory }}</span>
-              <span class="app-detail">{{ app.status }}</span>
+              <span class="app-detail">线程数: {{ app.ProcessIds.length }}</span>
+              <span class="app-detail">内存: {{ formatSpeed(app.UseMemory) }}</span>
+              <span class="app-detail">{{ !!app.ExitCode ? '已退出' : '活动' }}</span>
             </div>
           </div>
 
           <!-- 应用状态指示器 -->
           <div class="app-status">
-            <div class="status-indicator" :class="`status-${app.statusType}`"></div>
+            <div
+              class="status-indicator"
+              :class="`status-${!!app.ExitCode ? 'active' : 'background'}`"
+            ></div>
           </div>
         </div>
       </div>
@@ -69,7 +78,12 @@ import { storeToRefs } from 'pinia'
 import { CheckmarkOutline, DesktopOutline } from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http.ts'
 import { ResponseModel, SubscriptionInfo } from '@/types/response'
-import { useWebSocketStore,getIsConnected } from '@/stores/websocketStore'
+import { useWebSocketStore, getIsConnected } from '@/stores/websocketStore'
+import { useApplicationStore } from '@/stores/application'
+import { ApplicationType } from '@/types/infoModel'
+import { convertFileSize } from '@/utils/fileUtil'
+import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
+import lodash from 'lodash'
 // 定义应用数据类型
 interface Application {
   id: string
@@ -90,24 +104,45 @@ const emit = defineEmits<{
 }>()
 const webSocketStore = useWebSocketStore()
 const { isOpen } = storeToRefs(webSocketStore)
-console.log(isOpen);
-watch(isOpen,(oldValue, newValue) => {
-  if (oldValue || newValue) {
-    console.log("触发！！！！！！！！");
-    // 发送请求【请求订阅软件列表】
-    // const subAppInfo: SubscriptionInfo = {
-    //   subscriptionType: 'ApplicationInfo',
-    //   interval: 1000,
-    // }
-    //
-    // httpClient.post(`/subscribe`, JSON.stringify(subAppInfo)).then((res: ResponseModel) => {
-    //   console.log(res)
-    // })
-  }
-},{immediate:true})
+watch(
+  isOpen,
+  (oldValue, newValue) => {
+    if (oldValue || newValue) {
+      // 发送请求【请求订阅软件列表】
+      const subAppInfo: SubscriptionInfo = {
+        subscriptionType: 'ApplicationInfo',
+        interval: 1000,
+      }
+
+      httpClient.post(`/subscribe`, JSON.stringify(subAppInfo)).then((res: ResponseModel) => {
+        console.log(res)
+      })
+    }
+  },
+  { immediate: true },
+)
+
+// 绑定软件信息
+const useApplicationStore1 = useApplicationStore()
+const { appInfos } = storeToRefs(useApplicationStore1)
+watch(appInfos, (oldValue, newValue) => {})
 
 // 选中的应用
-const selectedApp = ref<Application | null>(null)
+const selectedApp = ref<ApplicationType | null>(null)
+
+// 计算人体工学单位
+const formatSpeed = (useMemory: number) => {
+  const fmt = convertFileSize(useMemory, FILE_SIZE_UNIT_ENUM.B)
+  return fmt.size + fmt.unit
+}
+// 获取软件名称的第一个字
+const getFirstByte = (name:string) => {
+  if (lodash.isEmpty(name)) {
+    return ""
+  }
+  const firstChar = name.charAt(0);
+  return firstChar
+}
 
 // 模拟应用数据
 const applications = ref<Application[]>([
@@ -118,7 +153,7 @@ const applications = ref<Application[]>([
     pid: 12456,
     memory: '245.6 MB',
     status: '活跃',
-    statusType: 'active',
+    statupe: 'active',
     path: '/Applications/Visual Studio Code.app',
     windowTitle: 'main.js - myproject',
     cpuUsage: 5.2,
@@ -223,6 +258,25 @@ const handleAction = (type: string) => {
 </script>
 
 <style scoped>
+
+/*字体图标*/
+.app-icon-span {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #1d4ed8 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.app-icon-span span {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+
 /* 书角折叠效果 - 平衡版 */
 .folded-corner {
   position: absolute;
@@ -645,6 +699,7 @@ const handleAction = (type: string) => {
   font-weight: 600;
   color: var(--text-secondary);
   margin: 0;
+  z-index: 90;
 }
 
 .sidebar-badge {

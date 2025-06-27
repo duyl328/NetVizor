@@ -37,7 +37,7 @@ export class WebSocketManager {
   private heartbeatInterval = 30000
 
   // 可配置参数
-  maxDelay = 30000 // 最大重连间隔 30s
+  maxDelay = 10000 // 最大重连间隔 30s
   baseDelay = 500 // 初始间隔 0.5s
   reconnectAttempts = 0
   isManuallyClosed = false
@@ -83,7 +83,7 @@ export class WebSocketManager {
       else console.error('收到WebSocket 欢迎信息，但是解析失败!!')
     })
     this.registerHandler('pong', (data: WebSocketResponse) => {
-      console.log("接收到服务器心跳");
+      console.log('接收到服务器心跳')
     })
 
     this.socket.onopen = () => {
@@ -105,7 +105,6 @@ export class WebSocketManager {
     this.socket.onmessage = (event) => {
       try {
         const message: WebSocketResponse = JSON.parse(event.data)
-        console.log('收到消息:', message)
         this.handleMessage(message)
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
@@ -162,7 +161,6 @@ export class WebSocketManager {
               this.initialize(data)
             } else {
               console.error('获取WebSocket路径失败')
-              this.isReconnecting.value = false
               // 继续重试
               this.retryConnect()
             }
@@ -172,8 +170,8 @@ export class WebSocketManager {
           this.initialize(this.url)
         } else {
           console.error('无法获取WebSocket连接地址')
-          this.isReconnecting.value = false
         }
+        this.isReconnecting.value = false
       }
     }, delay)
   }
