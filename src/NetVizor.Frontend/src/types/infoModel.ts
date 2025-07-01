@@ -2,23 +2,23 @@
  * 软件信息类型
  */
 type ApplicationType = {
-  ProcessName: string
-  ProcessIds: number[]
-  StartTime: string
-  HasExited: false
-  ExitTime?: number
-  ExitCode?: number
-  UseMemory: number
-  ThreadCount: number
-  MainModulePath: string
-  MainModuleName: string
-  FileDescription: string
-  ProductName: string
-  CompanyName: string
-  Version: string
-  LegalCopyright: string
-  IconBase64: string
-  Id:string
+  productName: string
+  processIds: number[]
+  startTime: string
+  hasExited: false
+  exitTime?: number
+  exitCode?: number
+  useMemory: number
+  threadCount: number
+  mainModulePath: string
+  mainModuleName: string
+  fileDescription: string
+  processName: string
+  companyName: string
+  version: string
+  legalCopyright: string
+  iconBase64: string
+  id: string
 }
 
-export {ApplicationType}
+export { ApplicationType }

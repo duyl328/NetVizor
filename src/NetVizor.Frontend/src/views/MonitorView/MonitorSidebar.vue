@@ -27,41 +27,41 @@
         >
           <div
             v-for="(app, index) in appInfos"
-            :key="app.Id"
-            :ref="el => setAppItemRef(el, index)"
+            :key="app.id"
+            :ref="(el) => setAppItemRef(el, index)"
             class="app-item"
             :class="{
-              'app-item--selected': selectedApp?.Id === app.Id,
-              'app-item--focused': focusedIndex === index
+              'app-item--selected': selectedApp?.id === app.id,
+              'app-item--focused': focusedIndex === index,
             }"
             @click="selectApp(app)"
             @mouseenter="handleMouseEnter(index)"
             @mouseleave="handleMouseLeave"
           >
             <!-- 书角折叠效果 -->
-            <div v-if="selectedApp?.Id === app.Id" class="folded-corner"></div>
+            <div v-if="selectedApp?.id === app.id" class="folded-corner"></div>
 
             <!-- 应用图标 -->
             <div class="app-icon">
               <img
-                v-if="!lodash.isEmpty(app.IconBase64)"
-                :src="'data:image/jpeg;base64,' + app.IconBase64"
-                :alt="app.ProductName"
+                v-if="!lodash.isEmpty(app.iconBase64)"
+                :src="'data:image/jpeg;base64,' + app.iconBase64"
+                :alt="app.productName"
               />
               <div v-else>
-                <div class="app-icon-span" :style="getGradientColor(getFirstChar(app.ProductName))">
-                  <span>{{ getFirstChar(app.ProductName) }}</span>
+                <div class="app-icon-span" :style="getGradientColor(getFirstChar(app.productName))">
+                  <span>{{ getFirstChar(app.productName) }}</span>
                 </div>
               </div>
             </div>
 
             <!-- 应用信息 -->
             <div class="app-info">
-              <div class="app-name">{{ app.ProductName }}</div>
+              <div class="app-name">{{ app.productName }}</div>
               <div class="app-details">
-                <span class="app-detail">线程数: {{ app.ProcessIds.length }}</span>
-                <span class="app-detail">内存: {{ formatMemory(app.UseMemory) }}</span>
-                <span class="app-detail">{{ !!app.ExitCode ? '已退出' : '活动' }}</span>
+                <span class="app-detail">线程数: {{ app.processIds.length }}</span>
+                <span class="app-detail">内存: {{ formatMemory(app.useMemory) }}</span>
+                <span class="app-detail">{{ !!app.exitCode ? '已退出' : '活动' }}</span>
               </div>
             </div>
 
@@ -69,7 +69,7 @@
             <div class="app-status">
               <div
                 class="status-indicator"
-                :class="`status-${!!app.ExitCode ? 'inactive' : 'active'}`"
+                :class="`status-${!!app.exitCode ? 'inactive' : 'active'}`"
               ></div>
             </div>
           </div>
@@ -163,8 +163,11 @@ onMounted(() => {
         selectApp(newAppInfos[0])
       }
       // 如果当前选中的应用不在列表中了，选中第一个
-      else if (newAppInfos.length > 0 && selectedApp.value &&
-        !newAppInfos.find(app => app.Id === selectedApp.value?.Id)) {
+      else if (
+        newAppInfos.length > 0 &&
+        selectedApp.value &&
+        !newAppInfos.find((app) => app.id === selectedApp.value?.id)
+      ) {
         await nextTick()
         selectApp(newAppInfos[0])
       }
@@ -173,7 +176,7 @@ onMounted(() => {
         applicationStore.setSelectedApp(null)
       }
     },
-    { immediate: true }
+    { immediate: true },
   )
 
   // 自动聚焦到列表容器
@@ -209,7 +212,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
       event.preventDefault()
       // 如果当前没有聚焦，从选中项开始
       if (focusedIndex.value === -1 && selectedApp.value) {
-        const selectedIndex = appInfos.value.findIndex(app => app.Id === selectedApp.value?.Id)
+        const selectedIndex = appInfos.value.findIndex(
+          (app: ApplicationType) => app.id === selectedApp.value?.id,
+        )
         newFocusedIndex = selectedIndex > 0 ? selectedIndex - 1 : appInfos.value.length - 1
       }
       // 如果没有聚焦也没有选中，从最后一个开始
@@ -228,7 +233,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       event.preventDefault()
       // 如果当前没有聚焦，从选中项开始
       if (focusedIndex.value === -1 && selectedApp.value) {
-        const selectedIndex = appInfos.value.findIndex(app => app.Id === selectedApp.value?.Id)
+        const selectedIndex = appInfos.value.findIndex((app) => app.id === selectedApp.value?.id)
         newFocusedIndex = selectedIndex < appInfos.value.length - 1 ? selectedIndex + 1 : 0
       }
       // 如果没有聚焦也没有选中，从第一个开始
@@ -281,7 +286,7 @@ const scrollToFocusedItem = (index: number) => {
       if (itemRect.top < listRect.top || itemRect.bottom > listRect.bottom) {
         itemEl.scrollIntoView({
           behavior: 'smooth',
-          block: 'center'
+          block: 'center',
         })
       }
     }
@@ -315,7 +320,7 @@ const selectApp = (app: ApplicationType) => {
   applicationStore.setSelectedApp(app)
   // 选中后，如果是通过键盘选中的，保持聚焦在当前项
   // 如果是通过鼠标点击的，会在 mouseLeave 时自动清除聚焦
-  const selectedIndex = appInfos.value.findIndex(a => a.Id === app.Id)
+  const selectedIndex = appInfos.value.findIndex((a: ApplicationType) => a.id === app.id)
   if (focusedIndex.value === selectedIndex) {
     // 通过键盘选中的，保持聚焦
   } else {
@@ -717,7 +722,7 @@ const handleMouseLeave = () => {
   }
   100% {
     filter: drop-shadow(1px 1px 3px rgba(0, 0, 0, 0.15))
-    drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+      drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
   }
 }
 
@@ -794,6 +799,12 @@ const handleMouseLeave = () => {
     border-top-width: 18px;
     top: -18px;
     right: -18px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .app-item {
+    padding: 12px;
   }
 }
 
