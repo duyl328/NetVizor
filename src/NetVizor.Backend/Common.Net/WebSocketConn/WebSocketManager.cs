@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Web;
 using Common.Logger;
+using Common.Utils;
 using Fleck;
 
 namespace Common.Net.WebSocketConn;
@@ -270,7 +271,7 @@ public class WebSocketManager
         try
         {
             Console.WriteLine(DateTime.Now);
-            var commandMessage = JsonSerializer.Deserialize<CommandMessage>(message);
+            var commandMessage = JsonHelper.FromJson<CommandMessage>(message);
             if (commandMessage != null && !string.IsNullOrEmpty(commandMessage.Command))
             {
                 await ProcessCommand(commandMessage, socket);
@@ -326,7 +327,7 @@ public class WebSocketManager
         {
             try
             {
-                var json = JsonSerializer.Serialize(message);
+                var json = JsonHelper.ToJson(message);
                 await socket.Socket.Send(json);
                 return true;
             }
@@ -364,7 +365,7 @@ public class WebSocketManager
     /// </summary>
     public async Task BroadcastMessage(ResponseMessage message)
     {
-        var json = JsonSerializer.Serialize(message);
+        var json = JsonHelper.ToJson(message);
         var tasks = new List<Task>();
 
         foreach (var connection in _connections.Values)

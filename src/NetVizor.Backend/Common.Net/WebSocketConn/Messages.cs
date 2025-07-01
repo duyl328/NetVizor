@@ -5,8 +5,8 @@ namespace Common.Net.WebSocketConn;
 // 消息基类
 public abstract class BaseMessage
 {
-    [JsonPropertyName("messageId")] public string? MessageId { get; set; } = Guid.NewGuid().ToString();
-    [JsonPropertyName("timestamp")] public DateTime Timestamp { get; set; } = DateTime.Now;
+    public string? MessageId { get; set; } = Guid.NewGuid().ToString();
+    public DateTime Timestamp { get; set; } = DateTime.Now;
 }
 
 // 网络状态消息
@@ -32,15 +32,14 @@ public class FirewallRuleMessage : NotificationMessage
 // 命令消息
 public class CommandMessage : BaseMessage
 {
-    [JsonPropertyName("command")] public string Command { get; set; }
-
-    [JsonPropertyName("data")] public object Data { get; set; }
+    public string Command { get; set; }
+    public object Data { get; set; }
 }
 
 // 响应消息
 public class ResponseMessage : NotificationMessage
 {
-    [JsonPropertyName("success")] public bool Success { get; set; }
+    public bool Success { get; set; }
 }
 
 /// <summary>
@@ -48,7 +47,7 @@ public class ResponseMessage : NotificationMessage
 /// </summary>
 public class NotificationMessage : BaseMessage
 {
-    [JsonPropertyName("type")] public string Type { get; set; } // 通知类型，如 "networkStatusUpdate", "firewallRuleChanged"
-    [JsonPropertyName("data")] public object Data { get; set; }
-    [JsonPropertyName("message")] public string Message { get; set; }
+    public string Type { get; set; } // 通知类型，如 "networkStatusUpdate", "firewallRuleChanged"
+    public object Data { get; set; }
+    public string Message { get; set; }
 }

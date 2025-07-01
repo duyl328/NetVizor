@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Web;
+using Common.Utils;
 using Fleck;
 
 namespace Common.Net.HttpConn;
@@ -34,7 +35,7 @@ public class HttpContext
     public Dictionary<string, string> RouteParams { get; set; } = new Dictionary<string, string>();
     public NameValueCollection QueryParams { get; set; }
     public string RequestBody { get; set; }
-    public T GetRequestBody<T>() => JsonSerializer.Deserialize<T>(RequestBody);
+    public T GetRequestBody<T>() => JsonHelper.FromJson<T>(RequestBody);
 }
 
 // 路由信息
@@ -284,11 +285,8 @@ public static class HttpListenerResponseExtensions
     public static async Task WriteJsonAsync<T>(this HttpListenerResponse response, T data)
     {
         response.ContentType = "application/json; charset=utf-8";
-        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var json = JsonHelper.ToJson(data);
+        
         var buffer = Encoding.UTF8.GetBytes(json);
         response.ContentLength64 = buffer.Length;
         await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);

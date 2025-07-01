@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Common;
 using Common.Logger;
 using Common.Net.WebSocketConn;
+using Common.Utils;
 using Infrastructure.Models;
 using Utils.ETW.Etw;
 
@@ -17,7 +18,8 @@ public class DispatchEngine
     private DispatchEngine()
     {
     }
-    // region 软件信息订阅
+
+    #region 软件信息订阅
 
     /// <summary>
     /// 软件信息订阅
@@ -134,7 +136,7 @@ public class DispatchEngine
                 appInfoList.Add(pi);
             }
 
-            var serialize = JsonSerializer.Serialize(appInfoList);
+            var serialize = JsonHelper.ToJson(appInfoList);
 
             foreach (var keyValuePair in ApplicationInfoDispatch)
             {
@@ -176,7 +178,94 @@ public class DispatchEngine
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
     }
 
-    // endregion
+    #endregion
+
+    #region 线程信息订阅
+
+    /// <summary>
+    /// 线程信息订阅
+    /// </summary>
+    private ConcurrentDictionary<string, ProcessDispatchModel> ProcessInfoDispatch = [];
+
+    /// <summary>
+    /// 软件信息上次发送时间
+    /// </summary>
+    private ConcurrentDictionary<string, DateTime> ProcessInfoLastSendTime = [];
+
+    /// <summary>
+    /// 添加订阅
+    /// </summary>
+    public void AddProcessInfo(string clientId, ProcessDispatchModel model)
+    {
+        ProcessInfoDispatch.TryAdd(clientId, model);
+    }
+
+    /// <summary>
+    /// 更新订阅
+    /// </summary>
+    public void UpdateProcessInfo(string clientId, ProcessDispatchModel model)
+    {
+        ProcessInfoDispatch[clientId] = model;
+    }
+
+    /// <summary>
+    /// 删除订阅
+    /// </summary>
+    public void DeleteProcessInfo(string clientId)
+    {
+        ProcessInfoDispatch.TryRemove(clientId, out _);
+    }
+
+    // 添加这个字段来保持Timer的强引用；Timer 对象没有强引用，会被垃圾回收器回收。
+    private Timer _processInfoTimer;
+
+    /// <summary>
+    /// 需要监视的线程列表
+    /// </summary>
+    public List<int> MonitorProcessList = new List<int>();
+
+    /// <summary>
+    /// 软件信息分发
+    /// </summary>
+    public void ProcessInfoDistribute()
+    {
+        _processInfoTimer = new Timer(state =>
+        {
+            if (ProcessInfoDispatch.Count == 0)
+            {
+                return;
+            }
+
+            // 获取信息
+            foreach (var processDispatchModel in ProcessInfoDispatch)
+            {
+                // 获取所有信息
+                var connectionInfos =
+                    GlobalNetworkMonitor.Instance.GetAllConnection(processDispatchModel.Value.ProcessIds);
+
+                // 上行总数据
+                long allBytesSent = 0;
+                // 下行总数据
+                long allBytesReceived = 0;
+                // 上行网速总数据
+                double allSendSpeed = 0;
+                // 下行网速总数据
+                double allReceiveSpeed = 0;
+                foreach (var connectionInfo in connectionInfos)
+                {
+                    // 数据发送量
+                    allBytesSent += connectionInfo.BytesSent;
+                    allBytesReceived += connectionInfo.BytesReceived;
+
+                    // 网速数据
+                    allSendSpeed += connectionInfo.CurrentSendSpeed;
+                    allReceiveSpeed += connectionInfo.CurrentReceiveSpeed;
+                }
+            }
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    #endregion
 }
 
 /// <summary>
@@ -191,10 +280,19 @@ public class DispatchModel
 }
 
 /// <summary>
+/// 进程订阅模型
+/// </summary>
+public class ProcessDispatchModel : DispatchModel
+{
+    // 订阅的进程列表
+    public List<int> ProcessIds { get; set; }
+}
+
+/// <summary>
 /// 订阅信息内容
 /// </summary>
 public class SubscriptionInfo
 {
-    [JsonPropertyName("subscriptionType")] public string SubscriptionType { get; set; }
-    [JsonPropertyName("interval")] public int Interval { get; set; }
+public string SubscriptionType { get; set; }
+public int Interval { get; set; }
 }
