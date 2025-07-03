@@ -68,11 +68,39 @@ public static class SysInfoUtils
     /// <param name="pid"></param>
     /// <returns></returns>
     /// <exception cref="ExceptionExpand"></exception>
-    public static ProgramInfo InspectProcess(int pid)
+    public static ProgramInfo? InspectProcess(int pid)
     {
         try
         {
-            var proc = Process.GetProcessById(pid);
+            // 1. 预检查：验证进程是否存在
+            Process proc;
+            try
+            {
+                proc = Process.GetProcessById(pid);
+            }
+            catch (ArgumentException)
+            {
+                Log.Information($"进程 {pid} 不存在");
+                return null; // 返回 null 而不是抛异常
+            }
+
+            // 2. 检查进程是否已退出
+            bool hasExited = false;
+            try
+            {
+                hasExited = proc.HasExited;
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法检查进程 {pid} 状态: {ex.Message}");
+                return null; // 如果连状态都无法检查，直接返回 null
+            }
+
+            if (hasExited)
+            {
+                Log.Information($"进程 {pid} 已退出");
+                return null; // 或者返回一个标记为已退出的 ProgramInfo 对象
+            }
 
             #region 检查缓存
 
@@ -104,7 +132,7 @@ public static class SysInfoUtils
                 exeInfo.StartTime = DateTime.MinValue;
             }
 
-            // 安全获取退出状态
+            // 安全获取退出状态（再次检查，因为状态可能在执行过程中改变）
             try
             {
                 exeInfo.HasExited = proc.HasExited;
@@ -161,7 +189,6 @@ public static class SysInfoUtils
                 }
                 catch (Exception ex)
                 {
-                    // 如果仍然无法获取退出信息，记录日志但不抛出异常
                     Log.Information($"无法获取进程 {pid} 的退出信息: {ex.Message}");
                     exeInfo.ExitTime = null;
                     exeInfo.ExitCode = null;
@@ -169,12 +196,11 @@ public static class SysInfoUtils
             }
             else
             {
-                // 对于正在运行的进程，设置默认值
-                exeInfo.ExitTime = null; // 或者 DateTime.MinValue，取决于 ProgramInfo.ExitTime 的类型
-                exeInfo.ExitCode = null; // 或者 0，取决于 ProgramInfo.ExitCode 的类型
+                exeInfo.ExitTime = null;
+                exeInfo.ExitCode = null;
             }
 
-            // MainModule 是一个涉及 native 调用的属性，不建议频繁调用，尤其在枚举大量进程时可能影响性能。
+            // 获取版本信息
             if (exeInfo.MainModulePath != null)
             {
                 try
@@ -193,7 +219,7 @@ public static class SysInfoUtils
                 }
             }
 
-            // 获取软件 Icon 【不一定存在】
+            // 获取软件 Icon
             try
             {
                 var iconBase64 = IconHelper.GetIconBase64(exeInfo.MainModulePath);
@@ -209,31 +235,36 @@ public static class SysInfoUtils
             ProcessCache.Instance.Set(pck, exeInfo);
             return exeInfo;
         }
-        // 捕获各种可能的异常
+        // 3. 关键改进：捕获异常但不再抛出，而是返回 null
         catch (ArgumentException ex)
         {
-            Log.Information($"获取进程信息失败：{ex.Message}");
-            throw ExceptionEnum.ProcessGetException;
+            Log.Warning($"获取进程信息失败：{ex.Message}"); // 改为 Warning 级别
+            return null; // 返回 null 而不是抛异常
         }
         catch (InvalidOperationException ex)
         {
-            Log.Information($"进程 {pid} 已退出或无法访问：{ex.Message}");
-            throw ExceptionEnum.ProcessGetException;
+            Log.Warning($"进程 {pid} 已退出或无法访问：{ex.Message}");
+            return null;
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            Log.Information($"无权限访问进程 {pid}：{ex.Message}");
-            throw ExceptionEnum.ProcessGetException;
+            Log.Warning($"无权限访问进程 {pid}：{ex.Message}");
+            return null;
         }
         catch (UnauthorizedAccessException ex)
         {
-            Log.Information($"拒绝访问进程 {pid}：{ex.Message}");
-            throw ExceptionEnum.ProcessGetException;
+            Log.Warning($"拒绝访问进程 {pid}：{ex.Message}");
+            return null;
         }
         catch (Exception ex)
         {
-            Log.Information($"获取进程 {pid} 信息时发生未知错误：{ex.Message}");
-            throw ExceptionEnum.ProcessGetException;
+            Log.Error($"获取进程 {pid} 信息时发生未知错误：{ex.Message}"); // 未知错误用 Error 级别
+            return null;
+        }
+        finally
+        {
+            // 4. 添加资源清理（如果需要）
+            // proc?.Dispose(); // 注意：Process 对象通常不需要手动释放，GC 会处理
         }
     }
 

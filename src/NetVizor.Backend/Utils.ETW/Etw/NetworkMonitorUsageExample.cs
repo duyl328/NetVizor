@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Common.Utils;
 using Utils.ETW.Core;
 
 namespace Utils.ETW.Etw;
@@ -57,7 +58,7 @@ public class NetworkMonitorUsageExample
                 // 获取网络监控快照
                 var snapshot = GlobalNetworkMonitor.Instance.GetSnapshot();
 
-                var serialize = JsonSerializer.Serialize(snapshot);
+                var serialize = JsonHelper.ToJson(snapshot);
                 Console.WriteLine("=================================================");
                 Console.WriteLine(serialize);
                 Console.WriteLine("=================================================");
@@ -182,7 +183,7 @@ public class NetworkMonitorUsageExample
     //             };
     //
     //             // 序列化为JSON
-    //             var json = JsonSerializer.Serialize(pushData);
+    //             var json = JsonHelper.ToJson(pushData);
     //
     //             // 这里应该通过WebSocket发送数据
     //             // await websocketClient.SendAsync(json);

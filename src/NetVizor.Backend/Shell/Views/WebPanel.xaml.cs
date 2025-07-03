@@ -7,6 +7,7 @@ using Common;
 using Common.Logger;
 using Common.Net;
 using Common.Net.WebSocketConn;
+using Common.Utils;
 using Infrastructure.utils;
 using Utils.ETW;
 using Utils.ETW.Core;
@@ -87,7 +88,7 @@ public partial class WebPanel : UserControl
             string json = args.WebMessageAsJson;
 
             // 反序列化为 C# 对象
-            var msg = JsonSerializer.Deserialize<JsMessage>(json);
+            var msg = JsonHelper.FromJson<JsMessage>(json);
 
             Log.Information(json);
             Log.Information(msg?.Channel);
@@ -165,8 +166,8 @@ public partial class WebPanel : UserControl
 
 public class JsMessage
 {
-    [JsonPropertyName("channel")] public string Channel { get; set; }
-    [JsonPropertyName("payload")] public JsData Payload { get; set; }
+public string Channel { get; set; }
+public JsData Payload { get; set; }
 
     public override string ToString()
     {
@@ -176,8 +177,8 @@ public class JsMessage
 
 public class JsData
 {
-    [JsonPropertyName("title")] public string Title { get; set; }
-    [JsonPropertyName("content")] public string Content { get; set; }
+public string Title { get; set; }
+public string Content { get; set; }
 
     public override string ToString()
     {

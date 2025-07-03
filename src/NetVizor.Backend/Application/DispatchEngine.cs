@@ -6,6 +6,7 @@ using Common.Logger;
 using Common.Net.WebSocketConn;
 using Common.Utils;
 using Infrastructure.Models;
+using Infrastructure.utils;
 using Utils.ETW.Etw;
 
 namespace Shell;
@@ -168,7 +169,7 @@ public class DispatchEngine
                     {
                         Success = true,
                         Data = serialize,
-                        Message = "数据发送123",
+                        Message = "程序信息发送",
                         Timestamp = AppInfoLastSendTime[keyValuePair.Key],
                         Type = AppConfig.ApplicationInfoSubscribe
                     };
@@ -225,7 +226,7 @@ public class DispatchEngine
     public List<int> MonitorProcessList = new List<int>();
 
     /// <summary>
-    /// 软件信息分发
+    /// 进行信息分发
     /// </summary>
     public void ProcessInfoDistribute()
     {
@@ -236,31 +237,114 @@ public class DispatchEngine
                 return;
             }
 
-            // 获取信息
+            /*
+                用户 A 订阅了 1、2、3 进程
+                用户 B 订阅了 5、6、7 进程
+                不同的的订阅的内容将进行不同的分发
+             */
+            // 用户订阅的内容
             foreach (var processDispatchModel in ProcessInfoDispatch)
             {
-                // 获取所有信息
-                var connectionInfos =
-                    GlobalNetworkMonitor.Instance.GetAllConnection(processDispatchModel.Value.ProcessIds);
+                // 检查是否发送，如果不发送，则跳过数据获取
+                // 间隔时间
+                var interval = processDispatchModel.Value.Interval;
+                // 上一次是否发送
+                var isHasLast = AppInfoLastSendTime.TryGetValue(processDispatchModel.Key, out DateTime lastSendTime);
 
-                // 上行总数据
-                long allBytesSent = 0;
-                // 下行总数据
-                long allBytesReceived = 0;
-                // 上行网速总数据
-                double allSendSpeed = 0;
-                // 下行网速总数据
-                double allReceiveSpeed = 0;
-                foreach (var connectionInfo in connectionInfos)
+                // 本次是否应该发送
+                var isShouldSend = false;
+                // 具有上一次，检查时间
+                if (isHasLast)
                 {
-                    // 数据发送量
-                    allBytesSent += connectionInfo.BytesSent;
-                    allBytesReceived += connectionInfo.BytesReceived;
+                    var intervalTime = (DateTime.Now - lastSendTime).TotalMilliseconds;
 
-                    // 网速数据
-                    allSendSpeed += connectionInfo.CurrentSendSpeed;
-                    allReceiveSpeed += connectionInfo.CurrentReceiveSpeed;
+                    isShouldSend = intervalTime >= interval;
                 }
+                // 没有上一次，直接发送
+                else
+                {
+                    isShouldSend = true;
+                }
+
+                if (!isShouldSend)
+                {
+                    continue;
+                }
+                
+                // 获取用户的订阅信息
+                var dispatchModel = processDispatchModel.Value;
+
+                if (dispatchModel.ProcessIds == null || dispatchModel.ProcessIds.Count == 0)
+                {
+                    continue;
+                }
+                
+                List<ProcessType> pts = new List<ProcessType>();
+                foreach (var processId in dispatchModel.ProcessIds)
+                {
+                    var connection = GlobalNetworkMonitor.Instance.GetConnection(processId);
+                    var inspectProcess = SysInfoUtils.InspectProcess(processId);
+
+                    if (inspectProcess == null)
+                    {
+                        continue;
+                    }
+                    
+                    ProcessType pt = new ProcessType();
+                    // 上行总数据
+                    long allBytesSent = 0;
+                    // 下行总数据
+                    long allBytesReceived = 0;
+                    // 上行网速总数据
+                    double allSendSpeed = 0;
+                    // 下行网速总数据
+                    double allReceiveSpeed = 0;
+                    // 软件启动时间
+                    var startTime = DateTime.Now;
+                    // 统计所有连接的信息
+                    foreach (var connectionInfo in connection)
+                    {
+                        // 数据发送量
+                        allBytesSent += connectionInfo.BytesSent;
+                        allBytesReceived += connectionInfo.BytesReceived;
+
+                        // 网速数据
+                        allSendSpeed += connectionInfo.CurrentSendSpeed;
+                        allReceiveSpeed += connectionInfo.CurrentReceiveSpeed;
+                    }
+
+                    pt.ProcessName = inspectProcess.ProcessName;
+                    pt.ProcessId = inspectProcess.ProcessId;
+                    pt.StartTime = inspectProcess.StartTime;
+                    pt.HasExited = inspectProcess.HasExited;
+                    pt.ExitTime = inspectProcess.ExitTime;
+                    pt.ExitCode = inspectProcess.ExitCode;
+                    pt.UseMemory = inspectProcess.UseMemory;
+                    pt.ThreadCount = inspectProcess.ThreadCount;
+                    pt.MainModulePath = inspectProcess.MainModulePath;
+                    pt.MainModuleName = inspectProcess.MainModuleName;
+                    pt.TotalUploaded = allBytesSent;
+                    pt.TotalDownloaded = allBytesReceived;
+                    pt.UploadSpeed = allSendSpeed;
+                    pt.DownloadSpeed = allReceiveSpeed;
+                    pt.Connections = connection;
+                    
+                    pts.Add(pt);
+                }
+                
+                // 数据整理完毕，开始分发内容
+                var json = JsonHelper.ToJson(pts);
+                AppInfoLastSendTime[processDispatchModel.Key] = DateTime.Now;
+                var rm = new ResponseMessage
+                {
+                    Success = true,
+                    Data = json,
+                    Message = "进程信息发送",
+                    Timestamp = AppInfoLastSendTime[processDispatchModel.Key],
+                    Type = AppConfig.ProcessInfoSubscribe
+                };
+                WebSocketManager.Instance.SendToClient(processDispatchModel.Key, rm);
+
             }
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
     }
@@ -285,7 +369,7 @@ public class DispatchModel
 public class ProcessDispatchModel : DispatchModel
 {
     // 订阅的进程列表
-    public List<int> ProcessIds { get; set; }
+    public List<int>? ProcessIds { get; set; }
 }
 
 /// <summary>
@@ -293,6 +377,15 @@ public class ProcessDispatchModel : DispatchModel
 /// </summary>
 public class SubscriptionInfo
 {
-public string SubscriptionType { get; set; }
-public int Interval { get; set; }
+    public string SubscriptionType { get; set; }
+    public int Interval { get; set; }
+}
+
+/// <summary>
+/// 进程订阅信息
+/// </summary>
+public class SubscriptionProcessInfo : SubscriptionInfo
+{
+    // 订阅的进程列表
+    public List<int> ProcessIds { get; set; }
 }

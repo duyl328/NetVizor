@@ -354,7 +354,7 @@ public class WebSocketManager
         }
         else
         {
-            Log.Error4Ctx("无法获取有效客户端 uuid !");
+            Log.Error4Ctx($"无法获取有效客户端 uuid !, uuid: {uuid}, socketId: {socketId}");
         }
 
         return ans;

@@ -273,14 +273,16 @@ public class EnhancedEtwNetworkManager : IDisposable
                     {
                         // 获取进程详细信息
                         var inspectProcess = SysInfoUtils.InspectProcess(processInfo.ProcessId);
+                        if (inspectProcess != null)
+                        {
+                            // 更新应用程序信息
+                            GlobalNetworkMonitor.Instance.UpdateApplicationInfo(
+                                processInfo.ProcessId,
+                                inspectProcess
+                            );
 
-                        // 更新应用程序信息
-                        GlobalNetworkMonitor.Instance.UpdateApplicationInfo(
-                            processInfo.ProcessId,
-                            inspectProcess
-                        );
-
-                        processInfo.NeedsUpdate = false;
+                            processInfo.NeedsUpdate = false;
+                        }
                     }
                     catch (Exception ex)
                     {
