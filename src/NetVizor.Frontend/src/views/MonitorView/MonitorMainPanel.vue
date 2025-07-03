@@ -152,19 +152,6 @@ const emit = defineEmits<{
 const isMonitoring = ref(true)
 const isTimelinePaused = ref(false)
 
-// 过滤后的连接列表
-// const filteredConnections = computed(() => {
-//   if (!props.searchQuery) return props.connections
-//
-//   const query = props.searchQuery.toLowerCase()
-//   return props.connections.filter(
-//     (conn) =>
-//       conn.process.toLowerCase().includes(query) ||
-//       conn.localAddress.toLowerCase().includes(query) ||
-//       conn.remoteAddress.toLowerCase().includes(query),
-//   )
-// })
-
 // 处理过滤
 const handleFilter = () => {
   console.log('打开过滤器')
@@ -210,7 +197,7 @@ const handleClearEvents = () => {
 }
 
 .header-info {
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .main-header-title {
@@ -219,12 +206,14 @@ const handleClearEvents = () => {
   color: var(--text-secondary);
   margin: 0;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .main-header-subtitle {
   font-size: 14px;
   color: var(--text-muted);
   margin: 4px 0 0 0;
+  white-space: nowrap;
 }
 
 .header-actions {
@@ -240,6 +229,7 @@ const handleClearEvents = () => {
 .filter-buttons {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 /* 时间轴分割线 */
@@ -281,10 +271,81 @@ const handleClearEvents = () => {
   border-color: var(--accent-primary);
 }
 
-/* 响应式 */
+/* 响应式设计 */
+/* 中等屏幕：隐藏标题和副标题 */
 @media (max-width: 1200px) {
+  .header-info {
+    display: none;
+  }
+
+  .header-content {
+    justify-content: flex-end;
+  }
+
   .search-area {
-    width: 250px;
+    width: 280px;
+  }
+}
+
+/* 小屏幕：搜索框开始使用弹性布局 */
+@media (max-width: 900px) {
+  .main-header {
+    padding: 0 16px;
+  }
+
+  .header-actions {
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .search-area {
+    flex: 1;
+    min-width: 150px;
+    max-width: 300px;
+    width: auto;
+  }
+
+  .filter-buttons {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+}
+
+/* 超小屏幕：进一步优化 */
+@media (max-width: 600px) {
+  .main-header {
+    padding: 0 12px;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .search-area {
+    min-width: 120px;
+    max-width: none;
+  }
+
+  .filter-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .filter-buttons .n-button {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+/* 超窄屏幕：只保留搜索框 */
+@media (max-width: 480px) {
+  .filter-buttons {
+    display: none;
+  }
+
+  .search-area {
+    min-width: 100px;
   }
 }
 </style>
