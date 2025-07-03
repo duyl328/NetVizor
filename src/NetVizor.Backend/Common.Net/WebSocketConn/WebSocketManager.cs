@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.IO.Compression;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using System.Web;
 using Common.Logger;
@@ -114,6 +116,36 @@ public class WebSocketManager
         }
     }
 
+    /// <summary>
+    /// 压缩需要发送的数据
+    /// </summary>
+    /// <param name="json"></param>
+    /// <returns></returns>
+    private static byte[] Compress(string json)
+    {
+        byte[] inputBytes = Encoding.UTF8.GetBytes(json);
+        using var outputStream = new MemoryStream();
+        // leaveOpen: false，确保 DeflateStream 完全关闭时写入尾部
+        using (var deflate = new DeflateStream(outputStream, CompressionLevel.Fastest))
+        {
+            deflate.Write(inputBytes, 0, inputBytes.Length);
+        } // Dispose 在这里调用，确保数据写入完成
+
+        return outputStream.ToArray();
+    }
+
+    private static byte[] CompressGzip(string json)
+    {
+        byte[] inputBytes = Encoding.UTF8.GetBytes(json);
+        using var outputStream = new MemoryStream();
+        using (var gzip = new GZipStream(outputStream, CompressionLevel.Fastest))
+        {
+            gzip.Write(inputBytes, 0, inputBytes.Length);
+        }
+        return outputStream.ToArray();
+    }
+
+
     // 停止服务器
     public void Stop()
     {
@@ -159,7 +191,7 @@ public class WebSocketManager
         if (_connections.TryGetValue(socketId, out var connection))
         {
             connection.Socket.Close();
-            
+
             // OnConnectionClose会被自动调用，但我们可以在这里预先记录关闭原因
             Log.Information($"主动关闭连接: {socketId}, 原因: {reason}");
         }
@@ -247,7 +279,7 @@ public class WebSocketManager
     {
         _connections.TryRemove(socket.ConnectionInfo.Id, out var conn);
         string? uuid = null;
-        
+
         if (conn?.Uuid != null)
         {
             uuid = conn.Uuid;
@@ -328,7 +360,7 @@ public class WebSocketManager
             try
             {
                 var json = JsonHelper.ToJson(message);
-                await socket.Socket.Send(json);
+                await socket.Socket.Send(CompressGzip(json));
                 return true;
             }
             catch (Exception ex)
@@ -370,7 +402,7 @@ public class WebSocketManager
 
         foreach (var connection in _connections.Values)
         {
-            tasks.Add(connection.Socket.Send(json));
+            tasks.Add(connection.Socket.Send(CompressGzip(json)));
         }
 
         try
@@ -405,11 +437,12 @@ public class WebSocketManager
     /// </summary>
     public ClientConnection? GetConnection(string uuid)
     {
-        if (_uuidToSocketId.TryGetValue(uuid, out var socketId) && 
+        if (_uuidToSocketId.TryGetValue(uuid, out var socketId) &&
             _connections.TryGetValue(socketId, out var connection))
         {
             return connection;
         }
+
         return null;
     }
 
@@ -491,14 +524,14 @@ public static class WebSocketManagerUsageExample
     public static void Initialize()
     {
         var wsManager = WebSocketManager.Instance;
-        
+
         // 订阅连接关闭事件
         wsManager.SubscribeConnectionClosed(OnConnectionClosed);
-        
+
         // 启动服务器
         wsManager.Start();
     }
-    
+
     private static void OnConnectionClosed(ConnectionClosedEventArgs args)
     {
         Console.WriteLine($"连接已关闭:");
@@ -506,20 +539,20 @@ public static class WebSocketManagerUsageExample
         Console.WriteLine($"  UUID: {args.Uuid ?? "未知"}");
         Console.WriteLine($"  关闭时间: {args.ClosedAt}");
         Console.WriteLine($"  关闭原因: {args.Reason ?? "未知"}");
-        
+
         // 在这里可以执行清理逻辑，比如：
         // - 清理用户相关的缓存数据
         // - 更新用户在线状态
         // - 记录用户离线时间
         // - 通知其他相关服务
-        
+
         // 示例：清理用户数据
         if (!string.IsNullOrEmpty(args.Uuid))
         {
             CleanupUserData(args.Uuid);
         }
     }
-    
+
     private static void CleanupUserData(string uuid)
     {
         // 实现用户数据清理逻辑

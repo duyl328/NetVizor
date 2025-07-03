@@ -9,6 +9,7 @@ import CSharpBridgeV2 from '@/correspond/CSharpBridgeV2'
 import { ref, Ref } from 'vue'
 import { logB } from '@/utils/logHelper/logUtils'
 import { useUuidStore } from '@/stores/uuidStore'
+import pako from "pako";
 
 export class WebSocketManager {
   private socket: WebSocket | null = null
@@ -102,10 +103,17 @@ export class WebSocketManager {
       this.startHeartbeat()
     }
 
-    this.socket.onmessage = (event) => {
+    this.socket.onmessage = async (event) => {
       try {
-        const message: WebSocketResponse = JSON.parse(event.data)
-        this.handleMessage(message)
+        const arrayBuffer: ArrayBuffer = event.data instanceof Blob
+          ? await event.data.arrayBuffer()
+          : event.data;
+
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const decompressed = pako.inflate(uint8Array, { to: "string" });
+
+        const json = JSON.parse(decompressed);
+        this.handleMessage(json)
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
       }

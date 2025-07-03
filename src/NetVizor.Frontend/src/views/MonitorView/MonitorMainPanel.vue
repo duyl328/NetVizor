@@ -97,7 +97,7 @@ onMounted(() => {
         // 发送请求【请求订阅软件列表】
         const subAppInfo: SubscriptionProcessInfo = {
           subscriptionType: 'ProcessInfo',
-          interval: 1000,
+          interval: 400,
           processIds: newValue1.processIds,
         }
 

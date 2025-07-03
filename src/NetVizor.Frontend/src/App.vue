@@ -146,42 +146,44 @@ const getLayout = (route) => {
     :theme-overrides="themeStore.themeOverrides"
     :theme="themeStore.theme"
   >
-    <n-global-style />
+    <n-message-provider>
+      <n-global-style />
 
-    <!-- 可拖动的导航栏 -->
-    <div
-      v-if="isShowGenerateRouter"
-      ref="navRef"
-      class="nav-container"
-      :style="{ left: `${navPosition.x}px`, top: `${navPosition.y}px` }"
-      @mousedown="startDrag"
-    >
-      <div class="drag-handle">
-        <span class="drag-icon">≡</span>
+      <!-- 可拖动的导航栏 -->
+      <div
+        v-if="isShowGenerateRouter"
+        ref="navRef"
+        class="nav-container"
+        :style="{ left: `${navPosition.x}px`, top: `${navPosition.y}px` }"
+        @mousedown="startDrag"
+      >
+        <div class="drag-handle">
+          <span class="drag-icon">≡</span>
+        </div>
+        <ul class="route-list">
+          <li v-for="(subRoute, index) in subRouteLists" :key="index" class="route-item">
+            <n-button
+              :type="isActive(subRoute.path) ? 'primary' : 'default'"
+              @click="listClickJump(subRoute)"
+            >
+              {{ subRoute.displayName }}
+            </n-button>
+          </li>
+        </ul>
       </div>
-      <ul class="route-list">
-        <li v-for="(subRoute, index) in subRouteLists" :key="index" class="route-item">
-          <n-button
-            :type="isActive(subRoute.path) ? 'primary' : 'default'"
-            @click="listClickJump(subRoute)"
-          >
-            {{ subRoute.displayName }}
-          </n-button>
-        </li>
-      </ul>
-    </div>
 
-    <!-- 展示主要内容 -->
-    <div class="main-content">
-      <router-view v-slot="{ Component, route }">
-        <transition name="fade-slide" mode="out-in">
-          <component :is="getLayout(route)">
-            <component :is="Component" />
-          </component>
-        </transition>
-      </router-view>
-<!--      <network-connection-panel2/>-->
-    </div>
+      <!-- 展示主要内容 -->
+      <div class="main-content">
+        <router-view v-slot="{ Component, route }">
+          <transition name="fade-slide" mode="out-in">
+            <component :is="getLayout(route)">
+              <component :is="Component" />
+            </component>
+          </transition>
+        </router-view>
+        <!--      <network-connection-panel2/>-->
+      </div>
+    </n-message-provider>
   </n-config-provider>
 </template>
 
