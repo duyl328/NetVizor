@@ -20,7 +20,7 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
 
   const selectedAppIndex = computed(() => {
     if (!selectedApp.value) return -1
-    return appInfos.value.findIndex((app) => app.Id === selectedApp.value?.Id)
+    return appInfos.value.findIndex((app) => app.id === selectedApp.value?.id)
   })
 
   const totalMemoryUsage = computed(() => {
@@ -36,7 +36,7 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
     appInfos.value = apps
 
     // 如果当前选中的应用不在新列表中，清空选中
-    if (selectedApp.value && !apps.find((app) => app.Id === selectedApp.value?.Id)) {
+    if (selectedApp.value && !apps.find((app) => app.id === selectedApp.value?.id)) {
       selectedApp.value = null
     }
   }
@@ -76,24 +76,24 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
   }
 
   const updateApp = (updatedApp: ApplicationType) => {
-    const index = appInfos.value.findIndex((app) => app.Id === updatedApp.Id)
+    const index = appInfos.value.findIndex((app) => app.id === updatedApp.id)
     if (index !== -1) {
       appInfos.value[index] = updatedApp
 
       // 如果更新的是当前选中的应用，同步更新选中状态
-      if (selectedApp.value?.Id === updatedApp.Id) {
+      if (selectedApp.value?.id === updatedApp.id) {
         selectedApp.value = updatedApp
       }
     }
   }
 
   const removeApp = (appId: string) => {
-    const index = appInfos.value.findIndex((app) => app.Id === appId)
+    const index = appInfos.value.findIndex((app) => app.id === appId)
     if (index !== -1) {
       appInfos.value.splice(index, 1)
 
       // 如果删除的是当前选中的应用，选择下一个
-      if (selectedApp.value?.Id === appId) {
+      if (selectedApp.value?.id === appId) {
         if (appInfos.value.length > 0) {
           // 优先选择同位置的应用，如果没有则选择前一个
           const newIndex = Math.min(index, appInfos.value.length - 1)

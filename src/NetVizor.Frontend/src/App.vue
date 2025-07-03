@@ -8,7 +8,9 @@ import { ref, onMounted, provide } from 'vue'
 import { NButton } from 'naive-ui'
 import { NConfigProvider, NGlobalStyle } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
-import MainLayout from '@/layouts/MainLayout.vue'
+import NetworkConnectionPanel1 from '@/components/NetworkConnectionPanel1.vue'
+import MainLayout from './layouts/MainLayout.vue'
+import NetworkConnectionPanel2 from '@/components/NetworkConnectionPanel2.vue'
 
 const router = useRouter()
 // 是否展示生成路由
@@ -132,6 +134,10 @@ onMounted(() => {
     window.removeEventListener('mouseup', endDrag)
   }
 })
+
+const getLayout = (route) => {
+  return route.meta.layout === 'main' ? MainLayout : 'div' // 'div' 表示没有布局
+}
 </script>
 
 <template>
@@ -167,13 +173,14 @@ onMounted(() => {
 
     <!-- 展示主要内容 -->
     <div class="main-content">
-      <MainLayout>
-        <router-view v-slot="{ Component }">
-          <transition name="fade-slide" mode="out-in">
+      <router-view v-slot="{ Component, route }">
+        <transition name="fade-slide" mode="out-in">
+          <component :is="getLayout(route)">
             <component :is="Component" />
-          </transition>
-        </router-view>
-      </MainLayout>
+          </component>
+        </transition>
+      </router-view>
+<!--      <network-connection-panel2/>-->
     </div>
   </n-config-provider>
 </template>

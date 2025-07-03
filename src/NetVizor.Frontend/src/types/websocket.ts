@@ -1,14 +1,14 @@
 // types/websocket.ts
 
 // 基础消息格式
-export interface WebSocketMessage<T = any> {
+export interface WebSocketMessage<T = unknown> {
   command: string
   data?: T
   timestamp?: string
 }
 
 // 响应消息格式
-export interface WebSocketResponse<T = any> {
+export interface WebSocketResponse<T = unknown> {
   type: string
   data?: T
   success?: boolean
@@ -81,7 +81,7 @@ export interface WebSocketConfig {
 export interface SubscriptionRequest {
   type: string
   interval?: number
-  params?: Record<string, any>
+  params?: Record<string, unknown>
 }
 // 命令处理器类型
 export type CommandHandler = (data: WebSocketResponse) => void

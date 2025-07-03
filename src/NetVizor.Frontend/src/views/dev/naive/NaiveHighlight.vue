@@ -23,7 +23,7 @@ watch(input, (value) => {
     :text="text"
     :patterns="patterns"
     :highlight-style="{
-      padding: '0 6px',
+      padding: '0 1px',
       borderRadius: themeVars.borderRadius,
       display: 'inline-block',
       color: themeVars.baseColor,

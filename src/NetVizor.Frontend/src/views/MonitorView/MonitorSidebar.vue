@@ -138,7 +138,7 @@ onMounted(() => {
         }
 
         httpClient
-          .post(`/subscribe`, JSON.stringify(subAppInfo))
+          .post(`/subscribe-application`, JSON.stringify(subAppInfo))
           .then((res: ResponseModel) => {
             console.log('订阅应用信息成功:', res)
           })

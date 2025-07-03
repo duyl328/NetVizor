@@ -64,18 +64,21 @@ const router = createRouter({
       path: '/monitor',
       name: 'monitor',
       component: MonitorView,
+      meta: { layout: 'main' },
     },
     // 防火墙
     {
       path: '/firewall',
       name: 'firewall',
       component: FirewallView,
+      meta: { layout: 'main' },
     },
     // 网络分析
     {
       path: '/analyse',
       name: 'analyse',
       component: AnalyseView,
+      meta: { layout: 'main' },
     },
 
     {

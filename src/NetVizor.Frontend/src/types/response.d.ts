@@ -11,8 +11,14 @@ interface ResponseModel {
  * 订阅信息
  */
 interface SubscriptionInfo {
-  subscriptionType: 'ApplicationInfo'
+  // ApplicationInfo ProcessInfo
+  subscriptionType: string
   interval: number
 }
 
-export { ResponseModel, SubscriptionInfo }
+interface SubscriptionProcessInfo extends SubscriptionInfo {
+  // 订阅的进程列表
+  processIds: number[]
+}
+
+export { ResponseModel, SubscriptionInfo,SubscriptionProcessInfo }
