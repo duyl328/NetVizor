@@ -23,7 +23,7 @@ export const useProcessStore = defineStore('processInfoSub', () => {
           webSocketStore.registerHandler('ProcessInfo', (data: WebSocketResponse<string>) => {
             // console.log(data.data)
             const parse: ProcessType[] = JSON.parse(data.data)
-            console.log(parse);
+            console.log(parse,Date.now());
             processInfos.value = parse
           })
         }

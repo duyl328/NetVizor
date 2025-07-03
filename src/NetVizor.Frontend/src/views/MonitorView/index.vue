@@ -49,7 +49,7 @@ import MonitorInspector from './MonitorInspector.vue'
 // 布局尺寸控制
 const sidebarWidth = ref(400)
 const inspectorWidth = ref(350)
-const timelineHeight = ref(500)
+const timelineHeight = ref(200)
 const mainHeaderHeight = ref(80)
 
 // 调整分割条范围限制
