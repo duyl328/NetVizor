@@ -49,6 +49,11 @@ public class NetworkModel
     public long BytesReceived { get; set; }
 
     /// <summary>
+    /// 是否是增量数据
+    /// </summary>
+    public bool IsIncrementalData { get; set; }
+
+    /// <summary>
     /// 连接状态
     /// </summary>
     public required ConnectionState State { get; set; } // 如 ESTABLISHED, CLOSED, TIME_WAIT, 或 UDP/Unknown
@@ -87,7 +92,7 @@ public class NetworkModel
     /// 是否是完整会话【如果在软件打开前会话已经创建则不认为是完整会话】
     /// </summary>
     public required bool IsPartialConnection { get; set; }
-    
+
 
     /// <summary>
     /// 会话持续时间

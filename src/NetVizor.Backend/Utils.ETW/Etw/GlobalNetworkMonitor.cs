@@ -122,6 +122,9 @@ public sealed class GlobalNetworkMonitor
     /// <summary>
     /// 更新连接信息
     /// </summary>
+    /// <summary>
+    /// 更新连接信息 - 修复版本
+    /// </summary>
     public void UpdateConnectionInfo(NetworkModel networkModel)
     {
         _lock.EnterWriteLock();
@@ -143,23 +146,83 @@ public sealed class GlobalNetworkMonitor
                     LastActiveTime = networkModel.LastSeenTime,
                     BytesSent = networkModel.BytesSent,
                     BytesReceived = networkModel.BytesReceived,
-                    IsActive = networkModel.State == ConnectionState.Connected
+                    IsActive = networkModel.State == ConnectionState.Connected,
+
+                    //  修复：正确初始化速度计算相关字段
+                    LastBytesSent = networkModel.BytesSent,
+                    LastBytesReceived = networkModel.BytesReceived,
+                    LastSpeedCalculationTime = networkModel.LastSeenTime,
+                    CurrentSendSpeed = 0,
+                    CurrentReceiveSpeed = 0,
+
+                    // 📊 新增：重置计数器
+                    ResetCount = 0,
+                    TotalBytesSentAccumulated = networkModel.BytesSent,
+                    TotalBytesReceivedAccumulated = networkModel.BytesReceived
                 },
                 (key, existing) =>
                 {
+                    // 更新基本信息
                     existing.BytesSent = networkModel.BytesSent;
                     existing.BytesReceived = networkModel.BytesReceived;
                     existing.LastActiveTime = networkModel.LastSeenTime;
                     existing.State = networkModel.State;
                     existing.IsActive = networkModel.State == ConnectionState.Connected;
 
-                    // 计算速率
+                    // 📈 改进的速率计算
                     var timeDiff = (networkModel.LastSeenTime - existing.LastSpeedCalculationTime).TotalSeconds;
-                    if (timeDiff > 0)
+                    if (timeDiff > 0.1) // 避免时间间隔过小
                     {
-                        existing.CurrentSendSpeed = (networkModel.BytesSent - existing.LastBytesSent) / timeDiff;
-                        existing.CurrentReceiveSpeed =
-                            (networkModel.BytesReceived - existing.LastBytesReceived) / timeDiff;
+                        var sentDiff = networkModel.BytesSent - existing.LastBytesSent;
+                        var receivedDiff = networkModel.BytesReceived - existing.LastBytesReceived;
+
+                        // 🔄 智能重置检测
+                        bool sentReset = DetectCounterReset(existing.LastBytesSent, networkModel.BytesSent, timeDiff);
+                        bool receivedReset = DetectCounterReset(existing.LastBytesReceived, networkModel.BytesReceived,
+                            timeDiff);
+
+                        if (sentReset)
+                        {
+                            existing.ResetCount++;
+                            existing.TotalBytesSentAccumulated += networkModel.BytesSent;
+                            sentDiff = networkModel.BytesSent; // 使用当前值作为增量
+
+                            // 🔕 减少日志噪音：只记录重要的重置
+                            if (ShouldLogReset(existing.Protocol, existing.LocalEndpoint.Port, existing.ResetCount))
+                            {
+                                Console.WriteLine(
+                                    $"[信息] 连接 {connectionKey} 发送计数器重置 #{existing.ResetCount}: {existing.LastBytesSent} -> {networkModel.BytesSent}");
+                            }
+                        }
+                        else
+                        {
+                            existing.TotalBytesSentAccumulated = Math.Max(existing.TotalBytesSentAccumulated,
+                                existing.TotalBytesSentAccumulated + sentDiff);
+                        }
+
+                        if (receivedReset)
+                        {
+                            existing.ResetCount++;
+                            existing.TotalBytesReceivedAccumulated += networkModel.BytesReceived;
+                            receivedDiff = networkModel.BytesReceived;
+
+                            if (ShouldLogReset(existing.Protocol, existing.LocalEndpoint.Port, existing.ResetCount))
+                            {
+                                Console.WriteLine(
+                                    $"[信息] 连接 {connectionKey} 接收计数器重置 #{existing.ResetCount}: {existing.LastBytesReceived} -> {networkModel.BytesReceived}");
+                            }
+                        }
+                        else
+                        {
+                            existing.TotalBytesReceivedAccumulated = Math.Max(existing.TotalBytesReceivedAccumulated,
+                                existing.TotalBytesReceivedAccumulated + receivedDiff);
+                        }
+
+                        // 计算速率（确保非负）
+                        existing.CurrentSendSpeed = Math.Max(0, Math.Abs(sentDiff) / timeDiff);
+                        existing.CurrentReceiveSpeed = Math.Max(0, Math.Abs(receivedDiff) / timeDiff);
+
+                        // 更新记录值
                         existing.LastBytesSent = networkModel.BytesSent;
                         existing.LastBytesReceived = networkModel.BytesReceived;
                         existing.LastSpeedCalculationTime = networkModel.LastSeenTime;
@@ -167,6 +230,7 @@ public sealed class GlobalNetworkMonitor
 
                     return existing;
                 });
+
 
             // 更新进程的活跃连接列表
             if (_processes.TryGetValue(networkModel.ProcessId, out var process))
@@ -177,19 +241,160 @@ public sealed class GlobalNetworkMonitor
                 }
             }
 
-            // 更新端口流量统计
-            UpdatePortTraffic(networkModel.SourcePort, networkModel.BytesSent, networkModel.BytesReceived, true);
-            UpdatePortTraffic(networkModel.DestinationPort, networkModel.BytesSent, networkModel.BytesReceived, false);
-
-            // 更新IP流量统计
-            UpdateIpTraffic(networkModel.SourceIp.ToString(), networkModel.BytesSent, networkModel.BytesReceived, true);
-            UpdateIpTraffic(networkModel.DestinationIp.ToString(), networkModel.BytesSent, networkModel.BytesReceived,
+            // 更新端口流量统计（也需要类似的保护）
+            UpdatePortTrafficSafe(networkModel.SourcePort, networkModel.BytesSent, networkModel.BytesReceived, true);
+            UpdatePortTrafficSafe(networkModel.DestinationPort, networkModel.BytesSent, networkModel.BytesReceived,
                 false);
+
+            // 更新IP流量统计（也需要类似的保护）
+            UpdateIpTrafficSafe(networkModel.SourceIp.ToString(), networkModel.BytesSent, networkModel.BytesReceived,
+                true);
+            UpdateIpTrafficSafe(networkModel.DestinationIp.ToString(), networkModel.BytesSent,
+                networkModel.BytesReceived, false);
         }
         finally
         {
             _lock.ExitWriteLock();
         }
+    }
+
+    /// <summary>
+    /// 🧠 智能检测计数器重置
+    /// </summary>
+    private bool DetectCounterReset(long previousValue, long currentValue, double timeDiffSeconds)
+    {
+        // 如果当前值小于之前值，可能是重置
+        if (currentValue < previousValue)
+        {
+            // 但需要排除一些误判情况
+            var decrease = previousValue - currentValue;
+
+            // 如果减少量很小且时间间隔短，可能是数据延迟，不算重置
+            if (decrease < 1024 && timeDiffSeconds < 1.0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 🔇 减少不必要的日志噪音
+    /// </summary>
+    private bool ShouldLogReset(ProtocolType protocol, int port, int resetCount)
+    {
+        // mDNS 多播连接，重置很常见，减少日志
+        if (port == 5353)
+        {
+            return resetCount <= 2; // 只记录前2次
+        }
+
+        // 本地回环连接，重置也比较常见
+        if (port > 49152) // 动态端口范围
+        {
+            return resetCount <= 3;
+        }
+
+        // UDP 连接重置更常见
+        if (protocol == ProtocolType.UDP)
+        {
+            return resetCount <= 5;
+        }
+
+        // TCP 连接重置较少见，都记录
+        return true;
+    }
+
+    /// <summary>
+    /// 安全的端口流量更新
+    /// </summary>
+    private void UpdatePortTrafficSafe(int port, long bytesSent, long bytesReceived, bool isLocal)
+    {
+        _portTraffic.AddOrUpdate(port,
+            new PortTrafficInfo
+            {
+                Port = port,
+                BytesSent = isLocal ? bytesSent : 0,
+                BytesReceived = isLocal ? 0 : bytesReceived,
+                LastUpdateTime = DateTime.Now
+            },
+            (key, existing) =>
+            {
+                // ✅ 修复：防止流量统计出现负数
+                if (isLocal)
+                {
+                    // 如果新值小于现有值，可能是计数器重置，累加当前值
+                    if (bytesSent < existing.BytesSent)
+                    {
+                        existing.BytesSent += bytesSent;
+                    }
+                    else
+                    {
+                        existing.BytesSent = bytesSent;
+                    }
+                }
+                else
+                {
+                    if (bytesReceived < existing.BytesReceived)
+                    {
+                        existing.BytesReceived += bytesReceived;
+                    }
+                    else
+                    {
+                        existing.BytesReceived = bytesReceived;
+                    }
+                }
+
+                existing.LastUpdateTime = DateTime.Now;
+                return existing;
+            });
+    }
+
+    /// <summary>
+    /// 安全的IP流量更新
+    /// </summary>
+    private void UpdateIpTrafficSafe(string ip, long bytesSent, long bytesReceived, bool isSource)
+    {
+        _ipTraffic.AddOrUpdate(ip,
+            new IpTrafficInfo
+            {
+                IpAddress = ip,
+                BytesSent = isSource ? bytesSent : 0,
+                BytesReceived = isSource ? 0 : bytesReceived,
+                LastUpdateTime = DateTime.Now
+            },
+            (key, existing) =>
+            {
+                // ✅ 修复：防止流量统计出现负数
+                if (isSource)
+                {
+                    if (bytesSent < existing.BytesSent)
+                    {
+                        existing.BytesSent += bytesSent;
+                    }
+                    else
+                    {
+                        existing.BytesSent = bytesSent;
+                    }
+                }
+                else
+                {
+                    if (bytesReceived < existing.BytesReceived)
+                    {
+                        existing.BytesReceived += bytesReceived;
+                    }
+                    else
+                    {
+                        existing.BytesReceived = bytesReceived;
+                    }
+                }
+
+                existing.LastUpdateTime = DateTime.Now;
+                return existing;
+            });
     }
 
     /// <summary>

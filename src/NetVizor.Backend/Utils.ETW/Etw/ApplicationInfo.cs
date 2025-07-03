@@ -141,6 +141,35 @@ public class ConnectionInfo
     public long LastBytesSent { get; set; }
     public long LastBytesReceived { get; set; }
     public DateTime LastSpeedCalculationTime { get; set; }
+
+    /// <summary>
+    /// 重置次数统计
+    /// </summary>
+    public int ResetCount { get; set; }
+
+    /// <summary>
+    /// 累积发送总量（跨重置）
+    /// </summary>
+    public long TotalBytesSentAccumulated { get; set; }
+
+    /// <summary>
+    /// 累积接收总量（跨重置）
+    /// </summary>
+    public long TotalBytesReceivedAccumulated { get; set; }
+
+    /// <summary>
+    /// 连接类型（持久/临时）
+    /// </summary>
+    public ConnectionType ConnectionType { get; set; }
+}
+
+public enum ConnectionType
+{
+    Unknown,
+    Persistent, // 长连接
+    Ephemeral, // 短连接
+    Multicast, // 多播
+    Loopback // 本地回环
 }
 
 /// <summary>

@@ -104,7 +104,11 @@ public class EnhancedEtwNetworkManager : IDisposable
                 RecordTime = tcpEvent.Timestamp,
                 Direction = tcpEvent.Direction,
                 IsPartialConnection = false,
-                State = ConnectionState.Connecting
+                State = ConnectionState.Connecting,
+                // 明确标识这是增量还是累积值
+                BytesSent = tcpEvent.DataLength, // 如果是增量
+                BytesReceived = tcpEvent.DataLength,
+                IsIncrementalData = true // 新增标识
             };
 
             // 根据事件类型处理
@@ -362,7 +366,8 @@ public class EnhancedEtwNetworkManager : IDisposable
                                  !c.IsActive && c.Duration > TimeSpan.FromMinutes(5)))
                     {
                         // 这里可以添加清理逻辑
-                        Console.WriteLine($"清理过期连接: {app.ProgramInfo?.ProductName} - {conn.RemoteIp}:{conn.RemotePort}");
+                        Console.WriteLine(
+                            $"清理过期连接: {app.ProgramInfo?.ProductName} - {conn.RemoteIp}:{conn.RemotePort}");
                     }
                 }
 
