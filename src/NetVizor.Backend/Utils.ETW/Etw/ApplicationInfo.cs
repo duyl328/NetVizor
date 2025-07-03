@@ -28,6 +28,87 @@ public class ProcessNetworkInfo
 }
 
 /// <summary>
+/// 进程信息
+/// </summary>
+public class ProcessType
+{
+    /// <summary>
+    /// 进程名称
+    /// </summary>
+    public string ProcessName { get; set; }
+
+    /// <summary>
+    /// 进程ID
+    /// </summary>
+    public int ProcessId { get; set; }
+
+    /// <summary>
+    /// 启动时间
+    /// </summary>
+    public DateTime StartTime { get; set; }
+
+    /// <summary>
+    /// 是否退出
+    /// </summary>
+    public bool HasExited { get; set; }
+
+    /// <summary>
+    /// 退出时间
+    /// </summary>
+    public DateTime? ExitTime { get; set; }
+
+    /// <summary>
+    /// 退出代码
+    /// </summary>
+    public int? ExitCode { get; set; }
+
+    /// <summary>
+    /// 占用内存
+    /// </summary>
+    public long UseMemory { get; set; }
+
+    /// <summary>
+    /// 线程数
+    /// </summary>
+    public int ThreadCount { get; set; }
+
+    /// <summary>
+    /// 主模块路径
+    /// </summary>
+    public string? MainModulePath { get; set; }
+
+    /// <summary>
+    /// 启动文件名
+    /// </summary>
+    public string? MainModuleName { get; set; }
+
+    /// <summary>
+    /// 上行总量
+    /// </summary>
+    public long TotalUploaded { get; set; }
+
+    /// <summary>
+    /// 下行总量
+    /// </summary>
+    public long TotalDownloaded { get; set; }
+
+    /// <summary>
+    /// 上行速度
+    /// </summary>
+    public double UploadSpeed { get; set; }
+
+    /// <summary>
+    /// 下行速度
+    /// </summary>
+    public double DownloadSpeed { get; set; }
+
+    /// <summary>
+    /// 所有连接
+    /// </summary>
+    public List<ConnectionInfo> Connections { get; set; } = new List<ConnectionInfo>();
+}
+
+/// <summary>
 /// 连接详细信息
 /// </summary>
 public class ConnectionInfo
@@ -35,14 +116,17 @@ public class ConnectionInfo
     public string ConnectionKey { get; set; }
     public int ProcessId { get; set; }
     public ProtocolType Protocol { get; set; }
+
     /// <summary>
     /// 本地 终结点
     /// </summary>
     public IPEndPoint LocalEndpoint { get; set; }
+
     /// <summary>
     /// 目标 终结点
     /// </summary>
     public IPEndPoint RemoteEndpoint { get; set; }
+
     public ConnectionState State { get; set; }
     public TrafficDirection Direction { get; set; }
     public DateTime StartTime { get; set; }
@@ -138,10 +222,12 @@ public class ConnectionSnapshot
     public int RemotePort { get; set; }
     public string RemoteDomain { get; set; }
     public string State { get; set; }
+
     /// <summary>
     /// 方向
     /// </summary>
     public string Direction { get; set; }
+
     public DateTime StartTime { get; set; }
     public TimeSpan Duration { get; set; }
     public long BytesSent { get; set; }

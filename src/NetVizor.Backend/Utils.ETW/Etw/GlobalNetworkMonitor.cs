@@ -390,6 +390,30 @@ public sealed class GlobalNetworkMonitor
         return _applications.Values.ToList().Select(applicationInfo => applicationInfo.ProgramInfo).ToList();
     }
 
+    /// <summary>
+    /// 获取指定的 pid 连接
+    /// </summary>
+    public List<ConnectionInfo> GetAllConnection(List<int> processIds)
+    {
+        var connectionInfos = _connections.Values.ToList();
+        var ansList = new List<ConnectionInfo>();
+        foreach (var t in processIds)
+        {
+            var infos = GetConnection(t);
+
+            ansList.AddRange(infos);
+        }
+
+        return ansList;
+    }
+
+    public List<ConnectionInfo> GetConnection(int processIds)
+    {
+        var connectionInfos = _connections.Values.ToList();
+        var infos = connectionInfos.FindAll(info => info.ProcessId == processIds);
+        return infos;
+    }
+
     #endregion
 
     #region 私有辅助方法

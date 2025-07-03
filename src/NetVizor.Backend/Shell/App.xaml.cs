@@ -14,6 +14,7 @@ using Common.Logger;
 using Common.Net.HttpConn;
 using Common.Net.Models;
 using Common.Net.WebSocketConn;
+using Common.Utils;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
 using Utils.ETW.Etw;
@@ -135,11 +136,16 @@ public partial class App : System.Windows.Application
         // 订阅 websocket 关闭服务
         WebSocketManager.Instance.SubscribeConnectionClosed((args =>
                 {
-                    if (args.Uuid != null) DispatchEngine.Instance.DeleteApplicationInfo(args.Uuid);
+                    if (args.Uuid != null)
+                    {
+                        DispatchEngine.Instance.DeleteApplicationInfo(args.Uuid);
+                        DispatchEngine.Instance.DeleteProcessInfo(args.Uuid);
+                    }
                 }
             ));
         // 开启 WebSocket 定时发送服务
         DispatchEngine.Instance.ApplicationInfoDistribute();
+        DispatchEngine.Instance.ProcessInfoDistribute();
 
         // 启动 http 服务
         Task.Run(() => { _ = StartHttpServer(); });
@@ -174,8 +180,9 @@ public partial class App : System.Windows.Application
         server.Get("/api",
             async (context) => { await context.Response.WriteJsonAsync(new { message = "Hi!" }); });
 
-        // 订阅某信息
-        server.Post("/api/subscribe", async (context) =>
+        #region 软件信息订阅
+
+        server.Post("/api/subscribe-application", async (context) =>
         {
             // 正确的做法：只处理请求体数据
             if (string.IsNullOrEmpty(context.RequestBody))
@@ -199,18 +206,27 @@ public partial class App : System.Windows.Application
                 string? uuid = context.Request.Headers["uuid"];
                 Log.Warning($"接收到的数据: {requestData}, 用户 Id: {uuid}");
 
-                var subscriptionInfo = JsonSerializer.Deserialize<SubscriptionInfo>(requestData);
-                if (subscriptionInfo != null && !string.IsNullOrWhiteSpace(uuid))
+                if (string.IsNullOrWhiteSpace(uuid))
                 {
-                    if (AppConfig.ApplicationInfoSubscribe.Equals(subscriptionInfo.SubscriptionType))
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
                     {
-                        DispatchEngine.Instance.AddApplicationInfo(uuid, new DispatchModel
-                        {
-                            Interval = subscriptionInfo.Interval
-                        });
-                    }
+                        Success = false,
+                        Message = $"用户 ID 丢失!",
+                    });
+                    return;
+                }
 
-                    Log.Warning($"名称: {subscriptionInfo.SubscriptionType}");
+                var subscriptionInfo = JsonHelper.FromJson<SubscriptionInfo>(requestData);
+                if (subscriptionInfo != null)
+                {
+                    // 软件信息订阅
+                    DispatchEngine.Instance.AddApplicationInfo(uuid, new DispatchModel
+                    {
+                        Interval = subscriptionInfo.Interval
+                    });
+
+
                     Log.Warning($"时间: {subscriptionInfo.Interval}");
                 }
             }
@@ -235,7 +251,81 @@ public partial class App : System.Windows.Application
             });
         });
 
-        // 取消订阅
+        #endregion
+
+        #region 线程信息订阅
+
+        server.Post("/api/subscribe-process", async (context) =>
+        {
+            if (string.IsNullOrEmpty(context.RequestBody))
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = "请求体不能为空",
+                });
+                return;
+            }
+
+            // 解析请求数据
+            try
+            {
+                string requestData = context.RequestBody;
+
+                // 打印原始数据用于调试
+                string? uuid = context.Request.Headers["uuid"];
+
+                if (string.IsNullOrWhiteSpace(uuid))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = $"用户 ID 丢失!",
+                    });
+                    return;
+                }
+
+                var subscriptionInfo = JsonHelper.FromJson<SubscriptionProcessInfo>(requestData);
+                if (subscriptionInfo != null)
+                {
+                    DispatchEngine.Instance.DeleteProcessInfo(uuid);
+                    DispatchEngine.Instance.AddProcessInfo(uuid, new ProcessDispatchModel
+                    {
+                        Interval = subscriptionInfo.Interval,
+                        ProcessIds = subscriptionInfo.ProcessIds
+                    });
+                    Log.Warning($"时间: {subscriptionInfo.Interval}");
+                    Log.Warning($"监视的 ID : {subscriptionInfo.ProcessIds}");
+                }
+            }
+            catch (JsonException ex)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"请求数据格式错误: {ex.Message}",
+                });
+                return;
+            }
+
+            // 返回响应 - 只序列化纯数据对象
+            context.Response.StatusCode = 200;
+            await context.Response.WriteJsonAsync(new ResponseModel<string>
+            {
+                Success = true,
+                Data = "成功",
+                Message = "订阅成功",
+            });
+        });
+
+        #endregion
+
+
+        #region 取消订阅
+
         server.Post("/api/unsubscribe", async (context) =>
         {
             // 正确的做法：只处理请求体数据
@@ -260,12 +350,18 @@ public partial class App : System.Windows.Application
                 string? uuid = context.Request.Headers["uuid"];
                 Log.Warning($"接收到的数据: {requestData}, 用户 Id: {uuid}");
 
-                var subscriptionInfo = JsonSerializer.Deserialize<SubscriptionInfo>(requestData);
+                var subscriptionInfo = JsonHelper.FromJson<SubscriptionInfo>(requestData);
                 if (subscriptionInfo != null && !string.IsNullOrWhiteSpace(uuid))
                 {
+                    // 软件信息订阅
                     if (AppConfig.ApplicationInfoSubscribe.Equals(subscriptionInfo.SubscriptionType))
                     {
                         DispatchEngine.Instance.DeleteApplicationInfo(uuid);
+                    }
+                    // 进程信息订阅
+                    else if (AppConfig.ProcessInfoSubscribe.Equals(subscriptionInfo.SubscriptionType))
+                    {
+                        DispatchEngine.Instance.DeleteProcessInfo(uuid);
                     }
 
                     Log.Warning($"取消订阅的 名称: {subscriptionInfo.SubscriptionType}");
@@ -292,6 +388,7 @@ public partial class App : System.Windows.Application
             });
         });
 
+        #endregion
 
         // 启动服务器
         try

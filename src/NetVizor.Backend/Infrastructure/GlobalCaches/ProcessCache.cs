@@ -17,7 +17,7 @@ public sealed class ProcessCache
         var process = Process.GetProcessById(pid);
         return $"{pid}-{process.StartTime:yyyyMMddHHmmss}";
     }
-    
+
     // 私有构造函数，禁止外部创建实例
     private ProcessCache()
     {
@@ -27,14 +27,17 @@ public sealed class ProcessCache
     /// <summary>
     /// 缓存字典【给定初始量 1000 ，后期可根据需求调整，避免频繁扩容】
     /// </summary>
-    private readonly Dictionary<string, ProgramInfo> _cache = new(1000);
+    private readonly Dictionary<string, CacheItem> _cache = new(1000);
 
     // 设置缓存
     public void Set(string key, ProgramInfo value)
     {
         lock (_cache)
         {
-            _cache[key] = value;
+            _cache[key] = new CacheItem
+            {
+                Info = value
+            };
         }
     }
 
@@ -43,7 +46,16 @@ public sealed class ProcessCache
     {
         lock (_cache)
         {
-            return _cache.GetValueOrDefault(key);
+            if (_cache.TryGetValue(key, out var item))
+            {
+                if ((DateTime.Now - item.TimeStamp).TotalMinutes < 2)
+                    return item.Info;
+
+                // 超时，移除
+                _cache.Remove(key);
+            }
+
+            return null;
         }
     }
 
@@ -56,9 +68,15 @@ public sealed class ProcessCache
         }
     }
 }
+
+public class CacheItem
+{
+    public required ProgramInfo Info { get; init; }
+    public DateTime TimeStamp { get; init; } = DateTime.Now;
+}
 /*
  PID 重用问题：
- 
+
 🧠 背景 recap：
 操作系统（如 Windows）中的每个连接通常可以获取一个 PID。
 但由于：
@@ -77,5 +95,5 @@ public sealed class ProcessCache
 但 PID 对应的进程启动时间是 18:10
 → 说明这个进程是后来启动的（PID 被重用了）
 → ❌ 不应该关联这条连接
- 
+
  */
