@@ -64,6 +64,7 @@ import { useWebSocketStore } from '@/stores/websocketStore'
 import { useProcessStore } from '@/stores/processInfo'
 import { ApplicationType } from '@/types/infoModel'
 import ConnectionsTable1 from '@/views/MonitorView/components/ConnectionsTable1.vue'
+import UnifiedConnectionsList from '@/views/MonitorView/components/UnifiedConnectionsList.vue'
 
 const webSocketStore = useWebSocketStore()
 const { isOpen } = storeToRefs(webSocketStore)

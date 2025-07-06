@@ -190,8 +190,8 @@ public sealed class GlobalNetworkMonitor
                             // 🔕 减少日志噪音：只记录重要的重置
                             if (ShouldLogReset(existing.Protocol, existing.LocalEndpoint.Port, existing.ResetCount))
                             {
-                                Console.WriteLine(
-                                    $"[信息] 连接 {connectionKey} 发送计数器重置 #{existing.ResetCount}: {existing.LastBytesSent} -> {networkModel.BytesSent}");
+                                // Console.WriteLine(
+                                //     $"[信息] 连接 {connectionKey} 发送计数器重置 #{existing.ResetCount}: {existing.LastBytesSent} -> {networkModel.BytesSent}");
                             }
                         }
                         else
@@ -208,8 +208,8 @@ public sealed class GlobalNetworkMonitor
 
                             if (ShouldLogReset(existing.Protocol, existing.LocalEndpoint.Port, existing.ResetCount))
                             {
-                                Console.WriteLine(
-                                    $"[信息] 连接 {connectionKey} 接收计数器重置 #{existing.ResetCount}: {existing.LastBytesReceived} -> {networkModel.BytesReceived}");
+                                // Console.WriteLine(
+                                //     $"[信息] 连接 {connectionKey} 接收计数器重置 #{existing.ResetCount}: {existing.LastBytesReceived} -> {networkModel.BytesReceived}");
                             }
                         }
                         else

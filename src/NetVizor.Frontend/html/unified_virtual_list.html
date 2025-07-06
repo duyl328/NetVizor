@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>统一虚拟滚动列表</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			background-color: #f5f5f7;
+			color: #333;
+		}
+
+		.container {
+			max-width: 600px;
+			margin: 0 auto;
+			background-color: #fff;
+			min-height: 100vh;
+			box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+		}
+
+		.page-header {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			padding: 20px;
+			text-align: center;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.page-header h1 {
+			font-size: 24px;
+			font-weight: 600;
+			position: relative;
+			z-index: 1;
+		}
+
+		.page-header::before {
+			content: '';
+			position: absolute;
+			top: -50%;
+			right: -50%;
+			width: 200%;
+			height: 200%;
+			background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+			animation: shimmer 3s infinite;
+		}
+
+		@keyframes shimmer {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+
+		.virtual-list-container {
+			position: relative;
+			width: 100%;
+		}
+
+		.virtual-list-wrapper {
+			position: relative;
+			width: 100%;
+		}
+
+		.virtual-list-spacer {
+			width: 100%;
+			pointer-events: none;
+		}
+
+		.virtual-list-viewport {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+		}
+
+		.virtual-list-item {
+			position: absolute;
+			width: 100%;
+			display: flex;
+			align-items: center;
+			overflow: hidden;
+			transition: background-color 0.2s ease, padding-left 0.2s ease;
+		}
+
+		/* 表头样式 */
+		.virtual-list-item.header {
+			height: 60px;
+			background: rgba(248, 249, 250, 0.95);
+			padding: 15px 20px;
+			font-weight: 600;
+			font-size: 16px;
+			color: #495057;
+			border-bottom: 2px solid #e9ecef;
+			backdrop-filter: blur(10px);
+			cursor: pointer;
+			user-select: none;
+			justify-content: space-between;
+			z-index: 100;
+		}
+
+		/* 吸顶表头 */
+		.sticky-header {
+			position: fixed;
+			top: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 600px;
+			max-width: 100vw;
+			z-index: 1000;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			transition: all 0.3s ease;
+		}
+
+		.sticky-header-placeholder {
+			height: 60px;
+			background: transparent;
+			pointer-events: none;
+		}
+
+		.virtual-list-item.header:hover {
+			background: rgba(248, 249, 250, 1);
+			transform: translateY(-1px);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		}
+
+		.header-content {
+			display: flex;
+			align-items: center;
+		}
+
+		.header-content::before {
+			content: '📋';
+			margin-right: 8px;
+		}
+
+		.header-info {
+			font-size: 12px;
+			opacity: 0.7;
+			margin-left: 10px;
+		}
+
+		.header-arrow {
+			font-size: 12px;
+			transition: transform 0.3s ease;
+		}
+
+		.header-arrow.collapsed {
+			transform: rotate(-90deg);
+		}
+
+		/* 列表项样式 */
+		.virtual-list-item.item {
+			height: 60px;
+			padding: 15px 20px;
+			border-bottom: 1px solid #f1f3f5;
+			background: white;
+		}
+
+		.virtual-list-item.item::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 0;
+			height: 100%;
+			width: 3px;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			transform: translateX(-100%);
+			transition: transform 0.3s ease;
+		}
+
+		.virtual-list-item.item:hover {
+			background-color: #f8f9fa;
+			padding-left: 30px;
+		}
+
+		.virtual-list-item.item:hover::before {
+			transform: translateX(0);
+		}
+
+		.item-number {
+			display: inline-block;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			width: 28px;
+			height: 28px;
+			text-align: center;
+			line-height: 28px;
+			border-radius: 50%;
+			font-size: 12px;
+			font-weight: 600;
+			margin-right: 12px;
+			flex-shrink: 0;
+		}
+
+		.item-content {
+			flex: 1;
+			font-size: 14px;
+		}
+
+		/* 不同分类的颜色主题 */
+		.virtual-list-item.header.category-1 {
+			background: rgba(255, 243, 224, 0.95);
+			color: #ff6b6b;
+		}
+
+		.virtual-list-item.header.category-1 .header-content::before {
+			content: '🍔';
+		}
+
+		.virtual-list-item.header.category-2 {
+			background: rgba(224, 255, 224, 0.95);
+			color: #51cf66;
+		}
+
+		.virtual-list-item.header.category-2 .header-content::before {
+			content: '🥗';
+		}
+
+		.virtual-list-item.header.category-3 {
+			background: rgba(224, 240, 255, 0.95);
+			color: #339af0;
+		}
+
+		.virtual-list-item.header.category-3 .header-content::before {
+			content: '🍰';
+		}
+
+		.virtual-list-item.header.category-4 {
+			background: rgba(255, 224, 255, 0.95);
+			color: #ae3ec9;
+		}
+
+		.virtual-list-item.header.category-4 .header-content::before {
+			content: '🥤';
+		}
+
+		/* 滚动提示 */
+		.scroll-indicator {
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			background: rgba(0, 0, 0, 0.8);
+			color: white;
+			padding: 10px 15px;
+			border-radius: 20px;
+			font-size: 12px;
+			opacity: 0;
+			transition: opacity 0.3s ease;
+			pointer-events: none;
+		}
+
+		.scroll-indicator.show {
+			opacity: 1;
+		}
+
+		.performance-info {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			background: rgba(0, 0, 0, 0.8);
+			color: white;
+			padding: 8px 12px;
+			border-radius: 15px;
+			font-size: 11px;
+			font-family: monospace;
+			z-index: 1000;
+			max-width: 300px;
+			white-space: pre-line;
+		}
+
+		/* 移动端优化 */
+		@media (max-width: 768px) {
+			.container {
+				box-shadow: none;
+			}
+
+			.page-header h1 {
+				font-size: 20px;
+			}
+
+			.virtual-list-item.header {
+				padding: 12px 15px;
+				font-size: 15px;
+			}
+
+			.virtual-list-item.item {
+				padding: 12px 15px;
+				height: 55px;
+			}
+
+			.performance-info {
+				display: none;
+			}
+
+			.sticky-header {
+				width: 100vw;
+				left: 0;
+				transform: translateX(0);
+			}
+
+			.sticky-header.header {
+				padding: 12px 15px;
+				font-size: 15px;
+			}
+		}
+	</style>
+</head>
+<body>
+<div class="performance-info" id="performanceInfo">
+	渲染: 0 / 0 项目
+</div>
+
+<div class="container">
+	<div class="page-header">
+		<h1>统一虚拟滚动列表演示</h1>
+		<p style="font-size: 14px; margin-top: 10px; opacity: 0.9;">表头和列表项统一管理，支持大量数据</p>
+	</div>
+
+	<div id="listContainer"></div>
+</div>
+
+<div class="scroll-indicator" id="scrollIndicator">继续滚动查看更多</div>
+
+<script>
+	// 防抖函数
+	function debounce(func, wait) {
+		let timeout;
+		return function executedFunction(...args) {
+			const later = () => {
+				clearTimeout(timeout);
+				func(...args);
+			};
+			clearTimeout(timeout);
+			timeout = setTimeout(later, wait);
+		};
+	}
+
+	// 优化的节流函数
+	function throttle(func, delay) {
+		let timeoutId;
+		let lastExecTime = 0;
+
+		return function (...args) {
+			const currentTime = Date.now();
+
+			if (currentTime - lastExecTime > delay) {
+				func.apply(this, args);
+				lastExecTime = currentTime;
+			} else {
+				clearTimeout(timeoutId);
+				timeoutId = setTimeout(() => {
+					func.apply(this, args);
+					lastExecTime = Date.now();
+				}, delay - (currentTime - lastExecTime));
+			}
+		};
+	}
+
+	class UnifiedVirtualList {
+		constructor(container, options = {}) {
+			this.container = container;
+			this.itemHeight = options.itemHeight || 60;
+			this.headerHeight = options.headerHeight || 60;
+			this.allItems = []; // 包含表头和列表项的统一数组
+			this.visibleItems = []; // 当前实际显示的项目
+			this.collapsedSections = new Set(); // 折叠的分区
+
+			this.startIndex = 0;
+			this.endIndex = 0;
+			this.bufferSize = 10;
+
+			// 稳定性优化参数
+			this.lastScrollTop = 0;
+			this.scrollDirection = 'down';
+			this.lastRenderTime = 0;
+			this.minRenderInterval = 32; // 最小渲染间隔
+
+			this.init();
+		}
+
+		init() {
+			// 创建虚拟列表容器
+			this.listContainer = document.createElement('div');
+			this.listContainer.className = 'virtual-list-container';
+
+			// 创建包装器
+			this.wrapper = document.createElement('div');
+			this.wrapper.className = 'virtual-list-wrapper';
+
+			// 创建占位空间元素（维持总高度）
+			this.spacer = document.createElement('div');
+			this.spacer.className = 'virtual-list-spacer';
+
+			// 创建视口
+			this.viewport = document.createElement('div');
+			this.viewport.className = 'virtual-list-viewport';
+
+			// 创建吸顶表头容器
+			this.stickyHeader = null;
+			this.stickyHeaderPlaceholder = null;
+
+			this.wrapper.appendChild(this.spacer);
+			this.wrapper.appendChild(this.viewport);
+			this.listContainer.appendChild(this.wrapper);
+			this.container.appendChild(this.listContainer);
+		}
+
+		// 设置数据
+		setData(datasets) {
+			this.allItems = [];
+			this.visibleItems = [];
+
+			datasets.forEach((dataset, sectionIndex) => {
+				// 添加表头
+				const header = {
+					type: 'header',
+					title: dataset.title,
+					count: dataset.data.length,
+					sectionIndex: sectionIndex,
+					categoryClass: `category-${sectionIndex % 4}`,
+					collapsed: dataset.collapsed || false
+				};
+
+				this.allItems.push(header);
+
+				// 如果该分区折叠，记录到折叠集合中
+				if (header.collapsed) {
+					this.collapsedSections.add(sectionIndex);
+				}
+
+				// 添加列表项
+				dataset.data.forEach((item, itemIndex) => {
+					this.allItems.push({
+						type: 'item',
+						content: item,
+						sectionIndex: sectionIndex,
+						itemIndex: itemIndex,
+						globalIndex: itemIndex + 1
+					});
+				});
+			});
+
+			this.updateVisibleItems();
+			this.updateSpacerHeight();
+		}
+
+		// 更新可见项目列表
+		updateVisibleItems() {
+			this.visibleItems = this.allItems.filter(item => {
+				if (item.type === 'header') {
+					return true; // 表头总是可见
+				}
+				// 只有当分区未折叠时，列表项才可见
+				return !this.collapsedSections.has(item.sectionIndex);
+			});
+		}
+
+		// 更新空间占位高度
+		updateSpacerHeight() {
+			const totalHeight = this.visibleItems.length * this.itemHeight;
+			this.spacer.style.height = `${totalHeight}px`;
+		}
+
+		// 调整滚动位置，防止折叠后内容区域过短
+		adjustScrollPosition() {
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			const containerTop = this.getAbsoluteOffset();
+			const containerHeight = this.visibleItems.length * this.itemHeight;
+			const windowHeight = window.innerHeight;
+
+			// 如果内容很少（比如只有表头），直接滚动到容器顶部
+			if (this.visibleItems.length <= 10) {
+				setTimeout(() => {
+					window.scrollTo({
+						top: containerTop,
+						behavior: 'smooth'
+					});
+				}, 100);
+				return;
+			}
+
+			// 计算最大滚动位置
+			const maxScrollTop = containerTop + containerHeight - windowHeight;
+
+			// 如果当前滚动位置超出了内容区域，自动调整到合适位置
+			if (scrollTop > maxScrollTop && maxScrollTop > containerTop) {
+				setTimeout(() => {
+					window.scrollTo({
+						top: Math.max(containerTop, maxScrollTop),
+						behavior: 'smooth'
+					});
+				}, 100);
+			}
+		}
+
+		// 切换分区折叠状态
+		toggleSection(sectionIndex) {
+			if (this.collapsedSections.has(sectionIndex)) {
+				this.collapsedSections.delete(sectionIndex);
+			} else {
+				this.collapsedSections.add(sectionIndex);
+			}
+
+			this.updateVisibleItems();
+			this.updateSpacerHeight();
+			this.adjustScrollPosition();
+			this.forceRefresh();
+		}
+
+		// 获取绝对位置
+		getAbsoluteOffset() {
+			const rect = this.wrapper.getBoundingClientRect();
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			return rect.top + scrollTop;
+		}
+
+		getVisibleRange() {
+			// 如果没有可见项目，直接返回空范围
+			if (this.visibleItems.length === 0) {
+				return { start: 0, end: 0 };
+			}
+
+			// 获取当前滚动位置
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			const windowHeight = window.innerHeight;
+
+			// 检测滚动方向
+			this.scrollDirection = scrollTop > this.lastScrollTop ? 'down' : 'up';
+			this.lastScrollTop = scrollTop;
+
+			// 获取容器的绝对位置
+			const containerTop = this.getAbsoluteOffset();
+			const containerHeight = this.visibleItems.length * this.itemHeight;
+
+			// 特殊处理：如果容器很小（比如只有表头），强制显示所有内容
+			if (this.visibleItems.length <= 10) {
+				return { start: 0, end: this.visibleItems.length };
+			}
+
+			// 计算可见区域
+			const viewportTop = scrollTop;
+			const viewportBottom = scrollTop + windowHeight;
+
+			// 计算列表区域
+			const listTop = containerTop;
+			const listBottom = containerTop + containerHeight;
+
+			// 检查是否有交集 - 放宽条件
+			if (listBottom < viewportTop - windowHeight || listTop > viewportBottom + windowHeight) {
+				// 如果完全没有交集且距离很远，显示开头部分
+				return { start: 0, end: Math.min(10, this.visibleItems.length) };
+			}
+
+			// 计算可见范围
+			const visibleStartInList = Math.max(0, viewportTop - listTop);
+			const visibleEndInList = Math.min(containerHeight, viewportBottom - listTop);
+
+			// 计算项目索引
+			let startIndex = Math.floor(visibleStartInList / this.itemHeight);
+			let endIndex = Math.ceil(visibleEndInList / this.itemHeight);
+
+			// 确保索引在有效范围内
+			startIndex = Math.max(0, Math.min(startIndex, this.visibleItems.length - 1));
+			endIndex = Math.max(startIndex + 1, Math.min(endIndex, this.visibleItems.length));
+
+			// 动态调整缓冲区大小
+			const dynamicBuffer = this.scrollDirection === 'down'
+					? { top: Math.floor(this.bufferSize * 0.3), bottom: this.bufferSize }
+					: { top: this.bufferSize, bottom: Math.floor(this.bufferSize * 0.3) };
+
+			// 添加缓冲区
+			const bufferedStart = Math.max(0, startIndex - dynamicBuffer.top);
+			const bufferedEnd = Math.min(this.visibleItems.length, endIndex + dynamicBuffer.bottom);
+
+			// 最终验证：确保范围有效且不为空
+			if (bufferedStart >= bufferedEnd || bufferedStart >= this.visibleItems.length) {
+				// 如果计算出的范围无效，返回前几个项目
+				return {
+					start: 0,
+					end: Math.min(10, this.visibleItems.length)
+				};
+			}
+
+			// 确保至少渲染一个项目
+			if (bufferedEnd - bufferedStart === 0) {
+				bufferedEnd = Math.min(bufferedStart + 1, this.visibleItems.length);
+			}
+
+			return {
+				start: bufferedStart,
+				end: bufferedEnd
+			};
+		}
+
+		shouldUpdate(newStart, newEnd) {
+			// 时间限流
+			const now = Date.now();
+			if (now - this.lastRenderTime < this.minRenderInterval) {
+				return false;
+			}
+
+			// 如果范围完全相同，不更新
+			if (newStart === this.startIndex && newEnd === this.endIndex) {
+				return false;
+			}
+
+			// 如果内容很少，总是更新以确保显示
+			if (this.visibleItems.length <= 10) {
+				return true;
+			}
+
+			// 计算重叠区域
+			const overlapStart = Math.max(this.startIndex, newStart);
+			const overlapEnd = Math.min(this.endIndex, newEnd);
+			const overlapSize = Math.max(0, overlapEnd - overlapStart);
+			const currentSize = this.endIndex - this.startIndex;
+
+			// 如果重叠区域占当前显示区域的大部分，且变化不大，跳过更新
+			if (currentSize > 0 && overlapSize / currentSize > 0.7) {
+				const startDiff = Math.abs(newStart - this.startIndex);
+				const endDiff = Math.abs(newEnd - this.endIndex);
+
+				// 如果变化很小，跳过
+				if (startDiff <= 2 && endDiff <= 2) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		render() {
+			const { start, end } = this.getVisibleRange();
+
+			// 检查是否需要更新
+			if (!this.shouldUpdate(start, end)) {
+				this.updateStickyHeader();
+				return;
+			}
+
+			console.log(`渲染范围: ${start} - ${end} (之前: ${this.startIndex} - ${this.endIndex}) 总项目: ${this.visibleItems.length}`);
+
+			this.startIndex = start;
+			this.endIndex = end;
+			this.lastRenderTime = Date.now();
+
+			// 清除现有项目
+			this.viewport.innerHTML = '';
+
+			// 如果没有可见项目，直接返回
+			if (start >= end || this.visibleItems.length === 0) {
+				this.updateStickyHeader();
+				return;
+			}
+
+			// 创建文档片段提高性能
+			const fragment = document.createDocumentFragment();
+
+			// 渲染可见项目
+			for (let i = start; i < end && i < this.visibleItems.length; i++) {
+				const itemData = this.visibleItems[i];
+				const item = this.createItem(itemData, i);
+				item.style.transform = `translateY(${i * this.itemHeight}px)`;
+				item.dataset.visibleIndex = i;
+				fragment.appendChild(item);
+			}
+
+			this.viewport.appendChild(fragment);
+
+			// 更新吸顶表头
+			this.updateStickyHeader();
+		}
+
+		createItem(data, index) {
+			const item = document.createElement('div');
+			item.className = `virtual-list-item ${data.type}`;
+
+			if (data.type === 'header') {
+				// 创建表头
+				item.classList.add(data.categoryClass);
+				const isCollapsed = this.collapsedSections.has(data.sectionIndex);
+
+				item.innerHTML = `
+					<div class="header-content">
+						<span>${data.title}</span>
+						<span class="header-info">${data.count} 项</span>
+					</div>
+					<span class="header-arrow ${isCollapsed ? 'collapsed' : ''}">▼</span>
+				`;
+
+				// 绑定点击事件
+				item.addEventListener('click', () => {
+					this.toggleSection(data.sectionIndex);
+
+					// 添加点击动画
+					item.style.transform = `translateY(${index * this.itemHeight}px) scale(0.98)`;
+					setTimeout(() => {
+						item.style.transform = `translateY(${index * this.itemHeight}px)`;
+					}, 200);
+				});
+			} else {
+				// 创建列表项
+				item.innerHTML = `
+					<span class="item-number">${data.globalIndex}</span>
+					<span class="item-content">${data.content}</span>
+				`;
+
+				// 添加点击效果
+				item.addEventListener('click', () => {
+					const scale = item.style.transform.includes('scale') ? '' : ' scale(0.98)';
+					item.style.transform = `translateY(${index * this.itemHeight}px)${scale}`;
+					if (scale) {
+						setTimeout(() => {
+							item.style.transform = `translateY(${index * this.itemHeight}px)`;
+						}, 200);
+					}
+				});
+			}
+
+			return item;
+		}
+
+		updateOnScroll() {
+			this.render();
+		}
+
+		// 更新吸顶表头
+		updateStickyHeader() {
+			const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+			const containerTop = this.getAbsoluteOffset();
+
+			// 找到当前应该吸顶的表头
+			let currentStickyHeader = null;
+			let currentStickyIndex = -1;
+
+			for (let i = 0; i < this.visibleItems.length; i++) {
+				const item = this.visibleItems[i];
+				if (item.type === 'header') {
+					const headerTop = containerTop + i * this.itemHeight;
+					const headerBottom = headerTop + this.itemHeight;
+
+					if (headerTop <= scrollTop) {
+						// 这个表头已经滚动到顶部上方或刚好在顶部
+						currentStickyHeader = item;
+						currentStickyIndex = i;
+					} else {
+						// 这个表头还在下方，停止检查
+						break;
+					}
+				}
+			}
+
+			// 检查下一个表头是否即将推走当前吸顶表头
+			let nextHeaderIndex = -1;
+			if (currentStickyIndex >= 0) {
+				for (let i = currentStickyIndex + 1; i < this.visibleItems.length; i++) {
+					if (this.visibleItems[i].type === 'header') {
+						nextHeaderIndex = i;
+						break;
+					}
+				}
+			}
+
+			if (currentStickyHeader) {
+				this.showStickyHeader(currentStickyHeader, nextHeaderIndex, containerTop, scrollTop);
+			} else {
+				this.hideStickyHeader();
+			}
+		}
+
+		// 显示吸顶表头
+		showStickyHeader(headerData, nextHeaderIndex, containerTop, scrollTop) {
+			if (!this.stickyHeader) {
+				this.stickyHeader = document.createElement('div');
+				this.stickyHeader.className = 'virtual-list-item header sticky-header';
+				document.body.appendChild(this.stickyHeader);
+			}
+
+			// 更新吸顶表头内容
+			this.stickyHeader.className = `virtual-list-item header sticky-header ${headerData.categoryClass}`;
+			const isCollapsed = this.collapsedSections.has(headerData.sectionIndex);
+
+			this.stickyHeader.innerHTML = `
+				<div class="header-content">
+					<span>${headerData.title}</span>
+					<span class="header-info">${headerData.count} 项</span>
+				</div>
+				<span class="header-arrow ${isCollapsed ? 'collapsed' : ''}">▼</span>
+			`;
+
+			// 重新绑定点击事件
+			this.stickyHeader.onclick = () => {
+				this.toggleSection(headerData.sectionIndex);
+
+				// 添加点击动画
+				this.stickyHeader.style.transform = 'translateX(-50%) scale(0.98)';
+				setTimeout(() => {
+					this.stickyHeader.style.transform = 'translateX(-50%)';
+				}, 200);
+			};
+
+			// 计算位置，处理下一个表头推走的效果
+			let translateY = 0;
+			if (nextHeaderIndex >= 0) {
+				const nextHeaderTop = containerTop + nextHeaderIndex * this.itemHeight;
+				const pushDistance = nextHeaderTop - scrollTop;
+				if (pushDistance < this.itemHeight) {
+					translateY = pushDistance - this.itemHeight;
+				}
+			}
+
+			this.stickyHeader.style.transform = `translateX(-50%) translateY(${translateY}px)`;
+			this.stickyHeader.style.display = 'flex';
+		}
+
+		// 隐藏吸顶表头
+		hideStickyHeader() {
+			if (this.stickyHeader) {
+				this.stickyHeader.style.display = 'none';
+			}
+		}
+
+		forceRefresh() {
+			this.startIndex = -1;
+			this.endIndex = -1;
+			this.lastRenderTime = 0;
+			this.render();
+		}
+
+		// 清理资源
+		destroy() {
+			if (this.stickyHeader) {
+				document.body.removeChild(this.stickyHeader);
+				this.stickyHeader = null;
+			}
+		}
+	}
+
+	// 生成大量测试数据
+	function generateLargeDataset(prefix, count) {
+		const items = [];
+		const foods = [
+			'宫保鸡丁', '麻婆豆腐', '红烧肉', '鱼香肉丝', '青椒肉丝', '糖醋里脊',
+			'回锅肉', '蛋炒饭', '扬州炒饭', '牛肉面', '兰州拉面', '炸酱面',
+			'担担面', '热干面', '重庆小面', '小笼包', '煎饺', '蒸饺',
+			'包子', '馒头', '花卷', '烧饼', '油条', '豆浆', '胡辣汤', '煎蛋',
+			'培根', '香肠', '吐司', '三明治', '汉堡', '披萨', '意面', '拉面'
+		];
+
+		for (let i = 0; i < count; i++) {
+			const food = foods[i % foods.length];
+			const variant = Math.floor(i / foods.length) + 1;
+			const rating = '★'.repeat(Math.floor(Math.random() * 5) + 1);
+			items.push(`${prefix}${food}${variant > 1 ? ` (${variant})` : ''} ${rating}`);
+		}
+
+		return items;
+	}
+
+	// 创建数据集
+	const datasets = [
+		{
+			title: '早餐推荐',
+			data: generateLargeDataset('精品', 200),
+			collapsed: false
+		},
+		{
+			title: '主食类',
+			data: generateLargeDataset('招牌', 800),
+			collapsed: false
+		},
+		{
+			title: '素食专区',
+			data: generateLargeDataset('健康', 300),
+			collapsed: false
+		},
+		{
+			title: '甜品点心',
+			data: generateLargeDataset('甜蜜', 500),
+			collapsed: false
+		},
+		{
+			title: '饮品推荐',
+			data: generateLargeDataset('特调', 400),
+			collapsed: false
+		}
+	];
+
+	// 计算总项目数
+	window.totalItems = datasets.reduce((sum, d) => sum + d.data.length, 0);
+
+	// 初始化统一虚拟列表
+	const listContainer = document.getElementById('listContainer');
+	const virtualList = new UnifiedVirtualList(listContainer, {
+		itemHeight: 60,
+		headerHeight: 60
+	});
+
+	// 设置数据
+	virtualList.setData(datasets);
+
+	// 全局滚动事件监听 - 使用节流
+	const throttledGlobalRender = throttle(() => {
+		virtualList.updateOnScroll();
+		updatePerformanceInfo();
+	}, 32); // 约30fps
+
+	window.addEventListener('scroll', throttledGlobalRender, { passive: true });
+
+	// 窗口大小变化时重新渲染
+	window.addEventListener('resize', debounce(() => {
+		virtualList.forceRefresh();
+		updatePerformanceInfo();
+	}, 300));
+
+	// 更新性能信息
+	function updatePerformanceInfo() {
+		const allRendered = document.querySelectorAll('.virtual-list-item').length;
+		const perfInfo = document.getElementById('performanceInfo');
+		if (perfInfo) {
+			perfInfo.textContent = `渲染: ${allRendered} / ${window.totalItems} 项目`;
+		}
+	}
+
+	// 滚动提示功能
+	let scrollTimer;
+	const scrollIndicator = document.getElementById('scrollIndicator');
+
+	window.addEventListener('scroll', throttle(() => {
+		scrollIndicator.classList.add('show');
+		clearTimeout(scrollTimer);
+		scrollTimer = setTimeout(() => {
+			scrollIndicator.classList.remove('show');
+		}, 1000);
+	}, 100));
+
+	// 初始渲染
+	setTimeout(() => {
+		virtualList.updateOnScroll();
+		updatePerformanceInfo();
+	}, 100);
+</script>
+</body>
+</html>
