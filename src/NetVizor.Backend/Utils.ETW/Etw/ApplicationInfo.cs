@@ -244,6 +244,7 @@ public class ApplicationSnapshot
 /// </summary>
 public class ConnectionSnapshot
 {
+    public string ConnectionKey { get; set; }
     public string Protocol { get; set; }
     public string LocalIp { get; set; }
     public int LocalPort { get; set; }

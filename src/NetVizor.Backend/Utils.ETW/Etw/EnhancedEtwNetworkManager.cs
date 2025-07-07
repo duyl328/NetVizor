@@ -365,6 +365,7 @@ public class EnhancedEtwNetworkManager : IDisposable
                     foreach (var conn in app.Connections.Where(c =>
                                  !c.IsActive && c.Duration > TimeSpan.FromMinutes(5)))
                     {
+                        GlobalNetworkMonitor.Instance.RemoveConnection(conn.ConnectionKey);
                         // 这里可以添加清理逻辑
                         Console.WriteLine(
                             $"清理过期连接: {app.ProgramInfo?.ProductName} - {conn.RemoteIp}:{conn.RemotePort}");

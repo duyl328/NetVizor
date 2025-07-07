@@ -499,6 +499,7 @@ public sealed class GlobalNetworkMonitor
                     {
                         var connSnapshot = new ConnectionSnapshot
                         {
+                            ConnectionKey = conn.ConnectionKey,
                             Protocol = conn.Protocol.ToString(),
                             LocalPort = conn.LocalEndpoint.Port,
                             LocalIp = conn.LocalEndpoint.Address.ToString(),
