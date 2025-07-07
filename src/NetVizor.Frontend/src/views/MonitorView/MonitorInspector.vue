@@ -107,13 +107,22 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import TrafficChart from './components/TrafficChart.vue'
+// 假设我们有一个连接状态的store，将来可以添加
+// import { useConnectionStore } from '@/stores/connection'
 
-// Props
+// Props - 只保留布局相关的
 const props = defineProps<{
   width: number
-  selectedConnection: any | null
 }>()
+
+// 从store获取选中的连接 - 将来可以从pinia获取
+// const connectionStore = useConnectionStore()
+// const { selectedConnection } = storeToRefs(connectionStore)
+
+// 临时使用ref，将来替换为store
+const selectedConnection = ref<any>(null)
 
 // 状态文本映射
 const getStatusText = (status: string) => {
@@ -129,11 +138,11 @@ const getStatusText = (status: string) => {
 
 // 流量数据
 const trafficData = computed(() => {
-  if (!props.selectedConnection) {
+  if (!selectedConnection.value) {
     return { upload: '0 B', download: '0 B', total: '0 B' }
   }
 
-  // 模拟数据
+  // 模拟数据 - 将来可以从store或API获取真实数据
   return {
     upload: '1.2 MB',
     download: '5.8 MB',
@@ -143,8 +152,19 @@ const trafficData = computed(() => {
 
 // 图表数据
 const chartData = computed(() => {
-  // 生成模拟的流量图表数据
+  // 生成模拟的流量图表数据 - 将来可以从store获取真实数据
   return Array.from({ length: 20 }, () => Math.random() * 100)
+})
+
+// 提供一个方法让外部组件设置选中的连接（过渡期使用）
+// 将来可以移除，直接通过store管理
+const setSelectedConnection = (connection: any) => {
+  selectedConnection.value = connection
+}
+
+// 暴露方法给父组件（如果需要的话）
+defineExpose({
+  setSelectedConnection
 })
 </script>
 

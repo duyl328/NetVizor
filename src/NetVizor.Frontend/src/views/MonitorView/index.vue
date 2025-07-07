@@ -14,16 +14,7 @@
 
       <!-- 中间主视图区域 -->
       <div class="main-panel-wrapper">
-        <MonitorMainPanel
-          :headerHeight="mainHeaderHeight"
-          :timelineHeight="timelineHeight"
-          :searchQuery="searchQuery"
-          :connections="mockConnections"
-          :events="mockEvents"
-          @update:searchQuery="searchQuery = $event"
-          @resizeTimeline="startResize('timeline', $event)"
-          @selectConnection="handleConnectionSelect"
-        />
+        <MonitorMainPanel :width="mainPanelWidth" />
       </div>
 
       <!-- 右侧分割线 -->
@@ -33,10 +24,7 @@
 
       <!-- 右侧检查器面板 -->
       <div class="inspector-wrapper" :style="{ width: inspectorWidth + 'px' }">
-        <MonitorInspector
-          :width="inspectorWidth"
-          :selectedConnection="selectedConnection"
-        />
+        <MonitorInspector :width="inspectorWidth" />
       </div>
     </div>
   </div>
@@ -47,7 +35,7 @@ defineOptions({
   name: 'MonitorView',
 })
 
-import { ref, onMounted, onUnmounted, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MonitorSidebar from './MonitorSidebar.vue'
 import MonitorMainPanel from './MonitorMainPanel.vue'
 import MonitorInspector from './MonitorInspector.vue'
@@ -55,83 +43,43 @@ import MonitorInspector from './MonitorInspector.vue'
 // 布局尺寸控制
 const sidebarWidth = ref(400)
 const inspectorWidth = ref(350)
-const timelineHeight = ref(200)
-const mainHeaderHeight = ref(80)
 
 // 调整分割条范围限制
 const MIN_SIDEBAR_WIDTH = 200
 const MAX_SIDEBAR_WIDTH = 600
 const MIN_INSPECTOR_WIDTH = 250
 const MAX_INSPECTOR_WIDTH = 650
-const MIN_TIMELINE_HEIGHT = 100
-const MAX_TIMELINE_HEIGHT = 800
 
-// 响应式数据
-const searchQuery = ref('')
-const selectedConnection = ref<any>(null)
-
-const mockConnections = ref([
-  {
-    id: 1,
-    process: 'chrome.exe',
-    localAddress: '192.168.1.100',
-    remoteAddress: 'google.com',
-    status: 'established',
-    traffic: '542 KB/s',
-  },
-  // ... 更多连接数据
-])
-
-const mockEvents = ref([
-  {
-    id: 1,
-    time: new Date().toLocaleTimeString(),
-    type: 'connection',
-    eventType: '连接建立',
-    description: 'chrome.exe → google.com:443',
-  },
-  // ... 更多事件数据
-])
-
-// 提供布局配置给子组件
-provide('layoutConfig', {
-  sidebarWidth,
-  inspectorWidth,
-  timelineHeight,
-  mainHeaderHeight,
+// 计算主面板的可用宽度
+const mainPanelWidth = computed(() => {
+  // 这里可以根据需要计算，如果不需要传递具体宽度，可以移除这个computed
+  return window.innerWidth - sidebarWidth.value - inspectorWidth.value - 8 // 8px为分割线宽度
 })
 
 // 拖拽状态
 const resizing = ref<{
-  type: 'sidebar' | 'inspector' | 'timeline' | null
+  type: 'sidebar' | 'inspector' | null
   startX: number
-  startY: number
   startWidth: number
-  startHeight: number
 }>({
   type: null,
   startX: 0,
-  startY: 0,
   startWidth: 0,
-  startHeight: 0,
 })
 
 // 开始拖拽
-const startResize = (type: 'sidebar' | 'inspector' | 'timeline', event: MouseEvent) => {
+const startResize = (type: 'sidebar' | 'inspector', event: MouseEvent) => {
   event.preventDefault()
 
   resizing.value = {
     type,
     startX: event.clientX,
-    startY: event.clientY,
-    startWidth:
-      type === 'sidebar' ? sidebarWidth.value : type === 'inspector' ? inspectorWidth.value : 0,
-    startHeight: type === 'timeline' ? timelineHeight.value : 0,
+    startWidth: type === 'sidebar' ? sidebarWidth.value : inspectorWidth.value,
   }
 
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
-  document.body.style.cursor = type === 'timeline' ? 'row-resize' : 'col-resize'
+  document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
 }
 
@@ -139,7 +87,7 @@ const startResize = (type: 'sidebar' | 'inspector' | 'timeline', event: MouseEve
 const handleResize = (event: MouseEvent) => {
   if (!resizing.value.type) return
 
-  const { type, startX, startY, startWidth, startHeight } = resizing.value
+  const { type, startX, startWidth } = resizing.value
 
   if (type === 'sidebar') {
     const deltaX = event.clientX - startX
@@ -152,13 +100,6 @@ const handleResize = (event: MouseEvent) => {
       Math.max(MIN_INSPECTOR_WIDTH, startWidth + deltaX),
     )
     inspectorWidth.value = newWidth
-  } else if (type === 'timeline') {
-    const deltaY = startY - event.clientY
-    const newHeight = Math.min(
-      MAX_TIMELINE_HEIGHT,
-      Math.max(MIN_TIMELINE_HEIGHT, startHeight + deltaY),
-    )
-    timelineHeight.value = newHeight
   }
 }
 
@@ -171,16 +112,10 @@ const stopResize = () => {
   document.body.style.userSelect = ''
 }
 
-// 处理连接选中
-const handleConnectionSelect = (connection: any) => {
-  selectedConnection.value = connection
-}
-
 // 重置布局
 const resetLayout = () => {
   sidebarWidth.value = 400
   inspectorWidth.value = 350
-  timelineHeight.value = 200
 }
 
 // 键盘快捷键

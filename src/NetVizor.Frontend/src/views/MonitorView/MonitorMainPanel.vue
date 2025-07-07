@@ -11,8 +11,7 @@
         <div class="header-actions">
           <div class="search-area">
             <n-input
-              :value="searchQuery"
-              @update:value="$emit('update:searchQuery', $event)"
+              v-model:value="searchQuery"
               placeholder="搜索连接、域名或IP..."
               size="medium"
             >
@@ -61,17 +60,13 @@ import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import { NButton, NInput, NIcon } from 'naive-ui'
 import { SearchOutline } from '@vicons/ionicons5'
 import EventTimeline from './components/EventTimeline.vue'
-import { FlashOutline } from '@vicons/ionicons5'
 import { useApplicationStore } from '@/stores/application'
 import { storeToRefs } from 'pinia'
 import { ResponseModel, SubscriptionInfo, SubscriptionProcessInfo } from '@/types/response'
 import { httpClient } from '@/utils/http'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { useProcessStore } from '@/stores/processInfo'
-import { ApplicationType } from '@/types/infoModel'
 import ConnectionsTable1 from '@/views/MonitorView/components/ConnectionsTable1.vue'
-import ConnectionsTable from '@/views/MonitorView/components/ConnectionsTable.vue'
-import UnifiedConnectionsList from '@/views/MonitorView/components/UnifiedConnectionsList.vue'
 
 const webSocketStore = useWebSocketStore()
 const { isOpen } = storeToRefs(webSocketStore)
@@ -83,10 +78,15 @@ const processStore = useProcessStore()
 const { processInfos } = storeToRefs(processStore)
 processStore.subscribe()
 
+// Props - 只保留必要的布局相关属性
+const props = defineProps<{
+  width?: number // 可选的宽度，如果父组件需要控制
+}>()
+
 // 组件引用
 const mainViewRef = ref<HTMLElement>()
 
-// 布局尺寸控制
+// 内部管理的布局尺寸
 const headerHeight = ref(80)
 const timelineHeight = ref(200)
 const mainViewHeight = ref(600)
@@ -106,12 +106,54 @@ const timelineResizing = ref<{
   startHeight: 0,
 })
 
+// 内部管理的状态
+const searchQuery = ref('')
+const isTimelinePaused = ref(false)
+const expandedProcesses = ref<number[]>([])
+
 // 计算ConnectionsTable1的可用高度
 const connectionsTableHeight = computed(() => {
   const totalHeight = mainViewHeight.value
   const usedHeight = headerHeight.value + timelineHeight.value + 4 // 4px为分割线高度
   return `${Math.max(200, totalHeight - usedHeight)}px`
 })
+
+// 过滤后的连接数据
+const filteredConnections = computed(() => {
+  const connections = processInfos.value || []
+
+  // 如果有搜索条件，进行过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    return connections.filter(process => {
+      // 搜索进程名
+      if (process.processName.toLowerCase().includes(query)) {
+        return true
+      }
+      // 搜索连接信息
+      return process.connections.some(conn =>
+        conn.localEndpoint.address.includes(query) ||
+        conn.remoteEndpoint.address.includes(query) ||
+        conn.localEndpoint.port.toString().includes(query) ||
+        conn.remoteEndpoint.port.toString().includes(query)
+      )
+    })
+  }
+
+  return connections
+})
+
+// 模拟事件数据 - 将来可以从pinia获取
+const events = computed(() => [
+  {
+    id: 1,
+    time: new Date().toLocaleTimeString(),
+    type: 'connection',
+    eventType: '连接建立',
+    description: 'chrome.exe → google.com:443',
+  },
+  // ... 更多事件数据
+])
 
 // Timeline拖拽逻辑
 const startTimelineResize = (event: MouseEvent) => {
@@ -157,39 +199,28 @@ const updateMainViewHeight = () => {
   }
 }
 
-// 展开的进程ID列表
-const expandedProcesses = ref<number[]>([])
+// 事件处理函数
+const handleFilter = () => {
+  console.log('打开过滤器')
+}
 
-// 过滤后的连接数据
-const filteredConnections = computed(() => {
-  const connections = processInfos.value || []
+const handleRefresh = () => {
+  console.log('刷新数据')
+  processStore.refresh?.()
+}
 
-  // 如果有搜索条件，进行过滤
-  if (props.searchQuery) {
-    const query = props.searchQuery.toLowerCase()
-    return connections.filter(process => {
-      // 搜索进程名
-      if (process.processName.toLowerCase().includes(query)) {
-        return true
-      }
-      // 搜索连接信息
-      return process.connections.some(conn =>
-        conn.localEndpoint.address.includes(query) ||
-        conn.remoteEndpoint.address.includes(query) ||
-        conn.localEndpoint.port.toString().includes(query) ||
-        conn.remoteEndpoint.port.toString().includes(query)
-      )
-    })
-  }
+const handleClearEvents = () => {
+  console.log('清空事件')
+}
 
-  return connections
-})
-
+// 监听选中应用的变化
 watch(selectedApp, (newVal, oldVal) => {
   // 进行更新，先把原始数据清空
   processStore.clear()
   // 重置展开状态
   expandedProcesses.value = []
+  // 清空搜索
+  searchQuery.value = ''
 
   console.log(newVal.id, '==========')
 })
@@ -208,7 +239,6 @@ onMounted(() => {
     [isOpen, selectedApp],
     ([newValue, newValue1]) => {
       if (newValue && newValue1 && newValue1.processIds && newValue1.processIds.length > 0) {
-        // ApplicationType
         // 发送请求【请求订阅软件列表】
         const subAppInfo: SubscriptionProcessInfo = {
           subscriptionType: 'ProcessInfo',
@@ -251,40 +281,6 @@ onUnmounted(() => {
       console.error('取消订阅进程信息失败:', err)
     })
 })
-
-// Props - 移除不再需要的height相关props
-const props = defineProps<{
-  searchQuery: string
-  connections: Array<unknown>
-  events: Array<unknown>
-}>()
-
-// Emits - 移除resize相关emit
-const emit = defineEmits<{
-  'update:searchQuery': [value: string]
-  selectConnection: [connection: unknown]
-}>()
-
-// Local state
-const isMonitoring = ref(true)
-const isTimelinePaused = ref(false)
-
-// 处理过滤
-const handleFilter = () => {
-  console.log('打开过滤器')
-}
-
-// 处理刷新
-const handleRefresh = () => {
-  console.log('刷新数据')
-  // 可以在这里触发数据重新加载
-  processStore.refresh?.()
-}
-
-// 清空事件
-const handleClearEvents = () => {
-  console.log('清空事件')
-}
 </script>
 
 <style scoped>
@@ -392,7 +388,6 @@ const handleClearEvents = () => {
 }
 
 /* 响应式设计 */
-/* 中等屏幕：隐藏标题和副标题 */
 @media (max-width: 1200px) {
   .header-info {
     display: none;
@@ -407,7 +402,6 @@ const handleClearEvents = () => {
   }
 }
 
-/* 小屏幕：搜索框开始使用弹性布局 */
 @media (max-width: 900px) {
   .main-header {
     padding: 0 16px;
@@ -432,7 +426,6 @@ const handleClearEvents = () => {
   }
 }
 
-/* 超小屏幕：进一步优化 */
 @media (max-width: 600px) {
   .main-header {
     padding: 0 12px;
@@ -458,7 +451,6 @@ const handleClearEvents = () => {
   }
 }
 
-/* 超窄屏幕：只保留搜索框 */
 @media (max-width: 480px) {
   .filter-buttons {
     display: none;
