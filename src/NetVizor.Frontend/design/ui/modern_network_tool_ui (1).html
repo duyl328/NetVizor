@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetGuardian - Modern Network Monitor</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; }
+    .card { @apply rounded-2xl shadow-md bg-white dark:bg-gray-800 p-4; }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white">
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col">
+      <h2 class="text-xl font-semibold mb-4">NetGuardian</h2>
+      <nav class="space-y-2">
+        <button class="w-full text-left hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded">总览 Dashboard</button>
+        <button class="w-full text-left hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded">连接详情 Connections</button>
+        <button class="w-full text-left hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded">进程监控 Processes</button>
+        <button class="w-full text-left hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded">流量统计 Traffic</button>
+        <button class="w-full text-left hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded">规则管理 Rules</button>
+        <button class="w-full text-left hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded">设置 Settings</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6 space-y-6">
+      <!-- Summary Cards -->
+      <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="card">
+          <h3 class="text-sm font-medium">当前连接</h3>
+          <p class="text-2xl font-bold">128</p>
+        </div>
+        <div class="card">
+          <h3 class="text-sm font-medium">上传总速率</h3>
+          <p class="text-2xl font-bold">2.3 MB/s</p>
+        </div>
+        <div class="card">
+          <h3 class="text-sm font-medium">下载总速率</h3>
+          <p class="text-2xl font-bold">5.1 MB/s</p>
+        </div>
+        <div class="card">
+          <h3 class="text-sm font-medium">阻止请求</h3>
+          <p class="text-2xl font-bold">27</p>
+        </div>
+      </section>
+
+      <!-- Real-time Chart -->
+      <section class="card">
+        <h3 class="text-lg font-semibold mb-2">实时流量图</h3>
+        <div id="traffic-chart" style="height: 300px;"></div>
+      </section>
+
+      <!-- Connection Table -->
+      <section class="card">
+        <h3 class="text-lg font-semibold mb-2">当前连接详情</h3>
+        <div class="overflow-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="bg-gray-200 dark:bg-gray-700">
+                <th class="text-left p-2">进程</th>
+                <th class="text-left p-2">本地端口</th>
+                <th class="text-left p-2">远程地址</th>
+                <th class="text-left p-2">协议</th>
+                <th class="text-left p-2">上传速率</th>
+                <th class="text-left p-2">下载速率</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="p-2">chrome.exe</td>
+                <td class="p-2">49152</td>
+                <td class="p-2">93.184.216.34 (example.com)</td>
+                <td class="p-2">TCP</td>
+                <td class="p-2">123 KB/s</td>
+                <td class="p-2">987 KB/s</td>
+              </tr>
+              <!-- 更多行通过 JS 动态生成 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const chart = echarts.init(document.getElementById('traffic-chart'));
+    const option = {
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: Array.from({length: 20}, (_, i) => `${i}s`) },
+      yAxis: { type: 'value', name: 'KB/s' },
+      series: [
+        { name: '上传', type: 'line', data: Array.from({length: 20}, () => Math.random() * 100) },
+        { name: '下载', type: 'line', data: Array.from({length: 20}, () => Math.random() * 200) }
+      ]
+    };
+    chart.setOption(option);
+  </script>
+</body>
+</html>

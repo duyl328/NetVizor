@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网速监测仪 - 上传下载双线版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e1b;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #00ff88 0%, #00a8ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .monitor-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #gridCanvas {
+            z-index: 1;
+        }
+
+        #chartCanvas {
+            z-index: 2;
+        }
+
+        .ball {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: none; /* 移除过渡效果，使用实时位置 */
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+        }
+
+        .ball-download {
+            background: #00ff88;
+            box-shadow: 
+                0 0 20px #00ff88,
+                0 0 40px #00ff88,
+                inset 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+
+        .ball-upload {
+            background: #00a8ff;
+            box-shadow: 
+                0 0 20px #00a8ff,
+                0 0 40px #00a8ff,
+                inset 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+
+        .ball::before {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 40%;
+            height: 40%;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-group {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .stat-group h3 {
+            grid-column: 1 / -1;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-group.download h3 {
+            color: #00ff88;
+        }
+
+        .stat-group.upload h3 {
+            color: #00a8ff;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .download .stat-value {
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .upload .stat-value {
+            color: #00a8ff;
+            text-shadow: 0 0 10px rgba(0, 168, 255, 0.5);
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group label {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .control-group input[type="range"] {
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            border-radius: 2px;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .control-value {
+            min-width: 40px;
+            text-align: right;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .legend-color.download {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .legend-color.upload {
+            background: #00a8ff;
+            box-shadow: 0 0 10px #00a8ff;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00ff88 0%, #00a8ff 100%);
+            color: #0a0e1b;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>网络速度监测仪</h1>
+            <p style="color: rgba(255, 255, 255, 0.6);">实时监测上传下载速度</p>
+        </div>
+
+        <div class="monitor-container">
+            <div class="canvas-wrapper">
+                <canvas id="gridCanvas"></canvas>
+                <canvas id="chartCanvas"></canvas>
+                <div class="ball ball-download" id="ballDownload"></div>
+                <div class="ball ball-upload" id="ballUpload"></div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color download"></div>
+                    <span>下载速度</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color upload"></div>
+                    <span>上传速度</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-group download">
+                <h3>📥 下载速度</h3>
+                <div class="stat-box">
+                    <div class="stat-label">当前</div>
+                    <div class="stat-value"><span id="downloadCurrent">0</span> Mbps</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">平均</div>
+                    <div class="stat-value"><span id="downloadAvg">0</span> Mbps</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">峰值</div>
+                    <div class="stat-value"><span id="downloadMax">0</span> Mbps</div>
+                </div>
+            </div>
+
+            <div class="stat-group upload">
+                <h3>📤 上传速度</h3>
+                <div class="stat-box">
+                    <div class="stat-label">当前</div>
+                    <div class="stat-value"><span id="uploadCurrent">0</span> Mbps</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">平均</div>
+                    <div class="stat-value"><span id="uploadAvg">0</span> Mbps</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">峰值</div>
+                    <div class="stat-value"><span id="uploadMax">0</span> Mbps</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>动画速度:</label>
+                <input type="range" id="speedControl" min="10" max="100" value="50">
+                <span class="control-value" id="speedValue">50</span>
+            </div>
+            <div class="control-group">
+                <label>数据平滑度:</label>
+                <input type="range" id="smoothControl" min="1" max="20" value="10">
+                <span class="control-value" id="smoothValue">10</span>
+            </div>
+            <button onclick="toggleAnimation()">暂停/继续</button>
+            <button onclick="resetData()">重置数据</button>
+        </div>
+    </div>
+
+    <script>
+        // 获取画布和上下文
+        const gridCanvas = document.getElementById('gridCanvas');
+        const chartCanvas = document.getElementById('chartCanvas');
+        const gridCtx = gridCanvas.getContext('2d');
+        const chartCtx = chartCanvas.getContext('2d');
+        
+        // 获取小球元素
+        const ballDownload = document.getElementById('ballDownload');
+        const ballUpload = document.getElementById('ballUpload');
+        
+        // 配置参数 - 必须在使用前定义
+        const config = {
+            maxDataPoints: 300,
+            animationSpeed: 50,
+            smoothness: 10,
+            maxSpeed: 100,
+            pixelsPerFrame: 2,
+            ballFixedX: 0.9, // 小球固定在90%的位置
+            colors: {
+                download: '#00ff88',
+                upload: '#00a8ff',
+                grid: 'rgba(255, 255, 255, 0.05)'
+            }
+        };
+        
+        // 数据存储
+        const data = {
+            download: [],
+            upload: []
+        };
+        
+        // 当前值和目标值
+        const current = {
+            download: 50,
+            upload: 30
+        };
+        
+        const target = {
+            download: 50,
+            upload: 30
+        };
+        
+        // 动画控制
+        let animationRunning = true;
+        let frameCount = 0;
+        
+        // 设置画布大小
+        function resizeCanvas() {
+            const container = gridCanvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            
+            gridCanvas.width = rect.width;
+            gridCanvas.height = rect.height;
+            chartCanvas.width = rect.width;
+            chartCanvas.height = rect.height;
+            
+            drawGrid(); // 重绘网格
+        }
+        
+        // 绘制网格
+        function drawGrid() {
+            gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+            gridCtx.strokeStyle = config.colors.grid;
+            gridCtx.lineWidth = 1;
+            
+            // 水平线
+            const hLines = 10;
+            for (let i = 0; i <= hLines; i++) {
+                const y = (gridCanvas.height / hLines) * i;
+                gridCtx.beginPath();
+                gridCtx.moveTo(0, y);
+                gridCtx.lineTo(gridCanvas.width, y);
+                gridCtx.stroke();
+            }
+            
+            // 垂直线
+            const vLines = 20;
+            for (let i = 0; i <= vLines; i++) {
+                const x = (gridCanvas.width / vLines) * i;
+                gridCtx.beginPath();
+                gridCtx.moveTo(x, 0);
+                gridCtx.lineTo(x, gridCanvas.height);
+                gridCtx.stroke();
+            }
+        }
+        
+        // 生成随机速度
+        function generateRandomSpeed(current, type) {
+            const baseChange = (Math.random() - 0.5) * 15;
+            let newSpeed = current + baseChange;
+            
+            // 添加一些特征
+            if (type === 'download') {
+                // 下载速度通常更高且更稳定
+                if (Math.random() < 0.02) newSpeed = Math.random() * 30 + 60;
+                if (Math.random() < 0.01) newSpeed = Math.random() * 10 + 10; // 偶尔低速
+            } else {
+                // 上传速度通常较低
+                if (Math.random() < 0.02) newSpeed = Math.random() * 20 + 40;
+                if (Math.random() < 0.01) newSpeed = Math.random() * 10 + 5; // 偶尔低速
+            }
+            
+            return Math.max(5, Math.min(95, newSpeed));
+        }
+        
+        // 平滑插值
+        function lerp(start, end, t) {
+            return start + (end - start) * t;
+        }
+        
+        // 绘制曲线
+        function drawCurve(ctx, data, color, yOffset = 0) {
+            if (data.length < 2) return null;
+            
+            ctx.save(); // 保存上下文状态
+            
+            // 创建渐变色
+            const gradient = ctx.createLinearGradient(0, 0, chartCanvas.width, 0);
+            gradient.addColorStop(0, color + '33'); // 33是20%的透明度
+            gradient.addColorStop(0.5, color + '88'); // 88是53%的透明度
+            gradient.addColorStop(1, color);
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 15;
+            
+            ctx.beginPath();
+            
+            const spacing = config.pixelsPerFrame;
+            const fixedX = chartCanvas.width * config.ballFixedX;
+            
+            // 计算起始X位置，使最后一个点在固定位置
+            const startX = fixedX - (data.length - 1) * spacing;
+            
+            let lastPoint = null;
+            
+            // 绘制平滑曲线
+            for (let i = 0; i < data.length; i++) {
+                const x = startX + i * spacing;
+                const y = chartCanvas.height - (data[i] / config.maxSpeed) * (chartCanvas.height - 60) - 30 + yOffset;
+                
+                if (x < -50) continue; // 跳过画布外的点
+                
+                if (i === 0 || (i > 0 && startX + (i - 1) * spacing < -50)) {
+                    ctx.moveTo(x, y);
+                } else {
+                    // 使用贝塞尔曲线创建平滑效果
+                    const prevX = startX + (i - 1) * spacing;
+                    const prevY = chartCanvas.height - (data[i - 1] / config.maxSpeed) * (chartCanvas.height - 60) - 30 + yOffset;
+                    const cpX = (prevX + x) / 2;
+                    const cpY = (prevY + y) / 2;
+                    
+                    ctx.quadraticCurveTo(prevX, prevY, cpX, cpY);
+                }
+                
+                if (i === data.length - 1) {
+                    lastPoint = { x, y };
+                    ctx.lineTo(x, y); // 确保最后一个点被绘制
+                }
+            }
+            
+            ctx.stroke();
+            
+            // 绘制发光效果
+            ctx.strokeStyle = color + '33'; // 20%透明度
+            ctx.lineWidth = 8;
+            ctx.shadowBlur = 25;
+            ctx.stroke();
+            
+            ctx.restore(); // 恢复上下文状态
+            
+            return lastPoint;
+        }
+        
+        // 更新小球位置
+        function updateBallPosition(ball, position) {
+            if (position && ball) {
+                ball.style.left = position.x + 'px';
+                ball.style.top = position.y + 'px';
+                ball.style.display = 'block'; // 确保小球可见
+            }
+        }
+        
+        // 更新统计数据
+        function updateStats(type, data) {
+            if (data.length === 0) return;
+            
+            const currentValue = Math.round(data[data.length - 1]);
+            const avgValue = Math.round(data.reduce((a, b) => a + b, 0) / data.length);
+            const maxValue = Math.round(Math.max(...data));
+            
+            document.getElementById(`${type}Current`).textContent = currentValue;
+            document.getElementById(`${type}Avg`).textContent = avgValue;
+            document.getElementById(`${type}Max`).textContent = maxValue;
+        }
+        
+        // 主动画循环
+        function animate() {
+            if (animationRunning) {
+                frameCount++;
+                
+                // 平滑过渡到目标值
+                const smoothFactor = 1 / config.smoothness;
+                current.download = lerp(current.download, target.download, smoothFactor);
+                current.upload = lerp(current.upload, target.upload, smoothFactor);
+                
+                // 每几帧添加一个数据点
+                if (frameCount % 2 === 0) {
+                    data.download.push(current.download);
+                    data.upload.push(current.upload);
+                    
+                    // 限制数据点数量
+                    if (data.download.length > config.maxDataPoints) {
+                        data.download.shift();
+                    }
+                    if (data.upload.length > config.maxDataPoints) {
+                        data.upload.shift();
+                    }
+                }
+                
+                // 定期生成新目标
+                if (frameCount % config.animationSpeed === 0) {
+                    target.download = generateRandomSpeed(target.download, 'download');
+                    target.upload = generateRandomSpeed(target.upload, 'upload');
+                }
+                
+                // 清空画布
+                chartCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+                
+                // 绘制曲线并获取末端位置
+                const downloadPos = drawCurve(chartCtx, data.download, config.colors.download, 0);
+                const uploadPos = drawCurve(chartCtx, data.upload, config.colors.upload, 20);
+                
+                // 更新小球位置（确保与曲线末端对齐）
+                updateBallPosition(ballDownload, downloadPos);
+                updateBallPosition(ballUpload, uploadPos);
+                
+                // 更新统计
+                updateStats('download', data.download);
+                updateStats('upload', data.upload);
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // 控制函数
+        window.toggleAnimation = function() {
+            animationRunning = !animationRunning;
+        }
+        
+        window.resetData = function() {
+            data.download = [];
+            data.upload = [];
+            current.download = 50;
+            current.upload = 30;
+            target.download = 50;
+            target.upload = 30;
+            frameCount = 0;
+            
+            // 添加一些初始数据
+            for (let i = 0; i < 50; i++) {
+                data.download.push(50 + Math.random() * 20 - 10);
+                data.upload.push(30 + Math.random() * 15 - 7.5);
+            }
+        }
+        
+        // 控件事件
+        document.getElementById('speedControl').addEventListener('input', (e) => {
+            config.animationSpeed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = e.target.value;
+        });
+        
+        document.getElementById('smoothControl').addEventListener('input', (e) => {
+            config.smoothness = parseInt(e.target.value);
+            document.getElementById('smoothValue').textContent = e.target.value;
+        });
+        
+        // 初始化
+        console.log('开始初始化...');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 测试canvas是否正常工作
+        if (chartCtx) {
+            chartCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            chartCtx.fillRect(0, 0, 100, 100);
+            console.log('Canvas 测试成功');
+        }
+        
+        // 添加一些初始数据
+        for (let i = 0; i < 50; i++) {
+            data.download.push(50 + Math.random() * 20 - 10);
+            data.upload.push(30 + Math.random() * 15 - 7.5);
+        }
+        
+        // 设置初始值为最后一个数据点
+        current.download = data.download[data.download.length - 1];
+        current.upload = data.upload[data.upload.length - 1];
+        target.download = current.download;
+        target.upload = current.upload;
+        
+        drawGrid();
+        console.log('初始化完成，开始动画...');
+        console.log('数据点数量:', data.download.length, data.upload.length);
+        animate();
+    </script>
+</body>
+</html>

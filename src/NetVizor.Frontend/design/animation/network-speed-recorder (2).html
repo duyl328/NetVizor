@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网速记录仪</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .controls {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            min-width: 80px;
+        }
+
+        .slider {
+            width: 150px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff88;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff88;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .slider-value {
+            font-size: 14px;
+            color: #00ff88;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .button {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid rgba(0, 255, 136, 0.5);
+            color: #00ff88;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .button:active {
+            transform: scale(0.95);
+        }
+
+        .recorder-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(180deg, 
+                rgba(0, 255, 136, 0.03) 0%, 
+                rgba(0, 255, 136, 0.01) 50%, 
+                rgba(0, 255, 136, 0.03) 100%);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+        }
+
+        .grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, 
+                    rgba(0, 255, 136, 0.05) 0px, 
+                    transparent 1px, 
+                    transparent 39px, 
+                    rgba(0, 255, 136, 0.05) 40px),
+                repeating-linear-gradient(90deg, 
+                    rgba(0, 255, 136, 0.05) 0px, 
+                    transparent 1px, 
+                    transparent 39px, 
+                    rgba(0, 255, 136, 0.05) 40px);
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .indicator {
+            position: absolute;
+            right: 30px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5);
+            z-index: 10;
+            transition: top 0.1s ease-out;
+        }
+
+        .indicator.download {
+            background: #00ff88;
+            box-shadow: 
+                0 0 20px #00ff88,
+                0 0 40px #00ff88,
+                inset 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: pulse-green 1.5s ease-in-out infinite;
+        }
+
+        .indicator.upload {
+            background: #00d4ff;
+            box-shadow: 
+                0 0 20px #00d4ff,
+                0 0 40px #00d4ff,
+                inset 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: pulse-blue 1.5s ease-in-out infinite;
+            right: 60px;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes pulse-blue {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        .stats {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-box.upload {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .stat-value.download {
+            color: #00ff88;
+        }
+
+        .stat-value.upload {
+            color: #00d4ff;
+        }
+
+        .unit {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: 5px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.download {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+
+        .legend-dot.upload {
+            background: #00d4ff;
+            box-shadow: 0 0 10px #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">网络速度监测仪</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label class="control-label">动画速度:</label>
+                <input type="range" class="slider" id="animSpeed" min="0.5" max="3" step="0.1" value="1">
+                <span class="slider-value" id="animSpeedValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">波动频率:</label>
+                <input type="range" class="slider" id="fluctuation" min="0.1" max="2" step="0.1" value="1">
+                <span class="slider-value" id="fluctuationValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <button class="button" id="pauseBtn">暂停</button>
+                <button class="button" id="clearBtn">清除轨迹</button>
+            </div>
+        </div>
+        
+        <div class="recorder-container">
+            <div class="grid"></div>
+            <div class="canvas-container">
+                <canvas id="speedCanvas"></canvas>
+                <div class="indicator download" id="downloadIndicator"></div>
+                <div class="indicator upload" id="uploadIndicator"></div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot download"></div>
+                <span>下载速度</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot upload"></div>
+                <span>上传速度</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">当前下载速度</div>
+                <div class="stat-value download">
+                    <span id="currentDownload">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+            <div class="stat-box upload">
+                <div class="stat-label">当前上传速度</div>
+                <div class="stat-value upload">
+                    <span id="currentUpload">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">平均下载速度</div>
+                <div class="stat-value download">
+                    <span id="avgDownload">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+            <div class="stat-box upload">
+                <div class="stat-label">平均上传速度</div>
+                <div class="stat-value upload">
+                    <span id="avgUpload">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('speedCanvas');
+        const ctx = canvas.getContext('2d');
+        const downloadIndicator = document.getElementById('downloadIndicator');
+        const uploadIndicator = document.getElementById('uploadIndicator');
+        
+        // 控制元素
+        const animSpeedSlider = document.getElementById('animSpeed');
+        const animSpeedValue = document.getElementById('animSpeedValue');
+        const fluctuationSlider = document.getElementById('fluctuation');
+        const fluctuationValue = document.getElementById('fluctuationValue');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        // 设置画布大小
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 数据存储
+        const maxDataPoints = 200;
+        const downloadData = [];
+        const uploadData = [];
+        let maxSpeed = 100;
+        
+        // 当前速度和目标速度
+        let currentDownload = 50;
+        let targetDownload = 50;
+        let currentUpload = 30;
+        let targetUpload = 30;
+        
+        // 动画参数
+        let animationTime = 0;
+        let dataUpdateCounter = 0;
+        let speedUpdateCounter = 0;
+        let animationSpeed = 1;
+        let fluctuationRate = 1;
+        let isPaused = false;
+        let animationId = null;
+
+        // 更新控制值
+        animSpeedSlider.addEventListener('input', (e) => {
+            animationSpeed = parseFloat(e.target.value);
+            animSpeedValue.textContent = animationSpeed.toFixed(1);
+        });
+
+        fluctuationSlider.addEventListener('input', (e) => {
+            fluctuationRate = parseFloat(e.target.value);
+            fluctuationValue.textContent = fluctuationRate.toFixed(1);
+        });
+
+        // 暂停/继续按钮
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? '继续' : '暂停';
+            if (!isPaused && !animationId) {
+                animate();
+            }
+        });
+
+        // 清除轨迹按钮
+        clearBtn.addEventListener('click', () => {
+            downloadData.length = 0;
+            uploadData.length = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // 生成随机速度数据
+        function generateSpeed() {
+            // 下载速度波动（通常较高）
+            const downloadChange = (Math.random() - 0.5) * 20 * fluctuationRate;
+            targetDownload = Math.max(20, Math.min(95, targetDownload + downloadChange));
+            
+            // 上传速度波动（通常较低）
+            const uploadChange = (Math.random() - 0.5) * 15 * fluctuationRate;
+            targetUpload = Math.max(10, Math.min(60, targetUpload + uploadChange));
+            
+            // 偶尔出现下载峰值
+            if (Math.random() < 0.05 * fluctuationRate) {
+                targetDownload = Math.random() * 20 + 75;
+            }
+            
+            // 偶尔出现上传峰值
+            if (Math.random() < 0.05 * fluctuationRate) {
+                targetUpload = Math.random() * 15 + 45;
+            }
+            
+            // 偶尔同时降低
+            if (Math.random() < 0.03 * fluctuationRate) {
+                targetDownload = Math.random() * 20 + 20;
+                targetUpload = Math.random() * 10 + 10;
+            }
+        }
+
+        // 平滑插值
+        function lerp(start, end, t) {
+            return start + (end - start) * t;
+        }
+
+        // 更新统计数据
+        function updateStats() {
+            document.getElementById('currentDownload').textContent = Math.round(currentDownload);
+            document.getElementById('currentUpload').textContent = Math.round(currentUpload);
+            
+            if (downloadData.length > 0) {
+                const avgDown = downloadData.reduce((a, b) => a + b, 0) / downloadData.length;
+                document.getElementById('avgDownload').textContent = Math.round(avgDown);
+            }
+            
+            if (uploadData.length > 0) {
+                const avgUp = uploadData.reduce((a, b) => a + b, 0) / uploadData.length;
+                document.getElementById('avgUpload').textContent = Math.round(avgUp);
+            }
+        }
+
+        // 绘制单条曲线
+        function drawCurve(data, color, shadowColor, indicatorOffset) {
+            if (data.length < 2) return;
+            
+            // 设置渐变
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, `${color}22`);
+            gradient.addColorStop(0.5, `${color}99`);
+            gradient.addColorStop(1, color);
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // 添加光晕效果
+            ctx.shadowColor = shadowColor;
+            ctx.shadowBlur = 10;
+            
+            ctx.beginPath();
+            
+            // 计算每个数据点的X位置
+            const pointSpacing = 2 * animationSpeed;
+            const endX = canvas.width - 30 - indicatorOffset; // 终点位置与指示器对齐
+            const startX = endX - (data.length - 1) * pointSpacing;
+            
+            // 绘制平滑曲线
+            for (let i = 0; i < data.length; i++) {
+                const x = startX + i * pointSpacing;
+                const y = canvas.height - (data[i] / maxSpeed) * (canvas.height - 40) - 20;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    // 使用贝塞尔曲线创建平滑效果
+                    const prevX = startX + (i - 1) * pointSpacing;
+                    const prevY = canvas.height - (data[i - 1] / maxSpeed) * (canvas.height - 40) - 20;
+                    const midX = (prevX + x) / 2;
+                    const midY = (prevY + y) / 2;
+                    
+                    ctx.quadraticCurveTo(prevX, prevY, midX, midY);
+                }
+            }
+            
+            // 连接到最后一个点
+            if (data.length > 0) {
+                const lastX = endX;
+                const lastY = canvas.height - (data[data.length - 1] / maxSpeed) * (canvas.height - 40) - 20;
+                ctx.lineTo(lastX, lastY);
+            }
+            
+            ctx.stroke();
+            
+            // 绘制发光的尾迹
+            ctx.strokeStyle = `${color}55`;
+            ctx.lineWidth = 8;
+            ctx.shadowBlur = 20;
+            ctx.stroke();
+        }
+
+        // 绘制所有曲线
+        function drawCurves() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 先绘制上传曲线（在后面）
+            ctx.save();
+            drawCurve(uploadData, '#00d4ff', '#00d4ff', 30); // 偏移30像素，对应upload indicator位置
+            ctx.restore();
+            
+            // 再绘制下载曲线（在前面）
+            ctx.save();
+            drawCurve(downloadData, '#00ff88', '#00ff88', 0); // 偏移0像素，对应download indicator位置
+            ctx.restore();
+        }
+
+        // 更新指示器位置
+        function updateIndicators() {
+            const downloadY = canvas.height - (currentDownload / maxSpeed) * (canvas.height - 40) - 20;
+            downloadIndicator.style.top = (downloadY - 10) + 'px';
+            
+            const uploadY = canvas.height - (currentUpload / maxSpeed) * (canvas.height - 40) - 20;
+            uploadIndicator.style.top = (uploadY - 10) + 'px';
+        }
+
+        // 动画循环
+        function animate() {
+            if (isPaused) {
+                animationId = null;
+                return;
+            }
+            
+            animationTime++;
+            
+            // 平滑过渡到目标速度 - 使用固定的插值速度
+            currentDownload = lerp(currentDownload, targetDownload, 0.1);
+            currentUpload = lerp(currentUpload, targetUpload, 0.1);
+            
+            // 数据更新计数器 - 基于动画速度
+            dataUpdateCounter += animationSpeed;
+            
+            // 当计数器达到10时，添加新数据点
+            if (dataUpdateCounter >= 10) {
+                dataUpdateCounter = 0;
+                downloadData.push(currentDownload);
+                uploadData.push(currentUpload);
+                
+                // 限制数据点数量
+                if (downloadData.length > maxDataPoints) {
+                    downloadData.shift();
+                }
+                if (uploadData.length > maxDataPoints) {
+                    uploadData.shift();
+                }
+            }
+            
+            // 速度变化计数器 - 基于波动频率
+            speedUpdateCounter += fluctuationRate;
+            
+            // 根据波动频率调整生成新目标的频率
+            if (speedUpdateCounter >= 60) {
+                speedUpdateCounter = 0;
+                generateSpeed();
+            }
+            
+            // 更新显示
+            drawCurves();
+            updateIndicators();
+            updateStats();
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // 初始化数据
+        for (let i = 0; i < 30; i++) {
+            downloadData.push(50 + Math.random() * 20 - 10);
+            uploadData.push(30 + Math.random() * 15 - 7.5);
+        }
+
+        // 开始动画
+        animate();
+    </script>
+</body>
+</html>

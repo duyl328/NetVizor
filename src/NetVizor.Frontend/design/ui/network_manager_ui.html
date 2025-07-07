@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuard Pro - 网络管理工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #475569;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --blur: blur(8px);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 顶部标题栏 */
+        .title-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+            -webkit-app-region: drag;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .logo-icon {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .control-btn:hover { opacity: 0.8; }
+        .control-btn.close { background: #ef4444; }
+        .control-btn.minimize { background: #f59e0b; }
+        .control-btn.maximize { background: #10b981; }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding-top: 40px;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar-header {
+            padding: 20px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .status-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .status-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 16px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            margin: 2px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            padding-top: 40px;
+            background: var(--bg-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .page-description {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        /* 卡片组件 */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        /* 实时连接表格 */
+        .connections-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .connection-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: auto 1fr auto auto auto;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+        }
+
+        .connection-item:hover {
+            background: var(--bg-primary);
+            transform: translateY(-1px);
+        }
+
+        .connection-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .connection-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .connection-process {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .connection-target {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .connection-protocol {
+            background: var(--accent-primary);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .connection-speed {
+            text-align: right;
+            font-size: 12px;
+        }
+
+        .speed-up { color: var(--success); }
+        .speed-down { color: var(--accent-secondary); }
+
+        /* 图表区域 */
+        .chart-container {
+            height: 200px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        /* 进程列表 */
+        .process-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .process-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: grid;
+            grid-template-columns: 32px 1fr auto auto;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .process-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--accent-primary);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .process-details h4 {
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .process-details p {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .process-stats {
+            text-align: right;
+            font-size: 12px;
+        }
+
+        .toggle-btn {
+            width: 40px;
+            height: 20px;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: var(--success);
+        }
+
+        .toggle-btn::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-btn.active::after {
+            transform: translateX(20px);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 60px;
+            }
+            
+            .status-overview {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-item span {
+                display: none;
+            }
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* 动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 标题栏 -->
+        <div class="title-bar">
+            <div class="app-logo">
+                <div class="logo-icon">🛡️</div>
+                <span>NetGuard Pro</span>
+            </div>
+            <div class="window-controls">
+                <div class="control-btn minimize"></div>
+                <div class="control-btn maximize"></div>
+                <div class="control-btn close"></div>
+            </div>
+        </div>
+
+        <!-- 侧边栏 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="status-overview">
+                    <div class="status-card">
+                        <div class="status-value">24</div>
+                        <div class="status-label">活跃连接</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-value">1.2MB/s</div>
+                        <div class="status-label">当前流量</div>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <div class="nav-item active" data-page="dashboard">
+                    <div class="nav-icon">📊</div>
+                    <span>实时监控</span>
+                </div>
+                <div class="nav-item" data-page="processes">
+                    <div class="nav-icon">⚙️</div>
+                    <span>进程管理</span>
+                </div>
+                <div class="nav-item" data-page="firewall">
+                    <div class="nav-icon">🛡️</div>
+                    <span>防火墙</span>
+                </div>
+                <div class="nav-item" data-page="analytics">
+                    <div class="nav-icon">📈</div>
+                    <span>流量分析</span>
+                </div>
+                <div class="nav-item" data-page="network-map">
+                    <div class="nav-icon">🌐</div>
+                    <span>连接地图</span>
+                </div>
+                <div class="nav-item" data-page="settings">
+                    <div class="nav-icon">⚡</div>
+                    <span>系统设置</span>
+                </div>
+            </nav>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="content-header">
+                <h1 class="page-title" id="pageTitle">实时网络监控</h1>
+                <p class="page-description" id="pageDescription">监控当前系统的网络连接状态和流量情况</p>
+            </div>
+
+            <div class="content-body" id="contentBody">
+                <!-- 实时监控页面 -->
+                <div id="dashboard-content">
+                    <!-- 活跃连接 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">活跃连接</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary tooltip" data-tooltip="刷新连接列表">🔄</button>
+                                <button class="btn btn-secondary tooltip" data-tooltip="导出连接数据">📥</button>
+                            </div>
+                        </div>
+                        <div class="connections-grid">
+                            <div class="connection-item">
+                                <div class="connection-status pulse"></div>
+                                <div class="connection-info">
+                                    <div class="connection-process">Chrome.exe (PID: 12340)</div>
+                                    <div class="connection-target">192.168.1.1:443 → www.google.com</div>
+                                </div>
+                                <div class="connection-protocol">HTTPS</div>
+                                <div class="connection-speed">
+                                    <div class="speed-up">↑ 245 KB/s</div>
+                                    <div class="speed-down">↓ 1.2 MB/s</div>
+                                </div>
+                                <button class="btn btn-secondary">详情</button>
+                            </div>
+                            <div class="connection-item">
+                                <div class="connection-status"></div>
+                                <div class="connection-info">
+                                    <div class="connection-process">Steam.exe (PID: 8956)</div>
+                                    <div class="connection-target">103.28.54.10:27030 → Steam CDN</div>
+                                </div>
+                                <div class="connection-protocol">TCP</div>
+                                <div class="connection-speed">
+                                    <div class="speed-up">↑ 12 KB/s</div>
+                                    <div class="speed-down">↓ 856 KB/s</div>
+                                </div>
+                                <button class="btn btn-secondary">详情</button>
+                            </div>
+                            <div class="connection-item">
+                                <div class="connection-status"></div>
+                                <div class="connection-info">
+                                    <div class="connection-process">System (PID: 4)</div>
+                                    <div class="connection-target">8.8.8.8:53 → DNS</div>
+                                </div>
+                                <div class="connection-protocol">UDP</div>
+                                <div class="connection-speed">
+                                    <div class="speed-up">↑ 2 KB/s</div>
+                                    <div class="speed-down">↓ 1 KB/s</div>
+                                </div>
+                                <button class="btn btn-secondary">详情</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 实时流量图表 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">实时流量监控</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary">1分钟</button>
+                                <button class="btn btn-primary">5分钟</button>
+                                <button class="btn btn-secondary">15分钟</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            📈 实时流量图表 (ECharts 集成区域)
+                        </div>
+                    </div>
+
+                    <!-- 进程网络使用排行 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">网络使用排行</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary">按流量</button>
+                                <button class="btn btn-secondary">按连接数</button>
+                            </div>
+                        </div>
+                        <div class="process-grid">
+                            <div class="process-item">
+                                <div class="process-icon">🌐</div>
+                                <div class="process-details">
+                                    <h4>Google Chrome</h4>
+                                    <p>C:\Program Files\Google\Chrome\Application\chrome.exe</p>
+                                </div>
+                                <div class="process-stats">
+                                    <div>2.3 MB/s</div>
+                                    <div style="color: var(--text-muted);">8 连接</div>
+                                </div>
+                                <div class="toggle-btn active"></div>
+                            </div>
+                            <div class="process-item">
+                                <div class="process-icon">🎮</div>
+                                <div class="process-details">
+                                    <h4>Steam</h4>
+                                    <p>C:\Program Files (x86)\Steam\steam.exe</p>
+                                </div>
+                                <div class="process-stats">
+                                    <div>856 KB/s</div>
+                                    <div style="color: var(--text-muted);">3 连接</div>
+                                </div>
+                                <div class="toggle-btn active"></div>
+                            </div>
+                            <div class="process-item">
+                                <div class="process-icon">💬</div>
+                                <div class="process-details">
+                                    <h4>Microsoft Teams</h4>
+                                    <p>C:\Users\User\AppData\Local\Microsoft\Teams\current\Teams.exe</p>
+                                </div>
+                                <div class="process-stats">
+                                    <div>234 KB/s</div>
+                                    <div style="color: var(--text-muted);">5 连接</div>
+                                </div>
+                                <div class="toggle-btn active"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 其他页面内容将通过 JavaScript 动态加载 -->
+                <div id="processes-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">进程网络权限管理</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-primary">添加规则</button>
+                                <button class="btn btn-secondary">批量操作</button>
+                            </div>
+                        </div>
+                        <p style="color: var(--text-muted); text-align: center; padding: 40px;">进程管理功能区域 - 显示所有联网进程的详细信息和权限控制</p>
+                    </div>
+                </div>
+
+                <div id="firewall-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">防火墙规则管理</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-primary">新建规则</button>
+                                <button class="btn btn-secondary">导入/导出</button>
+                            </div>
+                        </div>
+                        <p style="color: var(--text-muted); text-align: center; padding: 40px;">防火墙管理功能区域 - 统一的规则管理界面</p>
+                    </div>
+                </div>
+
+                <div id="analytics-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">流量分析与统计</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary">日报告</button>
+                                <button class="btn btn-secondary">周报告</button>
+                                <button class="btn btn-secondary">月报告</button>
+                            </div>
+                        </div>
+                        <p style="color: var(--text-muted); text-align: center; padding: 40px;">流量分析功能区域 - 历史数据、趋势分析、可视化图表</p>
+                    </div>
+                </div>
+
+                <div id="network-map-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">网络连接地图</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary">拓扑视图</button>
+                                <button class="btn btn-secondary">地理视图</button>
+                            </div>
+                        </div>
+                        <p style="color: var(--text-muted); text-align: center; padding: 40px;">网络地图功能区域 - 连接可视化、地理位置映射</p>
+                    </div>
+                </div>
+
+                <div id="settings-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">系统设置</h3>
+                        </div>
+                        <p style="color: var(--text-muted); text-align: center; padding: 40px;">系统设置功能区域 - 配置选项、日志管理、系统偏好</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面切换功能
+        const navItems = document.querySelectorAll('.nav-item');
+        const pageTitle = document.getElementById('pageTitle');
+        const pageDescription = document.getElementById('pageDescription');
+        const contentSections = {
+            'dashboard': {
+                title: '实时网络监控',
+                description: '监控当前系统的网络连接状态和流量情况',
+                element: document.getElementById('dashboard-content')
+            },
+            'processes': {
+                title: '进程网络管理',
+                description: '管理应用程序的网络访问权限和行为监控',
+                element: document.getElementById('processes-content')
+            },
+            'firewall': {
+                title: '防火墙控制中心',
+                description: '统一管理和配置Windows防火墙规则',
+                element: document.getElementById('firewall-content')
+            },
+            'analytics': {
+                title: '流量分析报告',
+                description: '深入分析网络使用模式和历史趋势',
+                element: document.getElementById('analytics-content')
+            },
+            'network-map': {
+                title: '网络连接地图',
+                description: '可视化网络连接和地理位置分布',
+                element: document.getElementById('network-map-content')
+            },
+            'settings': {
+                title: '系统设置',
+                description: '配置应用程序行为和系统偏好',
+                element: document.getElementById('settings-content')
+            }
+        };
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // 移除所有活跃状态
+                navItems.forEach(nav => nav.classList.remove('active'));
+                // 添加当前活跃状态
+                item.classList.add('active');
+                
+                // 获取页面标识
+                const page = item.getAttribute('data-page');
+                const pageInfo = contentSections[page];
+                
+                if (pageInfo) {
+                    // 更新页面标题和描述
+                    pageTitle.textContent = pageInfo.title;
+                    pageDescription.textContent = pageInfo.description;
+                    
+                    // 隐藏所有内容区域
+                    Object.values(contentSections).forEach(section => {
+                        section.element.style.display = 'none';
+                    });
+                    
+                    // 显示当前页面内容
+                    pageInfo.element.style.display = 'block';
+                }
+            });
+        });
+
+        // 切换按钮功能
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('active');
+            });
+        });
+
+        // 模拟实时数据更新
+        function updateRealTimeData() {
+            // 更新状态卡片数据
+            const connectionCount = document.querySelector('.status-value');
+            const speedValue = document.querySelectorAll('.status-value')[1];
+            
+            if (connectionCount && speedValue) {
+                const connections = Math.floor(Math.random() * 10) + 20;
+                const speed = (Math.random() * 2 + 0.5).toFixed(1);
+                
+                connectionCount.textContent = connections;
+                speedValue.textContent = `${speed}MB/s`;
+            }
+            
+            // 更新连接状态指示器
+            document.querySelectorAll('.connection-status').forEach(status => {
+                if (Math.random() > 0.8) {
+                    status.classList.toggle('pulse');
+                }
+            });
+        }
+
+        // 每3秒更新一次数据
+        setInterval(updateRealTimeData, 3000);
+
+        // 窗口控制按钮功能
+        document.querySelector('.control-btn.minimize').addEventListener('click', () => {
+            console.log('窗口最小化');
+        });
+
+        document.querySelector('.control-btn.maximize').addEventListener('click', () => {
+            console.log('窗口最大化/还原');
+        });
+
+        document.querySelector('.control-btn.close').addEventListener('click', () => {
+            console.log('关闭窗口');
+        });
+
+        // 响应式侧边栏
+        function handleResize() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth < 1200) {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // 初始检查
+    </script>
+</body>
+</html>

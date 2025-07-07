@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuard - 现代化网络管理工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #151923;
+            --bg-card: #1a1f2e;
+            --bg-hover: #252b3b;
+            --text-primary: #ffffff;
+            --text-secondary: #8892b0;
+            --text-dim: #64748b;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #7c3aed;
+            --accent-success: #10b981;
+            --accent-danger: #ef4444;
+            --accent-warning: #f59e0b;
+            --border-color: #2a3142;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* 主布局 */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .logo {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .nav-item.active {
+            background: var(--bg-hover);
+            color: var(--accent-primary);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--accent-primary);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.8;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            height: 60px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 8px 16px;
+            width: 300px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .search-input {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            outline: none;
+            width: 100%;
+            margin-left: 8px;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .action-btn.primary {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border: none;
+        }
+
+        /* 内容区域 */
+        .content-area {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto 1fr;
+            gap: 20px;
+        }
+
+        /* 统计卡片 */
+        .stats-container {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+            margin: 8px 0;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .stat-trend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 12px;
+        }
+
+        .trend-up {
+            color: var(--accent-success);
+        }
+
+        .trend-down {
+            color: var(--accent-danger);
+        }
+
+        /* 实时监控区 */
+        .monitor-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+        }
+
+        /* 连接列表 */
+        .connections-section {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .connection-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-chip {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-chip.active {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .connections-table {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(42, 49, 66, 0.5);
+        }
+
+        .table tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .process-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .process-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .process-name {
+            font-weight: 500;
+        }
+
+        .process-path {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .speed-badge {
+            background: var(--bg-secondary);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: var(--accent-success);
+            box-shadow: 0 0 8px var(--accent-success);
+        }
+
+        .status-blocked {
+            background: var(--accent-danger);
+        }
+
+        /* 悬浮详情面板 */
+        .detail-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            bottom: 0;
+            width: 400px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-panel.open {
+            right: 0;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            border-color: var(--accent-danger);
+            color: var(--accent-danger);
+        }
+
+        /* 动画效果 */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .live-indicator {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 1200px) {
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .content-area {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7V12C2 16.5 4.5 20.5 8 21.5C8.5 20.5 9 19.5 9.5 18.5C7.5 17.5 6 15.5 6 13V9L12 6L18 9V13C18 13.5 17.9 14 17.8 14.5C18.8 14.5 19.8 14.8 20.5 15.3C20.8 14.2 21 13.1 21 12V7L12 2Z" fill="white"/>
+                        <circle cx="18" cy="18" r="4" fill="#00d4ff"/>
+                    </svg>
+                </div>
+                <span class="logo-text">NetGuard</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item active">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+                        <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+                        <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+                    </svg>
+                    <span>实时监控</span>
+                </div>
+                <div class="nav-item">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h2a1 1 0 100-2H6V7h8v6h-2a1 1 0 100 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a1 1 0 100-2h2a2 2 0 012 2z"/>
+                    </svg>
+                    <span>防火墙规则</span>
+                </div>
+                <div class="nav-item">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+                    </svg>
+                    <span>应用管理</span>
+                </div>
+                <div class="nav-item">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                    </svg>
+                    <span>流量分析</span>
+                </div>
+                <div class="nav-item">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
+                    </svg>
+                    <span>设置</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <div class="search-box">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="9" r="7"/>
+                        <path d="M14 14l4 4"/>
+                    </svg>
+                    <input type="text" class="search-input" placeholder="搜索进程、IP地址或域名...">
+                </div>
+                
+                <div class="top-actions">
+                    <div class="live-indicator"></div>
+                    <span style="color: var(--text-secondary); font-size: 14px; margin-right: 16px;">实时监控中</span>
+                    <button class="action-btn">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+                        </svg>
+                        阻止所有
+                    </button>
+                    <button class="action-btn primary">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        学习模式
+                    </button>
+                </div>
+            </header>
+
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <!-- 统计卡片 -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-label">活跃连接</div>
+                        <div class="stat-value">247</div>
+                        <div class="stat-trend trend-up">↑ 12%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">总下载</div>
+                        <div class="stat-value">3.2GB</div>
+                        <div class="stat-trend trend-up">↑ 5.3MB/s</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">总上传</div>
+                        <div class="stat-value">1.1GB</div>
+                        <div class="stat-trend trend-up">↑ 2.1MB/s</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">已阻止</div>
+                        <div class="stat-value">89</div>
+                        <div class="stat-trend" style="color: var(--accent-warning);">15 今日</div>
+                    </div>
+                </div>
+
+                <!-- 实时监控图表 -->
+                <div class="monitor-section">
+                    <div class="section-header">
+                        <h3 class="section-title">网络流量实时监控</h3>
+                        <select style="background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; color: var(--text-primary);">
+                            <option>最近5分钟</option>
+                            <option>最近1小时</option>
+                            <option>最近24小时</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <!-- 这里会放置 Echarts 实时流量图 -->
+                        <span>实时流量图表区域</span>
+                    </div>
+                </div>
+
+                <div class="monitor-section">
+                    <div class="section-header">
+                        <h3 class="section-title">应用流量排行</h3>
+                        <button class="action-btn" style="padding: 4px 12px; font-size: 12px;">查看全部</button>
+                    </div>
+                    <div class="chart-container">
+                        <!-- 这里会放置应用流量饼图 -->
+                        <span>应用流量分布图</span>
+                    </div>
+                </div>
+
+                <!-- 连接列表 -->
+                <div class="connections-section">
+                    <div class="section-header">
+                        <h3 class="section-title">活跃连接</h3>
+                        <div class="connection-filters">
+                            <div class="filter-chip active">全部</div>
+                            <div class="filter-chip">TCP</div>
+                            <div class="filter-chip">UDP</div>
+                            <div class="filter-chip">已阻止</div>
+                        </div>
+                    </div>
+                    
+                    <div class="connections-table">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>进程</th>
+                                    <th>协议</th>
+                                    <th>本地地址</th>
+                                    <th>远程地址</th>
+                                    <th>速度</th>
+                                    <th>流量</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="process-info">
+                                            <div class="process-icon">
+                                                <svg width="20" height="20" fill="#00d4ff" viewBox="0 0 24 24">
+                                                    <path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="process-name">Chrome.exe</div>
+                                                <div class="process-path">C:\Program Files\Google\Chrome</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>TCP</td>
+                                    <td>192.168.1.100:54321</td>
+                                    <td>
+                                        <div>142.250.185.78:443</div>
+                                        <div class="process-path">youtube.com</div>
+                                    </td>
+                                    <td><span class="speed-badge">2.3 MB/s</span></td>
+                                    <td>156 MB</td>
+                                    <td><span class="status-dot status-active"></span>活跃</td>
+                                    <td>
+                                        <button class="action-btn" style="padding: 4px 12px; font-size: 12px;">详情</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="process-info">
+                                            <div class="process-icon" style="background: #ef4444;">
+                                                <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                                                    <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div class="process-name">Unknown.exe</div>
+                                                <div class="process-path">C:\Users\AppData\Temp</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>TCP</td>
+                                    <td>192.168.1.100:55789</td>
+                                    <td>
+                                        <div>185.45.67.89:8080</div>
+                                        <div class="process-path" style="color: var(--accent-danger);">未知</div>
+                                    </td>
+                                    <td><span class="speed-badge">0 KB/s</span></td>
+                                    <td>12 KB</td>
+                                    <td><span class="status-dot status-blocked"></span>已阻止</td>
+                                    <td>
+                                        <button class="action-btn" style="padding: 4px 12px; font-size: 12px;">详情</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 详情面板 -->
+        <div class="detail-panel" id="detailPanel">
+            <div class="panel-header">
+                <h3>连接详情</h3>
+                <button class="close-btn" onclick="document.getElementById('detailPanel').classList.remove('open')">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                    </svg>
+                </button>
+            </div>
+            <!-- 详情内容 -->
+        </div>
+    </div>
+
+    <script>
+        // 模拟点击详情按钮打开面板
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            if (btn.textContent === '详情') {
+                btn.addEventListener('click', () => {
+                    document.getElementById('detailPanel').classList.add('open');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

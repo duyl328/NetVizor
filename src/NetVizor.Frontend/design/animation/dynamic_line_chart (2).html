@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态折线图 - 跳动小球轨迹</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #chartContainer {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #ff4757);
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.8), 0 0 40px rgba(255, 107, 107, 0.4);
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            animation: bounce 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes bounce {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            100% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .value-display {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 11;
+            transform: translate(-50%, -150%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .info {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 动态数据轨迹图</h1>
+        
+        <div id="chartContainer">
+            <svg id="chart" viewBox="0 0 1000 400">
+                <!-- 网格线 -->
+                <defs>
+                    <pattern id="grid" width="50" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 50 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+                    </pattern>
+                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#4ecdc4;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#ff6b6b;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                
+                <rect width="100%" height="100%" fill="url(#grid)" />
+                
+                <!-- 主要轨迹线 -->
+                <path id="mainPath" fill="none" stroke="url(#lineGradient)" stroke-width="3" opacity="0.8"/>
+                
+                <!-- 辅助点 -->
+                <g id="points"></g>
+            </svg>
+            
+            <!-- 跳动的小球 -->
+            <div class="ball" id="ball"></div>
+            <div class="value-display" id="valueDisplay">0</div>
+        </div>
+
+        <div class="controls">
+            <button onclick="startAnimation()">🚀 开始动画</button>
+            <button onclick="pauseAnimation()">⏸️ 暂停</button>
+            <button onclick="resetAnimation()">🔄 重置</button>
+            <button onclick="changeSpeed()">⚡ 切换速度</button>
+        </div>
+
+        <div class="info">
+            <p>💡 小球会沿着数据轨迹移动，实时显示当前数值</p>
+        </div>
+    </div>
+
+    <script>
+        let animationRunning = false;
+        let animationSpeed = 50; // 毫秒
+        let currentIndex = 0;
+        let dataPoints = [];
+        let pathData = '';
+        let animationId;
+
+        // 生成模拟数据
+        function generateData() {
+            dataPoints = [];
+            const baseValue = 200;
+            let currentValue = baseValue;
+            
+            for (let i = 0; i < 200; i++) {
+                // 生成随机波动数据
+                const change = (Math.random() - 0.5) * 40;
+                currentValue += change;
+                
+                // 限制范围
+                currentValue = Math.max(50, Math.min(350, currentValue));
+                
+                dataPoints.push({
+                    x: i * 5, // x轴间距
+                    y: 400 - currentValue, // y轴翻转
+                    value: Math.round(currentValue)
+                });
+            }
+        }
+
+        // 更新SVG路径
+        function updatePath() {
+            if (currentIndex < 2) return;
+            
+            pathData = `M ${dataPoints[0].x} ${dataPoints[0].y}`;
+            for (let i = 1; i <= currentIndex; i++) {
+                pathData += ` L ${dataPoints[i].x} ${dataPoints[i].y}`;
+            }
+            
+            document.getElementById('mainPath').setAttribute('d', pathData);
+            
+            // 添加轨迹点
+            const pointsGroup = document.getElementById('points');
+            if (currentIndex < dataPoints.length) {
+                const point = dataPoints[currentIndex];
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point.x);
+                circle.setAttribute('cy', point.y);
+                circle.setAttribute('r', '2');
+                circle.setAttribute('fill', 'rgba(255, 255, 255, 0.6)');
+                pointsGroup.appendChild(circle);
+            }
+        }
+
+        // 更新小球位置
+        function updateBall() {
+            if (currentIndex >= dataPoints.length) {
+                pauseAnimation();
+                return;
+            }
+
+            const point = dataPoints[currentIndex];
+            const ball = document.getElementById('ball');
+            const valueDisplay = document.getElementById('valueDisplay');
+            
+            // 计算在容器中的实际位置
+            const container = document.getElementById('chartContainer');
+            const rect = container.getBoundingClientRect();
+            const svgWidth = 1000;
+            const svgHeight = 400;
+            
+            const actualX = (point.x / svgWidth) * rect.width;
+            const actualY = (point.y / svgHeight) * rect.height;
+            
+            ball.style.left = actualX + 'px';
+            ball.style.top = actualY + 'px';
+            
+            valueDisplay.style.left = actualX + 'px';
+            valueDisplay.style.top = actualY + 'px';
+            valueDisplay.textContent = point.value;
+            
+            // 自动滚动视图保持小球在视线内
+            const scrollThreshold = rect.width * 0.8;
+            if (actualX > scrollThreshold) {
+                const svg = document.getElementById('chart');
+                const newViewBox = `${point.x - 800} 0 1000 400`;
+                svg.setAttribute('viewBox', newViewBox);
+            }
+        }
+
+        // 动画循环
+        function animate() {
+            if (!animationRunning) return;
+            
+            updatePath();
+            updateBall();
+            currentIndex++;
+            
+            if (currentIndex < dataPoints.length) {
+                animationId = setTimeout(animate, animationSpeed);
+            } else {
+                pauseAnimation();
+            }
+        }
+
+        // 开始动画
+        function startAnimation() {
+            if (dataPoints.length === 0) {
+                generateData();
+            }
+            
+            animationRunning = true;
+            animate();
+        }
+
+        // 暂停动画
+        function pauseAnimation() {
+            animationRunning = false;
+            if (animationId) {
+                clearTimeout(animationId);
+            }
+        }
+
+        // 重置动画
+        function resetAnimation() {
+            pauseAnimation();
+            currentIndex = 0;
+            document.getElementById('mainPath').setAttribute('d', '');
+            document.getElementById('points').innerHTML = '';
+            document.getElementById('chart').setAttribute('viewBox', '0 0 1000 400');
+            
+            const ball = document.getElementById('ball');
+            const valueDisplay = document.getElementById('valueDisplay');
+            ball.style.left = '0px';
+            ball.style.top = '200px';
+            valueDisplay.style.left = '0px';
+            valueDisplay.style.top = '200px';
+            valueDisplay.textContent = '0';
+            
+            generateData();
+        }
+
+        // 切换速度
+        function changeSpeed() {
+            const speeds = [100, 50, 25, 10];
+            const currentSpeedIndex = speeds.indexOf(animationSpeed);
+            const nextSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
+            animationSpeed = speeds[nextSpeedIndex];
+            
+            const speedNames = ['慢速', '正常', '快速', '极速'];
+            alert(`切换到 ${speedNames[nextSpeedIndex]} 模式`);
+        }
+
+        // 初始化
+        window.addEventListener('load', function() {
+            generateData();
+            
+            // 处理窗口大小变化
+            window.addEventListener('resize', function() {
+                if (currentIndex > 0) {
+                    updateBall();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

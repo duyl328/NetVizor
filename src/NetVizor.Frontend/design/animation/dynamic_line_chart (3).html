@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态折线图 - 跳动小球轨迹</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .stop-btn {
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+        }
+
+        .stop-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
+        }
+
+        .reset-btn {
+            background: linear-gradient(45deg, #2196F3, #0b7dda);
+            color: white;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(103, 126, 234, 0.1);
+            border-radius: 10px;
+            text-align: center;
+            color: #333;
+        }
+
+        .current-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 动态折线图</h1>
+        
+        <div class="chart-container">
+            <canvas id="chartCanvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <button class="start-btn" onclick="startAnimation()">开始动画</button>
+            <button class="stop-btn" onclick="stopAnimation()">停止动画</button>
+            <button class="reset-btn" onclick="resetChart()">重置图表</button>
+        </div>
+
+        <div class="info">
+            <div>小球位置固定在画布右侧，数据值实时更新</div>
+            <div class="current-value" id="currentValue">当前值: 0</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+        const currentValueEl = document.getElementById('currentValue');
+
+        // 设置canvas实际尺寸
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        // 初始化
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 图表配置
+        const config = {
+            ballRadius: 8,
+            ballPosition: 0.85, // 小球在画布右侧85%的位置
+            trailWidth: 3,
+            gridColor: '#e0e0e0',
+            ballColor: '#ff4757',
+            trailColor: '#667eea',
+            ballGlowColor: 'rgba(255, 71, 87, 0.3)',
+            animationSpeed: 50, // ms
+            dataRange: { min: 10, max: 90 }, // 数据范围百分比
+            scrollSpeed: 2 // 画布滚动速度
+        };
+
+        // 数据存储
+        let dataPoints = [];
+        let animationId = null;
+        let isRunning = false;
+        let time = 0;
+        let currentValue = 50;
+
+        // 生成模拟数据
+        function generateNextValue() {
+            // 使用正弦波加随机波动生成更自然的数据
+            const baseValue = 50 + Math.sin(time * 0.02) * 20;
+            const randomFluctuation = (Math.random() - 0.5) * 10;
+            currentValue = Math.max(config.dataRange.min, 
+                Math.min(config.dataRange.max, baseValue + randomFluctuation));
+            time++;
+            return currentValue;
+        }
+
+        // 绘制网格
+        function drawGrid() {
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+            
+            ctx.strokeStyle = config.gridColor;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+
+            // 水平网格线
+            for (let i = 0; i <= 10; i++) {
+                const y = (height / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            // 垂直网格线
+            for (let i = 0; i <= 20; i++) {
+                const x = (width / 20) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+
+            ctx.setLineDash([]);
+        }
+
+        // 绘制轨迹线
+        function drawTrail() {
+            if (dataPoints.length < 2) return;
+
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+
+            ctx.strokeStyle = config.trailColor;
+            ctx.lineWidth = config.trailWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // 添加阴影效果
+            ctx.shadowColor = 'rgba(102, 126, 234, 0.3)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 2;
+
+            ctx.beginPath();
+            for (let i = 0; i < dataPoints.length; i++) {
+                const point = dataPoints[i];
+                const x = width * config.ballPosition - (dataPoints.length - 1 - i) * config.scrollSpeed;
+                const y = height - (point / 100) * height;
+
+                if (x < 0) continue; // 不绘制超出左边界的点
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // 重置阴影
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
+        // 绘制跳动的小球
+        function drawBall() {
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+            
+            const ballX = width * config.ballPosition;
+            const ballY = height - (currentValue / 100) * height;
+
+            // 小球跳动效果
+            const bounce = Math.sin(time * 0.3) * 2;
+            const finalBallY = ballY + bounce;
+
+            // 绘制小球光晕
+            const gradient = ctx.createRadialGradient(ballX, finalBallY, 0, ballX, finalBallY, config.ballRadius * 3);
+            gradient.addColorStop(0, config.ballGlowColor);
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ballX, finalBallY, config.ballRadius * 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 绘制小球主体
+            ctx.fillStyle = config.ballColor;
+            ctx.beginPath();
+            ctx.arc(ballX, finalBallY, config.ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 小球高光
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(ballX - 2, finalBallY - 2, config.ballRadius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 主渲染函数
+        function render() {
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+
+            // 清空画布
+            ctx.clearRect(0, 0, width, height);
+
+            // 绘制背景渐变
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+            bgGradient.addColorStop(0, '#f8f9fa');
+            bgGradient.addColorStop(1, '#e9ecef');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // 绘制网格
+            drawGrid();
+
+            // 绘制轨迹
+            drawTrail();
+
+            // 绘制小球
+            drawBall();
+
+            // 更新当前值显示
+            currentValueEl.textContent = `当前值: ${currentValue.toFixed(1)}`;
+        }
+
+        // 动画循环
+        function animate() {
+            if (!isRunning) return;
+
+            // 生成新数据点
+            const newValue = generateNextValue();
+            dataPoints.push(newValue);
+
+            // 限制数据点数量，移除画布外的点
+            const maxPoints = Math.ceil(canvas.width / window.devicePixelRatio / config.scrollSpeed) + 10;
+            if (dataPoints.length > maxPoints) {
+                dataPoints.shift();
+            }
+
+            render();
+
+            animationId = setTimeout(animate, config.animationSpeed);
+        }
+
+        // 控制函数
+        function startAnimation() {
+            if (isRunning) return;
+            isRunning = true;
+            animate();
+        }
+
+        function stopAnimation() {
+            isRunning = false;
+            if (animationId) {
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+
+        function resetChart() {
+            stopAnimation();
+            dataPoints = [];
+            time = 0;
+            currentValue = 50;
+            render();
+        }
+
+        // 初始渲染
+        render();
+
+        // 自动开始演示
+        setTimeout(startAnimation, 1000);
+    </script>
+</body>
+</html>

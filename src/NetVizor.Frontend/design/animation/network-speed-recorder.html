@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网速记录仪</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px auto;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .recorder-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(180deg, 
+                rgba(0, 255, 136, 0.03) 0%, 
+                rgba(0, 255, 136, 0.01) 50%, 
+                rgba(0, 255, 136, 0.03) 100%);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+        }
+
+        .grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, 
+                    rgba(0, 255, 136, 0.05) 0px, 
+                    transparent 1px, 
+                    transparent 39px, 
+                    rgba(0, 255, 136, 0.05) 40px),
+                repeating-linear-gradient(90deg, 
+                    rgba(0, 255, 136, 0.05) 0px, 
+                    transparent 1px, 
+                    transparent 39px, 
+                    rgba(0, 255, 136, 0.05) 40px);
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .indicator {
+            position: absolute;
+            right: 30px;
+            width: 20px;
+            height: 20px;
+            background: #00ff88;
+            border-radius: 50%;
+            box-shadow: 
+                0 0 20px #00ff88,
+                0 0 40px #00ff88,
+                inset 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: pulse 1.5s ease-in-out infinite;
+            z-index: 10;
+            transition: top 0.1s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        .stats {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .unit {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">网络速度监测仪</h1>
+        
+        <div class="recorder-container">
+            <div class="grid"></div>
+            <div class="canvas-container">
+                <canvas id="speedCanvas"></canvas>
+                <div class="indicator" id="indicator"></div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">当前速度</div>
+                <div class="stat-value">
+                    <span id="currentSpeed">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">平均速度</div>
+                <div class="stat-value">
+                    <span id="avgSpeed">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">峰值速度</div>
+                <div class="stat-value">
+                    <span id="maxSpeed">0</span>
+                    <span class="unit">Mbps</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('speedCanvas');
+        const ctx = canvas.getContext('2d');
+        const indicator = document.getElementById('indicator');
+        
+        // 设置画布大小
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 数据存储
+        const maxDataPoints = 200;
+        const speedData = [];
+        let maxSpeed = 100; // 最大速度范围
+        let currentSpeed = 50;
+        let targetSpeed = 50;
+        
+        // 动画参数
+        let animationTime = 0;
+        const scrollSpeed = 2; // 每帧移动的像素数
+
+        // 生成随机网速数据
+        function generateSpeed() {
+            // 模拟网速的自然波动
+            const change = (Math.random() - 0.5) * 20;
+            targetSpeed = Math.max(5, Math.min(95, targetSpeed + change));
+            
+            // 偶尔出现速度峰值
+            if (Math.random() < 0.05) {
+                targetSpeed = Math.random() * 30 + 70;
+            }
+            
+            // 偶尔出现速度低谷
+            if (Math.random() < 0.05) {
+                targetSpeed = Math.random() * 20 + 10;
+            }
+        }
+
+        // 平滑插值
+        function lerp(start, end, t) {
+            return start + (end - start) * t;
+        }
+
+        // 更新统计数据
+        function updateStats() {
+            document.getElementById('currentSpeed').textContent = Math.round(currentSpeed);
+            
+            if (speedData.length > 0) {
+                const avg = speedData.reduce((a, b) => a + b, 0) / speedData.length;
+                document.getElementById('avgSpeed').textContent = Math.round(avg);
+                
+                const max = Math.max(...speedData);
+                document.getElementById('maxSpeed').textContent = Math.round(max);
+            }
+        }
+
+        // 绘制曲线
+        function drawCurve() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (speedData.length < 2) return;
+            
+            // 设置渐变
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradient.addColorStop(0, 'rgba(0, 255, 136, 0.1)');
+            gradient.addColorStop(0.5, 'rgba(0, 255, 136, 0.6)');
+            gradient.addColorStop(1, 'rgba(0, 255, 136, 1)');
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // 添加光晕效果
+            ctx.shadowColor = '#00ff88';
+            ctx.shadowBlur = 10;
+            
+            ctx.beginPath();
+            
+            // 计算每个数据点的X位置
+            const pointSpacing = scrollSpeed;
+            const startX = canvas.width - 50 - (speedData.length - 1) * pointSpacing;
+            
+            // 绘制平滑曲线
+            for (let i = 0; i < speedData.length; i++) {
+                const x = startX + i * pointSpacing;
+                const y = canvas.height - (speedData[i] / maxSpeed) * (canvas.height - 40) - 20;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    // 使用贝塞尔曲线创建平滑效果
+                    const prevX = startX + (i - 1) * pointSpacing;
+                    const prevY = canvas.height - (speedData[i - 1] / maxSpeed) * (canvas.height - 40) - 20;
+                    const midX = (prevX + x) / 2;
+                    const midY = (prevY + y) / 2;
+                    
+                    ctx.quadraticCurveTo(prevX, prevY, midX, midY);
+                }
+            }
+            
+            // 连接到最后一个点
+            if (speedData.length > 0) {
+                const lastX = canvas.width - 50;
+                const lastY = canvas.height - (speedData[speedData.length - 1] / maxSpeed) * (canvas.height - 40) - 20;
+                ctx.lineTo(lastX, lastY);
+            }
+            
+            ctx.stroke();
+            
+            // 绘制发光的尾迹
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.3)';
+            ctx.lineWidth = 8;
+            ctx.shadowBlur = 20;
+            ctx.stroke();
+        }
+
+        // 更新指示器位置
+        function updateIndicator() {
+            const y = canvas.height - (currentSpeed / maxSpeed) * (canvas.height - 40) - 20;
+            indicator.style.top = (y - 10) + 'px';
+        }
+
+        // 动画循环
+        function animate() {
+            animationTime++;
+            
+            // 平滑过渡到目标速度
+            currentSpeed = lerp(currentSpeed, targetSpeed, 0.1);
+            
+            // 每10帧添加一个新数据点
+            if (animationTime % 10 === 0) {
+                speedData.push(currentSpeed);
+                
+                // 限制数据点数量
+                if (speedData.length > maxDataPoints) {
+                    speedData.shift();
+                }
+            }
+            
+            // 每60帧生成新的目标速度
+            if (animationTime % 60 === 0) {
+                generateSpeed();
+            }
+            
+            // 更新显示
+            drawCurve();
+            updateIndicator();
+            updateStats();
+            
+            requestAnimationFrame(animate);
+        }
+
+        // 初始化数据
+        for (let i = 0; i < 50; i++) {
+            speedData.push(50 + Math.random() * 20 - 10);
+        }
+
+        // 开始动画
+        animate();
+    </script>
+</body>
+</html>
