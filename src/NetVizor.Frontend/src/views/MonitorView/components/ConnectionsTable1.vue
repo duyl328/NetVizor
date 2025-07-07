@@ -45,264 +45,372 @@
       </div>
     </div>
 
-    <!-- 进程列表 -->
-    <div class="process-list">
-      <n-empty
-        v-if="connections.length === 0"
-        description="暂无进程数据"
-        :style="{ padding: '40px' }"
-      />
-
-      <transition-group name="process-list" tag="div" v-else>
+    <!-- 统一连接列表容器 -->
+    <div class="unified-connections-container">
+      <!-- 吸顶元素容器 -->
+      <Transition name="sticky-slide">
         <div
-          v-for="process in connections"
-          :key="process.processId"
-          class="process-item"
-          :class="{
-            'is-expanded': expandedItems.has(process.processId),
-            'is-exited': process.hasExited,
-          }"
+          v-show="shouldShowSticky && stickyItem"
+          class="sticky-header"
+          :style="stickyStyle"
         >
-          <!-- 进程头部 -->
-          <div class="process-header" @click="toggleExpand(process.processId)">
-            <div class="header-left">
-              <div class="expand-indicator">
-                <n-icon
-                  :component="ChevronForwardOutline"
-                  :size="expandIconSize"
-                  class="expand-arrow"
-                />
-              </div>
-
-              <div class="process-info">
-                <div class="process-title">
-                  <h4 class="process-name">{{ process.processName }}</h4>
-                  <n-tag :type="getProcessStatus(process).type" :size="tagSize" round>
-                    {{ getProcessStatus(process).text }}
-                  </n-tag>
-                  <n-tag
-                    v-if="process.hasExited && process.exitCode !== undefined && !isCompact"
-                    :type="process.exitCode === 0 ? 'success' : 'error'"
-                    :size="tagSize"
-                  >
-                    退出代码: {{ process.exitCode }}
-                  </n-tag>
+          <div class="sticky-content">
+            <template v-if="stickyItem?.isCollapsedIndicator">
+              <!-- 折叠状态的吸顶 -->
+              <div class="sticky-collapsed">
+                <div class="sticky-icon collapsed">
+                  <n-icon :component="FolderOutline" size="20" />
                 </div>
-
-                <div class="process-details">
-                  <span class="detail-item primary">
-                    <n-icon :component="DesktopOutline" :size="detailIconSize" />
-                    PID: {{ process.processId }}
-                  </span>
-                  <span class="detail-item" v-show="showProcessDetail('time')">
-                    <n-icon :component="TimeOutline" :size="detailIconSize" />
-                    {{ process.hasExited ? '运行时长' : '已运行' }}:
-                    {{ formatDuration(new Date(process.startTime), process.exitTime ? new Date(process.exitTime) : undefined) }}
-                  </span>
-                  <span class="detail-item" v-show="showProcessDetail('thread')">
-                    <n-icon :component="PeopleOutline" :size="detailIconSize" />
-                    {{ process.threadCount }} 线程
-                  </span>
-                  <span class="detail-item" v-show="showProcessDetail('memory')">
-                    <n-icon :component="HardwareChipOutline" :size="detailIconSize" />
-                    内存: {{ formatBytes(process.useMemory) }}
-                  </span>
-                  <span class="detail-item primary">
-                    <n-icon :component="GitNetworkOutline" :size="detailIconSize" />
-                    {{ process.connections.length }} 个连接
-                  </span>
-                  <span
-                    v-if="process.mainModuleName && showProcessDetail('module')"
-                    class="detail-item"
-                    :title="process.mainModulePath"
-                  >
-                    <n-icon :component="FileTrayFullOutline" :size="detailIconSize" />
-                    {{ process.mainModuleName }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="header-right">
-              <div class="traffic-summary">
-                <div class="traffic-speed">
-                  <div class="traffic-item upload">
-                    <n-icon :component="ArrowUpOutline" :size="trafficIconSize" />
-                    <span>{{ formatSpeed(process.uploadSpeed) }}</span>
-                  </div>
-                  <div class="traffic-item download">
-                    <n-icon :component="ArrowDownOutline" :size="trafficIconSize" />
-                    <span>{{ formatSpeed(process.downloadSpeed) }}</span>
+                <div class="sticky-info">
+                  <div class="sticky-title">{{ stickyItem.processName }}</div>
+                  <div class="sticky-subtitle">
+                    <n-icon :component="LayersOutline" size="14" />
+                    {{ stickyItem.collapsedCount }} 个连接已折叠
                   </div>
                 </div>
-                <div class="traffic-total" v-if="!isCompact">
-                  <span>
-                    总计: ↑{{ formatBytes(process.totalUploaded) }} ↓{{
-                      formatBytes(process.totalDownloaded)
-                    }}
-                  </span>
+                <n-button
+                  size="small"
+                  type="primary"
+                  @click="expandSection(stickyItem.processIndex)"
+                >
+                  <template #icon>
+                    <n-icon :component="ChevronDownOutline" />
+                  </template>
+                  展开
+                </n-button>
+              </div>
+            </template>
+
+            <template v-else-if="stickyItem?.isProcess">
+              <!-- 进程标题的吸顶 -->
+              <div class="sticky-process">
+                <div class="sticky-icon process">
+                  <n-icon :component="DesktopOutline" size="20" />
+                </div>
+                <div class="sticky-info">
+                  <div class="sticky-title">
+                    {{ stickyItem.processName }}
+                    <n-tag class="sticky-pid" size="tiny" round>
+                      PID: {{ stickyItem.processId }}
+                    </n-tag>
+                  </div>
+                  <div class="sticky-stats">
+                    <span class="stat-item">
+                      <n-icon :component="HardwareChipOutline" size="14" />
+                      {{ formatBytes(stickyItem.useMemory) }}
+                    </span>
+                    <span class="stat-item">
+                      <n-icon :component="GitBranchOutline" size="14" />
+                      {{ stickyItem.threadCount }} 线程
+                    </span>
+                    <span class="stat-item connections">
+                      <n-icon :component="GitNetworkOutline" size="14" />
+                      {{ stickyItem.connectionCount }} 连接
+                    </span>
+                  </div>
+                </div>
+                <div class="sticky-actions">
+                  <n-button
+                    size="small"
+                    quaternary
+                    circle
+                    @click="toggleCollapseWithScrollAdjust(stickyItem.processIndex)"
+                  >
+                    <template #icon>
+                      <n-icon
+                        :component="collapsedSections.has(stickyItem.processIndex) ? ChevronDownOutline : ChevronUpOutline"
+                        size="18"
+                      />
+                    </template>
+                  </n-button>
                 </div>
               </div>
-            </div>
+            </template>
           </div>
+        </div>
+      </Transition>
 
-          <!-- 连接列表 -->
-          <n-collapse-transition :show="expandedItems.has(process.processId)">
-            <div class="connections-content">
-              <div class="content-wrapper">
-                <div class="connections-header">
-                  <h5 class="connections-title">网络连接详情</h5>
-                  <span class="connection-count">{{ process.connections.length }} 个连接</span>
+      <!-- 虚拟列表 -->
+      <n-virtual-list
+        ref="virtualListRef"
+        class="connections-list"
+        :style="{ maxHeight: virtualListHeight }"
+        :item-size="itemHeight"
+        :items="displayItems"
+        @scroll="handleScroll"
+        item-resizable
+      >
+        <template #default="{ item, index }">
+          <div
+            :key="item.key"
+            class="list-item"
+            :class="{
+              'is-process': item.isProcess,
+              'is-connection': item.isConnection,
+              'is-collapsed-indicator': item.isCollapsedIndicator,
+              'is-hidden': shouldHideItem(item, index),
+              'is-active': item.isConnection && item.isActive,
+            }"
+            :style="{ minHeight: `${itemHeight}px` }"
+          >
+            <template v-if="item.isCollapsedIndicator">
+              <!-- 折叠状态指示器 -->
+              <div class="collapsed-indicator">
+                <div class="indicator-left">
+                  <div class="collapse-icon">
+                    <n-icon :component="LayersOutline" size="18" />
+                  </div>
+                  <div class="indicator-content">
+                    <span class="indicator-title">{{ item.processName }}</span>
+                    <span class="indicator-count">{{ item.collapsedCount }} 个连接已折叠</span>
+                  </div>
+                </div>
+                <n-button
+                  size="small"
+                  type="primary"
+                  ghost
+                  @click="expandSection(item.processIndex)"
+                >
+                  <template #icon>
+                    <n-icon :component="ChevronDownOutline" size="16" />
+                  </template>
+                  展开查看
+                </n-button>
+              </div>
+            </template>
+
+            <template v-else-if="item.isProcess">
+              <!-- 进程标题 -->
+              <div class="process-header">
+                <div class="process-icon-wrapper">
+                  <n-icon :component="DesktopOutline" size="24" />
+                </div>
+                <div class="process-info">
+                  <div class="process-title">
+                    <h4 class="process-name">{{ item.processName }}</h4>
+                    <n-tag type="info" size="small" round>
+                      PID: {{ item.processId }}
+                    </n-tag>
+                    <n-tag
+                      v-if="getProcessStatus(item).show"
+                      :type="getProcessStatus(item).type"
+                      size="small"
+                      round
+                    >
+                      {{ getProcessStatus(item).text }}
+                    </n-tag>
+                    <n-tag
+                      v-if="item.hasExited && item.exitCode !== undefined && !isCompact"
+                      :type="item.exitCode === 0 ? 'success' : 'error'"
+                      size="small"
+                    >
+                      退出代码: {{ item.exitCode }}
+                    </n-tag>
+                  </div>
+                  <div class="process-meta">
+                    <span class="meta-item">
+                      <n-icon :component="HardwareChipOutline" size="14" />
+                      <span>内存: {{ formatBytes(item.useMemory) }}</span>
+                    </span>
+                    <span class="meta-item">
+                      <n-icon :component="GitBranchOutline" size="14" />
+                      <span>{{ item.threadCount }} 线程</span>
+                    </span>
+                    <span class="meta-item primary">
+                      <n-icon :component="GitNetworkOutline" size="14" />
+                      <span>{{ item.connectionCount }} 个连接</span>
+                    </span>
+                    <span v-if="item.startTime" class="meta-item">
+                      <n-icon :component="TimeOutline" size="14" />
+                      <span>{{ item.hasExited ? '运行时长' : '已运行' }}: {{ formatDuration(new Date(item.startTime), item.exitTime ? new Date(item.exitTime) : undefined) }}</span>
+                    </span>
+                    <span
+                      v-if="item.mainModuleName && showProcessDetail('module')"
+                      class="meta-item"
+                      :title="item.mainModulePath"
+                    >
+                      <n-icon :component="FileTrayFullOutline" size="14" />
+                      {{ item.mainModuleName }}
+                    </span>
+                  </div>
+                </div>
+                <div class="process-actions">
+                  <div class="traffic-summary">
+                    <div class="traffic-speed">
+                      <div class="traffic-item upload">
+                        <n-icon :component="ArrowUpOutline" :size="trafficIconSize" />
+                        <span>{{ formatSpeed(item.uploadSpeed) }}</span>
+                      </div>
+                      <div class="traffic-item download">
+                        <n-icon :component="ArrowDownOutline" :size="trafficIconSize" />
+                        <span>{{ formatSpeed(item.downloadSpeed) }}</span>
+                      </div>
+                    </div>
+                    <div class="traffic-total" v-if="!isCompact">
+                      <span>
+                        总计: ↑{{ formatBytes(item.totalUploaded) }} ↓{{ formatBytes(item.totalDownloaded) }}
+                      </span>
+                    </div>
+                  </div>
+                  <n-button
+                    size="small"
+                    quaternary
+                    @click="toggleCollapse(item.processIndex)"
+                    class="collapse-btn"
+                  >
+                    <template #icon>
+                      <n-icon
+                        :component="collapsedSections.has(item.processIndex) ? ChevronDownOutline : ChevronUpOutline"
+                        size="16"
+                      />
+                    </template>
+                    {{ collapsedSections.has(item.processIndex) ? '展开' : '折叠' }}
+                  </n-button>
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="item.isConnection">
+              <!-- 连接详情 -->
+              <div class="connection-item">
+                <div class="connection-status">
+                  <div
+                    class="status-indicator"
+                    :class="item.isActive ? 'active' : 'inactive'"
+                    :title="item.isActive ? '活跃' : '空闲'"
+                  ></div>
                 </div>
 
-                <n-empty
-                  v-if="process.connections.length === 0"
-                  description="没有网络连接"
-                  :style="{ padding: isCompact ? '12px' : '20px' }"
-                />
-
-                <div v-else class="connection-list">
-                  <div
-                    v-for="connection in process.connections"
-                    :key="connection.connectionKey"
-                    class="connection-item"
-                    :class="{ 'is-active': connection.isActive }"
-                  >
-                    <div class="connection-main">
-                      <div class="connection-status">
-                        <div
-                          class="status-indicator"
-                          :class="connection.isActive ? 'active' : 'inactive'"
-                          :title="connection.isActive ? '活跃' : '空闲'"
-                        ></div>
+                <div class="connection-main">
+                  <div class="connection-header">
+                    <div class="connection-endpoints">
+                      <div class="endpoint-item local">
+                        <n-icon :component="LocationOutline" size="14" />
+                        <span class="endpoint-address">{{ formatEndpoint(item.localEndpoint) }}</span>
                       </div>
-
-                      <div class="connection-info">
-                        <div class="connection-tags">
-                          <n-tag
-                            :type="getConnectionStateType(connection.state, connection.isActive)"
-                            :size="tagSize"
-                          >
-                            {{ connection.state }}
-                          </n-tag>
-                          <n-tag :size="tagSize">{{ connection.protocol }}</n-tag>
-                          <n-tag :size="tagSize" v-if="!isCompact">
-                            <n-icon :component="getDirectionIcon(connection.direction)" size="12" />
-                            {{ getDirectionText(connection.direction) }}
-                          </n-tag>
-                        </div>
-
-                        <div class="connection-addresses">
-                          <div class="address-section">
-                            <n-icon :component="LocationOutline" :size="addressIconSize" />
-                            <span class="address-value">
-                              {{ formatEndpoint(connection.localEndpoint) }}
-                            </span>
-                          </div>
-                          <div class="connection-arrow">
-                            <n-icon :component="ArrowForwardOutline" :size="arrowIconSize" />
-                          </div>
-                          <div class="address-section">
-                            <n-icon :component="GlobeOutline" :size="addressIconSize" />
-                            <span class="address-value">
-                              {{ formatEndpoint(connection.remoteEndpoint) }}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div class="connection-meta" v-if="!isCompact">
-                          <span class="meta-item">
-                            <n-icon :component="TimeOutline" size="12" />
-                            持续: {{ formatDuration(new Date(connection.startTime)) }}
-                          </span>
-                          <span v-if="!connection.isActive" class="meta-item inactive">
-                            <n-icon :component="PauseCircleOutline" size="12" />
-                            最后活跃: {{ getTimeSinceActive(new Date(connection.lastActiveTime)) }}
-                          </span>
-                        </div>
+                      <n-icon :component="ArrowForwardOutline" size="16" class="connection-arrow" />
+                      <div class="endpoint-item remote">
+                        <n-icon :component="GlobeOutline" size="14" />
+                        <span class="endpoint-address">{{ formatEndpoint(item.remoteEndpoint) }}</span>
                       </div>
                     </div>
 
-                    <div class="connection-side">
-                      <div class="connection-traffic">
-                        <div class="traffic-stats">
-                          <div class="traffic-row upload">
-                            <n-icon :component="ArrowUpOutline" :size="trafficIconSize" />
-                            <span class="traffic-value">{{
-                                formatSpeed(connection.currentSendSpeed)
-                              }}</span>
-                          </div>
-                          <div class="traffic-row download">
-                            <n-icon :component="ArrowDownOutline" :size="trafficIconSize" />
-                            <span class="traffic-value">{{
-                                formatSpeed(connection.currentReceiveSpeed)
-                              }}</span>
-                          </div>
-                        </div>
-                        <div class="traffic-total-small" v-if="!isCompact">
-                          总计: ↑{{ formatBytes(connection.bytesSent) }} ↓{{
-                            formatBytes(connection.bytesReceived)
-                          }}
-                        </div>
-                      </div>
+                    <div class="connection-tags">
+                      <n-tag
+                        :type="getConnectionStateType(item.state, item.isActive)"
+                        size="tiny"
+                        round
+                      >
+                        {{ item.state }}
+                      </n-tag>
+                      <n-tag size="tiny" round>
+                        {{ item.protocol }}
+                      </n-tag>
+                      <n-tag size="tiny" v-if="!isCompact && item.direction">
+                        <n-icon :component="getDirectionIcon(item.direction)" size="12" />
+                        {{ getDirectionText(item.direction) }}
+                      </n-tag>
+                    </div>
+                  </div>
 
-                      <div class="connection-actions" v-if="showActions">
-                        <n-tooltip trigger="hover">
-                          <template #trigger>
-                            <n-button size="tiny" circle quaternary type="info" @click.stop="handleViewDetails(connection)">
-                              <template #icon>
-                                <n-icon :component="InformationCircleOutline" />
-                              </template>
-                            </n-button>
-                          </template>
-                          查看详情
-                        </n-tooltip>
-                        <n-tooltip trigger="hover">
-                          <template #trigger>
-                            <n-button size="tiny" circle quaternary type="warning" @click.stop="handleDisconnect(connection)">
-                              <template #icon>
-                                <n-icon :component="StopCircleOutline" />
-                              </template>
-                            </n-button>
-                          </template>
-                          断开连接
-                        </n-tooltip>
+                  <div class="connection-stats">
+                    <div class="traffic-info">
+                      <div class="traffic-item upload">
+                        <n-icon :component="ArrowUpOutline" size="12" />
+                        <span>{{ formatSpeed(item.currentSendSpeed || 0) }}</span>
                       </div>
+                      <div class="traffic-item download">
+                        <n-icon :component="ArrowDownOutline" size="12" />
+                        <span>{{ formatSpeed(item.currentReceiveSpeed || 0) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="connection-meta-info">
+                      <span v-if="item.startTime" class="meta-text">
+                        <n-icon :component="TimeOutline" size="12" />
+                        持续: {{ formatDuration(new Date(item.startTime)) }}
+                      </span>
+                      <span v-if="!item.isActive && item.lastActiveTime" class="meta-text inactive">
+                        <n-icon :component="PauseCircleOutline" size="12" />
+                        最后活跃: {{ getTimeSinceActive(new Date(item.lastActiveTime)) }}
+                      </span>
                     </div>
                   </div>
                 </div>
+
+                <div class="connection-side" v-if="showActions">
+                  <div class="connection-actions">
+                    <n-tooltip trigger="hover">
+                      <template #trigger>
+                        <n-button size="tiny" circle quaternary type="info" @click.stop="handleViewDetails(item)">
+                          <template #icon>
+                            <n-icon :component="InformationCircleOutline" />
+                          </template>
+                        </n-button>
+                      </template>
+                      查看详情
+                    </n-tooltip>
+                    <n-tooltip trigger="hover">
+                      <template #trigger>
+                        <n-button size="tiny" circle quaternary type="warning" @click.stop="handleDisconnect(item)">
+                          <template #icon>
+                            <n-icon :component="StopCircleOutline" />
+                          </template>
+                        </n-button>
+                      </template>
+                      断开连接
+                    </n-tooltip>
+                  </div>
+                </div>
               </div>
-            </div>
-          </n-collapse-transition>
+            </template>
+          </div>
+        </template>
+      </n-virtual-list>
+
+      <!-- 无数据提示 -->
+      <Transition name="fade">
+        <div v-if="displayItems.length === 0" class="empty-state">
+          <div class="empty-icon">
+            <n-icon :component="CloudOfflineOutline" size="64" />
+          </div>
+          <h3>暂无网络连接数据</h3>
+          <p>请检查数据源是否正确加载</p>
         </div>
-      </transition-group>
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { NButton, NIcon, NTag, NEmpty, NCollapseTransition, NTooltip } from 'naive-ui'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { NButton, NIcon, NTag, NEmpty, NVirtualList, NTooltip } from 'naive-ui'
 import {
+  FolderOutline,
+  ChevronDownOutline,
+  ChevronUpOutline,
   DesktopOutline,
+  HardwareChipOutline,
+  GitBranchOutline,
   GitNetworkOutline,
+  ArrowForwardOutline,
   ArrowUpOutline,
   ArrowDownOutline,
-  ChevronForwardOutline,
-  TimeOutline,
-  HardwareChipOutline,
+  CloudOfflineOutline,
+  LayersOutline,
   LocationOutline,
   GlobeOutline,
-  ArrowForwardOutline,
+  TimeOutline,
+  PauseCircleOutline,
   InformationCircleOutline,
   StopCircleOutline,
   PeopleOutline,
   FileTrayFullOutline,
-  PauseCircleOutline,
   SwapHorizontalOutline,
 } from '@vicons/ionicons5'
 import type { ProcessType, ConnectionInfo, IPEndPoint } from '@/types/process'
-import { ProtocolType, ConnectionState, TrafficDirection } from '@/constants/enums'
+import { ProtocolType, ConnectionState, TrafficDirection, FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
+import { convertFileSize } from '@/utils/fileUtil'
 
 // 尺寸类型
 type SizeType = 'compact' | 'normal' | 'comfortable' | 'spacious'
@@ -313,6 +421,8 @@ interface Props {
   showStats?: boolean
   showActions?: boolean
   defaultExpanded?: number[]
+  height?: string
+  itemHeight?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -320,6 +430,8 @@ const props = withDefaults(defineProps<Props>(), {
   showStats: true,
   showActions: true,
   defaultExpanded: () => [],
+  height: '600px',
+  itemHeight: 80
 })
 
 // Emits
@@ -331,9 +443,20 @@ const emit = defineEmits<{
 
 // 响应式相关
 const containerRef = ref<HTMLElement>()
+const virtualListRef = ref()
 const containerWidth = ref(1200)
 const resizeObserver = ref<ResizeObserver>()
 const actualSizeType = ref<SizeType>('spacious')
+
+// 虚拟列表相关
+const scrollTop = ref(0)
+const scrollbarWidth = ref(0)
+const collapsedSections = ref(new Set<number>())
+const beforeCollapseState = ref<{
+  scrollTop: number
+  visibleItemKey: string
+  offsetInItem: number
+} | null>(null)
 
 // 添加防抖处理
 let resizeTimeout: number | undefined
@@ -360,10 +483,37 @@ const calculateSizeType = (width: number): SizeType => {
   return currentType
 }
 
+// 检测滚动条宽度
+const getScrollbarWidth = () => {
+  const outer = document.createElement('div')
+  outer.style.visibility = 'hidden'
+  outer.style.overflow = 'scroll'
+  outer.style.msOverflowStyle = 'scrollbar'
+  document.body.appendChild(outer)
+
+  const inner = document.createElement('div')
+  outer.appendChild(inner)
+
+  const width = outer.offsetWidth - inner.offsetWidth
+  outer.parentNode?.removeChild(outer)
+
+  return width
+}
+
 // 计算属性
 const sizeType = computed(() => actualSizeType.value)
 const sizeClass = computed(() => `size-${sizeType.value}`)
 const isCompact = computed(() => sizeType.value === 'compact')
+
+// 虚拟列表高度计算
+const virtualListHeight = computed(() => {
+  // 减去统计卡片区域的高度
+  if (props.showStats) {
+    const statsHeight = isCompact.value ? 100 : 140
+    return `calc(${props.height} - ${statsHeight}px)`
+  }
+  return props.height
+})
 
 // 响应式图标大小
 const statIconSize = computed(() => {
@@ -377,22 +527,7 @@ const statIconSize = computed(() => {
   }
 })
 
-const expandIconSize = computed(() => (isCompact.value ? 14 : 16))
-const detailIconSize = computed(() => (isCompact.value ? 12 : 14))
 const trafficIconSize = computed(() => (isCompact.value ? 12 : 14))
-const addressIconSize = computed(() => (isCompact.value ? 10 : 12))
-const arrowIconSize = computed(() => (isCompact.value ? 12 : 14))
-
-const tagSize = computed(() => {
-  switch (sizeType.value) {
-    case 'compact':
-      return 'tiny' as const
-    case 'normal':
-      return 'small' as const
-    default:
-      return 'small' as const
-  }
-})
 
 // 根据尺寸决定是否显示某些元素
 const showStatCard = (type: string) => {
@@ -410,12 +545,9 @@ const showProcessDetail = (type: string) => {
   return false
 }
 
-// 状态管理
-const expandedItems = ref(new Set<number>())
-
 // 初始化默认展开项
 watch(() => props.defaultExpanded, (newVal) => {
-  expandedItems.value = new Set(newVal)
+  collapsedSections.value = new Set(newVal)
 }, { immediate: true })
 
 // 计算统计数据
@@ -426,8 +558,8 @@ const stats = computed(() => {
     (sum, p) => sum + p.connections.filter((c) => c.isActive).length,
     0,
   )
-  const totalUploadSpeed = activeProcesses.reduce((sum, p) => sum + p.uploadSpeed, 0)
-  const totalDownloadSpeed = activeProcesses.reduce((sum, p) => sum + p.downloadSpeed, 0)
+  const totalUploadSpeed = activeProcesses.reduce((sum, p) => sum + (p.uploadSpeed || 0), 0)
+  const totalDownloadSpeed = activeProcesses.reduce((sum, p) => sum + (p.downloadSpeed || 0), 0)
 
   return {
     activeProcesses: activeProcesses.length,
@@ -439,8 +571,146 @@ const stats = computed(() => {
   }
 })
 
+// 数据处理 - 将 ConnectionsTable1 的数据转换为 UnifiedConnectionsList4 的格式
+const originalItems = computed(() => {
+  const result: any[] = []
+
+  if (!props.connections || !Array.isArray(props.connections) || props.connections.length === 0) {
+    return result
+  }
+
+  props.connections.forEach((process, processIndex) => {
+    if (!process) return
+
+    // 计算进程级别的统计信息
+    const uploadSpeed = process.uploadSpeed || 0
+    const downloadSpeed = process.downloadSpeed || 0
+    const totalUploaded = process.totalUploaded || 0
+    const totalDownloaded = process.totalDownloaded || 0
+
+    result.push({
+      key: `process-${processIndex}`,
+      isProcess: true,
+      processIndex,
+      processName: process.processName || 'Unknown Process',
+      processId: process.processId || 0,
+      useMemory: process.useMemory || 0,
+      threadCount: process.threadCount || 0,
+      connectionCount: process.connections?.length || 0,
+      startTime: process.startTime,
+      exitTime: process.exitTime,
+      hasExited: process.hasExited || false,
+      exitCode: process.exitCode,
+      mainModulePath: process.mainModulePath,
+      mainModuleName: process.mainModuleName,
+      connections: process.connections || [],
+      uploadSpeed,
+      downloadSpeed,
+      totalUploaded,
+      totalDownloaded,
+    })
+
+    if (process.connections && Array.isArray(process.connections)) {
+      process.connections.forEach((connection, connectionIndex) => {
+        result.push({
+          key: `connection-${processIndex}-${connectionIndex}`,
+          isConnection: true,
+          processIndex,
+          connectionIndex,
+          processName: process.processName || 'Unknown Process',
+          ...connection,
+        })
+      })
+    }
+  })
+
+  return result
+})
+
+// 显示数据
+const displayItems = computed(() => {
+  const result: any[] = []
+  const processGroups: { [key: number]: any[] } = {}
+
+  originalItems.value.forEach((item) => {
+    const processIndex = item.processIndex
+    if (!processGroups[processIndex]) {
+      processGroups[processIndex] = []
+    }
+    processGroups[processIndex].push(item)
+  })
+
+  Object.keys(processGroups).forEach((processIndexStr) => {
+    const processIndex = parseInt(processIndexStr)
+    const group = processGroups[processIndex]
+    const processItem = group.find((item) => item.isProcess)
+    const connectionItems = group.filter((item) => item.isConnection)
+
+    if (collapsedSections.value.has(processIndex)) {
+      result.push({
+        key: `collapsed-${processIndex}`,
+        isCollapsedIndicator: true,
+        processIndex,
+        processName: processItem.processName,
+        collapsedCount: connectionItems.length,
+      })
+    } else {
+      result.push(processItem)
+      connectionItems.forEach((connection) => {
+        result.push(connection)
+      })
+    }
+  })
+
+  return result
+})
+
+// 计算吸顶元素的样式
+const stickyStyle = computed(() => ({
+  top: '0px',
+  right: `${scrollbarWidth.value}px`,
+}))
+
+// 吸顶逻辑
+const getCurrentIndex = () => {
+  return Math.floor(scrollTop.value / props.itemHeight)
+}
+
+const stickyItem = computed(() => {
+  if (displayItems.value.length === 0) return null
+
+  const currentIndex = getCurrentIndex()
+
+  for (let i = currentIndex; i >= 0; i--) {
+    const item = displayItems.value[i]
+    if (item && (item.isProcess || item.isCollapsedIndicator)) {
+      return {
+        ...item,
+        originalIndex: i,
+      }
+    }
+  }
+
+  return null
+})
+
+const shouldShowSticky = computed(() => {
+  if (!stickyItem.value) return false
+  const currentIndex = getCurrentIndex()
+  const stickyIndex = stickyItem.value.originalIndex
+  return currentIndex > stickyIndex
+})
+
+const shouldHideItem = (item: any, index: number) => {
+  if (!stickyItem.value || !shouldShowSticky.value) return false
+  return item.key === stickyItem.value.key
+}
+
 // 生命周期
 onMounted(() => {
+  scrollbarWidth.value = getScrollbarWidth()
+  window.addEventListener('resize', handleResize)
+
   if (containerRef.value) {
     // 初始化尺寸类型
     const initialWidth = containerRef.value.offsetWidth
@@ -478,27 +748,148 @@ onUnmounted(() => {
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
   }
+  window.removeEventListener('resize', handleResize)
 })
 
-// 方法
-const toggleExpand = (pid: number) => {
-  if (expandedItems.value.has(pid)) {
-    expandedItems.value.delete(pid)
-  } else {
-    expandedItems.value.add(pid)
+// 响应式处理
+const handleResize = () => {
+  scrollbarWidth.value = getScrollbarWidth()
+}
+
+// 交互逻辑
+const handleScroll = (e: Event) => {
+  const target = e.target as HTMLElement
+  scrollTop.value = target.scrollTop
+}
+
+const getFirstVisibleItem = () => {
+  const currentIndex = Math.floor(scrollTop.value / props.itemHeight)
+  const items = displayItems.value
+
+  if (currentIndex < items.length) {
+    return {
+      item: items[currentIndex],
+      index: currentIndex,
+      offsetInViewport: scrollTop.value % props.itemHeight,
+    }
   }
 
+  return null
+}
+
+const toggleCollapseWithScrollAdjust = async (processIndex: number) => {
+  if (!collapsedSections.value.has(processIndex)) {
+    const visibleItem = getFirstVisibleItem()
+    if (visibleItem) {
+      beforeCollapseState.value = {
+        scrollTop: scrollTop.value,
+        visibleItemKey: visibleItem.item.key,
+        offsetInItem: visibleItem.offsetInViewport,
+      }
+    }
+
+    collapsedSections.value.add(processIndex)
+    collapsedSections.value = new Set(collapsedSections.value)
+
+    await nextTick()
+
+    if (beforeCollapseState.value && visibleItem) {
+      const newItems = displayItems.value
+      const newIndex = newItems.findIndex((item) => item.key === visibleItem.item.key)
+
+      if (newIndex !== -1) {
+        const newScrollTop = newIndex * props.itemHeight - visibleItem.offsetInViewport
+        virtualListRef.value?.scrollTo({ top: Math.max(0, newScrollTop) })
+      }
+    }
+  } else {
+    expandSection(processIndex)
+  }
+}
+
+const toggleCollapse = (processIndex: number) => {
+  if (collapsedSections.value.has(processIndex)) {
+    collapsedSections.value.delete(processIndex)
+  } else {
+    collapsedSections.value.add(processIndex)
+  }
+  collapsedSections.value = new Set(collapsedSections.value)
+
   // 触发进程选择事件
-  const process = props.connections.find(p => p.processId === pid)
+  const process = props.connections.find(p => p.processId === processIndex)
   if (process) {
     emit('process-select', process)
   }
 }
 
-const getProcessStatus = (process: ProcessType) => {
-  if (process.hasExited) return { type: 'error' as const, text: '已退出' }
-  if (process.connections.some((c) => c.isActive)) return { type: 'success' as const, text: '活跃' }
-  return { type: 'warning' as const, text: '空闲' }
+const expandSection = (processIndex: number) => {
+  collapsedSections.value.delete(processIndex)
+  collapsedSections.value = new Set(collapsedSections.value)
+}
+
+// 格式化函数
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const value = parseFloat((bytes / Math.pow(k, i)).toFixed(2))
+
+  // 紧凑模式下简化单位
+  if (isCompact.value && i > 0) {
+    return value + sizes[i][0]
+  }
+
+  return value + ' ' + sizes[i]
+}
+
+const formatSpeed = (bytesPerSecond: number): string => {
+  const fileSize = convertFileSize(bytesPerSecond,FILE_SIZE_UNIT_ENUM.B)
+  return fileSize.size + fileSize.unit + '/s'
+}
+
+const formatEndpoint = (endpoint: IPEndPoint): string => {
+  if (isCompact.value && endpoint.address === '0.0.0.0') {
+    return `*:${endpoint.port}`
+  }
+  return `${endpoint.address}:${endpoint.port}`
+}
+
+const formatDuration = (start: Date, end?: Date): string => {
+  const endTime = end || new Date()
+  const diff = endTime.getTime() - start.getTime()
+  const hours = Math.floor(diff / 3600000)
+  const minutes = Math.floor((diff % 3600000) / 60000)
+  const seconds = Math.floor((diff % 60000) / 1000)
+
+  if (isCompact.value) {
+    return `${hours}h${minutes}m`
+  }
+
+  if (hours > 0) {
+    return `${hours}时${minutes}分`
+  } else if (minutes > 0) {
+    return `${minutes}分${seconds}秒`
+  } else {
+    return `${seconds}秒`
+  }
+}
+
+const getTimeSinceActive = (lastActive: Date): string => {
+  const diff = new Date().getTime() - lastActive.getTime()
+  if (diff < 1000) return '刚刚'
+  if (diff < 60000) return `${Math.floor(diff / 1000)}秒前`
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  return `${Math.floor(diff / 3600000)}小时前`
+}
+
+const getProcessStatus = (process: any) => {
+  if (process.hasExited) return { type: 'error' as const, text: '已退出', show: true }
+  const hasActiveConnections = process.connections?.some((c: any) => c.isActive)
+  if (hasActiveConnections) {
+    return { type: 'success' as const, text: '活跃', show: true }
+  }
+  return { type: 'warning' as const, text: '空闲', show: false }
 }
 
 const getConnectionStateType = (state: ConnectionState, isActive: boolean) => {
@@ -538,55 +929,6 @@ const getDirectionText = (direction: TrafficDirection) => {
   }
 }
 
-// 格式化函数
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  const value = parseFloat((bytes / Math.pow(k, i)).toFixed(2))
-
-  // 紧凑模式下简化单位
-  if (isCompact.value && i > 0) {
-    return value + sizes[i][0]
-  }
-
-  return value + ' ' + sizes[i]
-}
-
-const formatSpeed = (bytesPerSecond: number): string => {
-  return formatBytes(bytesPerSecond) + '/s'
-}
-
-const formatDuration = (start: Date, end?: Date): string => {
-  const endTime = end || new Date()
-  const diff = endTime.getTime() - start.getTime()
-  const hours = Math.floor(diff / 3600000)
-  const minutes = Math.floor((diff % 3600000) / 60000)
-  const seconds = Math.floor((diff % 60000) / 1000)
-
-  if (isCompact.value) {
-    return `${hours}h${minutes}m`
-  }
-
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-}
-
-const getTimeSinceActive = (lastActive: Date): string => {
-  const diff = new Date().getTime() - lastActive.getTime()
-  if (diff < 1000) return '刚刚'
-  if (diff < 60000) return `${Math.floor(diff / 1000)}秒前`
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  return `${Math.floor(diff / 3600000)}小时前`
-}
-
-const formatEndpoint = (endpoint: IPEndPoint): string => {
-  if (isCompact.value && endpoint.address === '0.0.0.0') {
-    return `*:${endpoint.port}`
-  }
-  return `${endpoint.address}:${endpoint.port}`
-}
-
 // 事件处理
 const handleViewDetails = (connection: ConnectionInfo) => {
   emit('view-details', connection)
@@ -600,9 +942,11 @@ const handleDisconnect = (connection: ConnectionInfo) => {
 <style scoped>
 .connections-table-container {
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 16px;
   box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
 }
 
 /* 响应式调整 */
@@ -738,86 +1082,161 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   margin-top: 2px;
 }
 
-/* 进程列表 */
-.process-list {
+/* 统一连接列表容器 */
+.unified-connections-container {
+  position: relative;
+  height: 100%;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  flex: 1;
+}
+
+/* 吸顶元素 */
+.sticky-header {
+  position: absolute;
+  left: 0;
+  z-index: 10;
+  background: var(--bg-sticky);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.sticky-content {
+  padding: 12px 20px;
+}
+
+.sticky-collapsed,
+.sticky-process {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 16px;
 }
 
-.size-compact .process-list {
-  gap: 8px;
-}
-
-/* 过渡动画 */
-.process-list-enter-active,
-.process-list-leave-active {
+.sticky-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 }
 
-.process-list-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
+.sticky-icon.process {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }
 
-.process-list-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
+.sticky-icon.collapsed {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
 }
 
-.process-item {
-  background: var(--bg-card);
-  backdrop-filter: var(--backdrop-blur);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  overflow: hidden;
-  margin-top: 5px;
+.sticky-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sticky-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sticky-pid {
+  font-weight: 400;
+}
+
+.sticky-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sticky-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-item.connections {
+  color: #3b82f6;
+}
+
+.sticky-actions {
+  flex-shrink: 0;
+}
+
+/* 虚拟列表 */
+.connections-list {
+  background: var(--bg-secondary);
+}
+
+/* 列表项 */
+.list-item {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-secondary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.size-compact .process-item {
-  border-radius: 8px;
+.list-item:hover {
+  background: var(--bg-hover);
 }
 
-.process-item.is-exited {
-  opacity: 0.8;
+.is-hidden {
+  visibility: hidden;
 }
 
-.process-item:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border-color: var(--border-hover);
+.is-process {
+  background: var(--bg-process);
+  border-left: 3px solid #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.process-item.is-expanded {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+.is-connection {
+  padding-left: 20px;
+  border-left: 3px solid transparent;
 }
 
-/* 进程头部 */
-.process-header {
-  padding: 16px 20px;
+.is-connection.is-active {
+  background: var(--bg-active);
+  border-left-color: #10b981;
+}
+
+.is-collapsed-indicator {
+  background: var(--bg-collapsed);
+  border-left: 3px solid #a855f7;
+}
+
+/* 折叠指示器 */
+.collapsed-indicator {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid transparent;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 20px;
 }
 
-.size-compact .process-header {
-  padding: 12px;
-}
-
-.size-normal .process-header {
-  padding: 14px 16px;
-}
-
-.process-item.is-expanded .process-header {
-  border-bottom-color: var(--border-primary);
-  background: rgba(59, 130, 246, 0.02);
-}
-
-.header-left {
+.indicator-left {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -825,39 +1244,53 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   min-width: 0;
 }
 
-.size-compact .header-left {
-  gap: 8px;
-}
-
-.expand-indicator {
-  width: 24px;
-  height: 24px;
+.collapse-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(168, 85, 247, 0.1);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-tertiary);
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
+  color: #a855f7;
 }
 
-.size-compact .expand-indicator {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+.indicator-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.process-item.is-expanded .expand-indicator {
+.indicator-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.indicator-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 进程头部 */
+.process-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.process-icon-wrapper {
+  width: 48px;
+  height: 48px;
   background: rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #3b82f6;
-}
-
-.expand-arrow {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.process-item.is-expanded .expand-arrow {
-  transform: rotate(90deg);
+  flex-shrink: 0;
 }
 
 .process-info {
@@ -869,13 +1302,8 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.size-compact .process-title {
-  gap: 6px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
 .process-name {
@@ -885,45 +1313,29 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   margin: 0;
 }
 
-.size-compact .process-name {
-  font-size: 14px;
-}
-
-.size-normal .process-name {
-  font-size: 15px;
-}
-
-.process-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.size-compact .process-details {
-  gap: 8px;
-  font-size: 11px;
-}
-
-.size-normal .process-details {
-  gap: 12px;
-}
-
-.detail-item {
+.process-meta {
   display: flex;
   align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.detail-item.primary {
+  gap: 20px;
+  font-size: 13px;
   color: var(--text-secondary);
+  flex-wrap: wrap;
 }
 
-.header-right {
+.meta-item {
   display: flex;
   align-items: center;
+  gap: 6px;
+}
+
+.meta-item.primary {
+  color: #3b82f6;
+}
+
+.process-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   flex-shrink: 0;
 }
 
@@ -934,20 +1346,11 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   gap: 6px;
 }
 
-.size-compact .traffic-summary {
-  gap: 4px;
-}
-
 .traffic-speed {
   display: flex;
   gap: 12px;
   font-size: 14px;
   font-weight: 500;
-}
-
-.size-compact .traffic-speed {
-  gap: 8px;
-  font-size: 12px;
 }
 
 .traffic-item {
@@ -969,112 +1372,28 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   color: var(--text-muted);
 }
 
-/* 连接内容区域 */
-.connections-content {
-  border-top: 1px solid var(--border-primary);
+.collapse-btn {
+  transition: all 0.3s ease;
 }
 
-.content-wrapper {
-  padding: 16px 20px;
+.collapse-btn:hover {
+  transform: translateY(-2px);
 }
 
-.size-compact .content-wrapper {
-  padding: 12px;
-}
-
-.size-normal .content-wrapper {
-  padding: 14px 16px;
-}
-
-.connections-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-secondary);
-}
-
-.size-compact .connections-header {
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-}
-
-.connections-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.size-compact .connections-title {
-  font-size: 12px;
-}
-
-.connection-count {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* 连接列表 */
-.connection-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.size-compact .connection-list {
-  gap: 6px;
-}
-
+/* 连接项 */
 .connection-item {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-secondary);
-  border-radius: 8px;
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  transition: all 0.2s ease;
-}
-
-.size-compact .connection-item {
-  padding: 8px;
-  gap: 8px;
-  border-radius: 6px;
-}
-
-.connection-item.is-active {
-  background: rgba(52, 211, 153, 0.05);
-  border-color: rgba(52, 211, 153, 0.2);
-}
-
-.connection-item:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
-}
-
-.connection-main {
   display: flex;
   align-items: flex-start;
+  width: 100%;
   gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.size-compact .connection-main {
-  gap: 8px;
+  padding: 12px 20px 12px 40px;
 }
 
 .connection-status {
   display: flex;
   align-items: center;
+  padding-top: 8px;
   flex-shrink: 0;
-  padding-top: 6px;
-}
-
-.size-compact .connection-status {
-  padding-top: 4px;
 }
 
 .status-indicator {
@@ -1084,82 +1403,121 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   transition: all 0.3s ease;
 }
 
-.size-compact .status-indicator {
-  width: 6px;
-  height: 6px;
-}
-
 .status-indicator.active {
-  background: #52c41a;
-  box-shadow: 0 0 6px rgba(82, 196, 26, 0.4);
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulse 2s infinite;
 }
 
 .status-indicator.inactive {
-  background: #d9d9d9;
+  background: #d1d5db;
 }
 
-.connection-info {
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.connection-main {
   flex: 1;
   min-width: 0;
 }
 
-.connection-tags {
+.connection-header {
   display: flex;
-  gap: 6px;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 8px;
-  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.size-compact .connection-tags {
-  gap: 4px;
-  margin-bottom: 6px;
-}
-
-.connection-addresses {
+.connection-endpoints {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: var(--text-primary);
+  gap: 12px;
+  flex: 1;
   flex-wrap: wrap;
 }
 
-.size-compact .connection-addresses {
-  font-size: 11px;
+.endpoint-item {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 4px;
+  font-size: 13px;
 }
 
-.address-section {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.endpoint-item.local {
+  color: var(--text-success);
 }
 
-.address-value {
-  font-family: 'Monaco', 'Menlo', monospace;
+.endpoint-item.remote {
+  color: var(--text-primary);
+}
+
+.endpoint-address {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-weight: 500;
 }
 
 .connection-arrow {
   color: var(--text-quaternary);
 }
 
-.connection-meta {
+.connection-tags {
   display: flex;
-  gap: 16px;
-  font-size: 11px;
-  color: var(--text-muted);
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-.meta-item {
+.connection-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 12px;
+}
+
+.traffic-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.traffic-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.traffic-item.upload {
+  color: #ef4444;
+}
+
+.traffic-item.download {
+  color: #22c55e;
+}
+
+.connection-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.meta-text {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.meta-item.inactive {
+.meta-text.inactive {
   color: var(--text-quaternary);
 }
 
@@ -1170,88 +1528,90 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   flex-shrink: 0;
 }
 
-.size-compact .connection-side {
-  gap: 8px;
-}
-
-.connection-traffic {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 100px;
-}
-
-.size-compact .connection-traffic {
-  min-width: 80px;
-  gap: 2px;
-}
-
-.traffic-stats {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.size-compact .traffic-stats {
-  gap: 8px;
-  font-size: 11px;
-}
-
-.traffic-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.size-compact .traffic-row {
-  gap: 2px;
-}
-
-.traffic-row.upload {
-  color: #ef4444;
-}
-
-.traffic-row.download {
-  color: #22c55e;
-}
-
-.traffic-value {
-  min-width: 60px;
-  text-align: right;
-}
-
-.size-compact .traffic-value {
-  min-width: 45px;
-}
-
-.traffic-total-small {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-align: right;
-}
-
 .connection-actions {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
 }
 
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 48px;
+  text-align: center;
+}
+
+.empty-icon {
+  color: var(--text-quaternary);
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* 动画 */
+.sticky-slide-enter-active,
+.sticky-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sticky-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.sticky-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 /* CSS 变量定义 */
 :root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-hover: #f3f4f6;
+  --bg-process: #f0f9ff;
+  --bg-active: rgba(16, 185, 129, 0.05);
+  --bg-collapsed: #faf5ff;
+  --bg-sticky: rgba(255, 255, 255, 0.95);
   --bg-card: rgba(255, 255, 255, 0.9);
-  --bg-tertiary: #f1f5f9;
-  --bg-quaternary: #e2e8f0;
-  --bg-hover: #f8fafc;
   --backdrop-blur: blur(8px);
-  --border-primary: #e2e8f0;
-  --border-secondary: #f1f5f9;
+
+  --border-primary: #e5e7eb;
+  --border-secondary: #f3f4f6;
   --border-hover: #cbd5e1;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-quaternary: #94a3b8;
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-quaternary: #9ca3af;
+  --text-success: #059669;
+
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
   --transition: all 0.2s ease;
 }
@@ -1259,22 +1619,128 @@ const handleDisconnect = (connection: ConnectionInfo) => {
 /* 暗色模式 */
 @media (prefers-color-scheme: dark) {
   :root {
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-hover: #374151;
+    --bg-process: rgba(59, 130, 246, 0.1);
+    --bg-active: rgba(16, 185, 129, 0.1);
+    --bg-collapsed: rgba(168, 85, 247, 0.1);
+    --bg-sticky: rgba(31, 41, 55, 0.95);
     --bg-card: rgba(30, 41, 59, 0.9);
-    --bg-tertiary: #1e293b;
-    --bg-quaternary: #334155;
-    --bg-hover: #1e293b;
-    --border-primary: #334155;
-    --border-secondary: #1e293b;
+
+    --border-primary: #374151;
+    --border-secondary: #1f2937;
     --border-hover: #475569;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
+
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
     --text-muted: #94a3b8;
     --text-quaternary: #64748b;
+    --text-success: #10b981;
+
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
   }
 
-  .connection-item.is-active {
-    background: rgba(52, 211, 153, 0.08);
-    border-color: rgba(52, 211, 153, 0.3);
+  .sticky-header {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
+
+  .is-process {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .sticky-content {
+    padding: 10px 16px;
+  }
+
+  .process-header,
+  .collapsed-indicator {
+    padding: 12px 16px;
+  }
+
+  .connection-item {
+    padding: 10px 16px 10px 32px;
+  }
+
+  .process-meta,
+  .sticky-stats {
+    gap: 12px;
+  }
+
+  .connection-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .traffic-info {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .process-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .connection-endpoints {
+    font-size: 12px;
+  }
+
+  .connection-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .process-icon-wrapper {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sticky-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Naive UI 组件样式覆盖 */
+:deep(.n-button) {
+  font-weight: 500;
+}
+
+:deep(.n-tag) {
+  font-weight: 500;
+}
+
+:deep(.n-virtual-list) {
+  --n-color: transparent;
+}
+
+/* 滚动条样式 */
+:deep(.n-virtual-list__content)::-webkit-scrollbar {
+  width: 8px;
+}
+
+:deep(.n-virtual-list__content)::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-bg);
+}
+
+:deep(.n-virtual-list__content)::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+:deep(.n-virtual-list__content)::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-bg-hover);
+}
+
+:deep(.n-virtual-list__content)::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-bg-active);
 }
 </style>

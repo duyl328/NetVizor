@@ -10,9 +10,6 @@ import { NConfigProvider, NGlobalStyle } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
 import NetworkConnectionPanel1 from '@/components/NetworkConnectionPanel1.vue'
 import MainLayout from './layouts/MainLayout.vue'
-import NetworkConnectionPanel2 from '@/components/NetworkConnectionPanel2.vue'
-import UnifiedConnectionsList from '@/views/MonitorView/components/UnifiedConnectionsList.vue'
-import UnifiedConnectionsList1 from '@/views/MonitorView/components/UnifiedConnectionsList1.vue'
 
 const router = useRouter()
 // 是否展示生成路由
@@ -175,35 +172,37 @@ const getLayout = (route) => {
       </div>
 
       <!-- 展示主要内容 -->
-<!--      <div class="main-content">-->
-<!--        <router-view v-slot="{ Component, route }">-->
-<!--          <transition name="fade-slide" mode="out-in">-->
-<!--            <component :is="getLayout(route)">-->
-<!--              <component :is="Component" />-->
-<!--            </component>-->
-<!--          </transition>-->
-<!--        </router-view>-->
-<!--        &lt;!&ndash;      <network-connection-panel2/>&ndash;&gt;-->
+            <div class="main-content">
+              <router-view v-slot="{ Component, route }">
+                <transition name="fade-slide" mode="out-in">
+                  <component :is="getLayout(route)">
+                    <component :is="Component" />
+                  </component>
+                </transition>
+              </router-view>
+              <!--      <network-connection-panel2/>-->
+            </div>
+<!--      <div class="div1">-->
+<!--        <div class="div2">-->
+<!--          <UnifiedConnectionsList4 />-->
+<!--        </div>-->
 <!--      </div>-->
-      <div class="div1">
-        <div class="div2">
-          <UnifiedConnectionsList1/>
-        </div>
-      </div>
-
     </n-message-provider>
   </n-config-provider>
 </template>
 
 <style scoped>
-.div1{
+.div1 {
   padding: 50px;
   border: 1px solid red;
 }
-.div2{
+
+.div2 {
   border: 1px solid red;
   margin: 50px;
+  height: 500px;
 }
+
 .app-wrapper {
   position: relative;
   width: 100%;

@@ -1,5 +1,5 @@
 <template>
-  <div class="main-view">
+  <div ref="mainViewRef" class="main-view">
     <!-- 顶部 - 搜索和标题 -->
     <div class="main-header" :style="{ height: headerHeight + 'px' }">
       <div class="header-content">
@@ -23,18 +23,25 @@
           </div>
 
           <div class="filter-buttons">
-            <n-button size="small" type="primary" ghost @click="handleFilter">过滤</n-button>
-            <n-button size="small" ghost @click="handleRefresh">刷新</n-button>
+            <n-button size="small" type="primary" quaternary @click="handleFilter">
+              过滤
+            </n-button>
+            <n-button size="small" quaternary @click="handleRefresh">
+              刷新
+            </n-button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 连接列表 -->
-    <connections-table1 :connections="filteredConnections" />
+    <connections-table1
+      :connections="filteredConnections"
+      :height="connectionsTableHeight"
+    />
 
     <!-- 时间轴分割线 -->
-    <div class="resize-handle-horizontal" @mousedown="$emit('resizeTimeline', $event)">
+    <div class="resize-handle-horizontal" @mousedown="startTimelineResize">
       <div class="resize-handle-hover-h"></div>
     </div>
 
@@ -50,10 +57,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import { NButton, NInput, NIcon } from 'naive-ui'
 import { SearchOutline } from '@vicons/ionicons5'
-import ConnectionsTable from './components/ConnectionsTable.vue'
 import EventTimeline from './components/EventTimeline.vue'
 import { FlashOutline } from '@vicons/ionicons5'
 import { useApplicationStore } from '@/stores/application'
@@ -64,6 +70,7 @@ import { useWebSocketStore } from '@/stores/websocketStore'
 import { useProcessStore } from '@/stores/processInfo'
 import { ApplicationType } from '@/types/infoModel'
 import ConnectionsTable1 from '@/views/MonitorView/components/ConnectionsTable1.vue'
+import ConnectionsTable from '@/views/MonitorView/components/ConnectionsTable.vue'
 import UnifiedConnectionsList from '@/views/MonitorView/components/UnifiedConnectionsList.vue'
 
 const webSocketStore = useWebSocketStore()
@@ -76,19 +83,126 @@ const processStore = useProcessStore()
 const { processInfos } = storeToRefs(processStore)
 processStore.subscribe()
 
-// 在父组件中
+// 组件引用
+const mainViewRef = ref<HTMLElement>()
+
+// 布局尺寸控制
+const headerHeight = ref(80)
+const timelineHeight = ref(200)
+const mainViewHeight = ref(600)
+
+// Timeline拖拽限制
+const MIN_TIMELINE_HEIGHT = 100
+const MAX_TIMELINE_HEIGHT = 800
+
+// Timeline拖拽状态
+const timelineResizing = ref<{
+  isResizing: boolean
+  startY: number
+  startHeight: number
+}>({
+  isResizing: false,
+  startY: 0,
+  startHeight: 0,
+})
+
+// 计算ConnectionsTable1的可用高度
+const connectionsTableHeight = computed(() => {
+  const totalHeight = mainViewHeight.value
+  const usedHeight = headerHeight.value + timelineHeight.value + 4 // 4px为分割线高度
+  return `${Math.max(200, totalHeight - usedHeight)}px`
+})
+
+// Timeline拖拽逻辑
+const startTimelineResize = (event: MouseEvent) => {
+  event.preventDefault()
+
+  timelineResizing.value = {
+    isResizing: true,
+    startY: event.clientY,
+    startHeight: timelineHeight.value,
+  }
+
+  document.addEventListener('mousemove', handleTimelineResize)
+  document.addEventListener('mouseup', stopTimelineResize)
+  document.body.style.cursor = 'row-resize'
+  document.body.style.userSelect = 'none'
+}
+
+const handleTimelineResize = (event: MouseEvent) => {
+  if (!timelineResizing.value.isResizing) return
+
+  const { startY, startHeight } = timelineResizing.value
+  const deltaY = startY - event.clientY // 向上拖拽为正值
+  const newHeight = Math.min(
+    MAX_TIMELINE_HEIGHT,
+    Math.max(MIN_TIMELINE_HEIGHT, startHeight + deltaY)
+  )
+
+  timelineHeight.value = newHeight
+}
+
+const stopTimelineResize = () => {
+  timelineResizing.value.isResizing = false
+  document.removeEventListener('mousemove', handleTimelineResize)
+  document.removeEventListener('mouseup', stopTimelineResize)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// 更新主视图高度
+const updateMainViewHeight = () => {
+  if (mainViewRef.value) {
+    mainViewHeight.value = mainViewRef.value.clientHeight
+  }
+}
+
+// 展开的进程ID列表
+const expandedProcesses = ref<number[]>([])
+
+// 过滤后的连接数据
 const filteredConnections = computed(() => {
-  return processInfos.value || []
+  const connections = processInfos.value || []
+
+  // 如果有搜索条件，进行过滤
+  if (props.searchQuery) {
+    const query = props.searchQuery.toLowerCase()
+    return connections.filter(process => {
+      // 搜索进程名
+      if (process.processName.toLowerCase().includes(query)) {
+        return true
+      }
+      // 搜索连接信息
+      return process.connections.some(conn =>
+        conn.localEndpoint.address.includes(query) ||
+        conn.remoteEndpoint.address.includes(query) ||
+        conn.localEndpoint.port.toString().includes(query) ||
+        conn.remoteEndpoint.port.toString().includes(query)
+      )
+    })
+  }
+
+  return connections
 })
 
 watch(selectedApp, (newVal, oldVal) => {
   // 进行更新，先把原始数据清空
   processStore.clear()
+  // 重置展开状态
+  expandedProcesses.value = []
 
   console.log(newVal.id, '==========')
 })
 
 onMounted(() => {
+  // 初始化主视图高度
+  nextTick(() => {
+    updateMainViewHeight()
+  })
+
+  // 监听窗口大小变化
+  window.addEventListener('resize', updateMainViewHeight)
+
   // 监听 WebSocket 状态
   watch(
     [isOpen, selectedApp],
@@ -118,6 +232,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 清理事件监听
+  window.removeEventListener('resize', updateMainViewHeight)
+  document.removeEventListener('mousemove', handleTimelineResize)
+  document.removeEventListener('mouseup', stopTimelineResize)
+
   const subAppInfo: SubscriptionInfo = {
     subscriptionType: 'ProcessInfo',
     interval: 1,
@@ -133,19 +252,16 @@ onUnmounted(() => {
     })
 })
 
-// Props
+// Props - 移除不再需要的height相关props
 const props = defineProps<{
-  headerHeight: number
-  timelineHeight: number
   searchQuery: string
   connections: Array<unknown>
   events: Array<unknown>
 }>()
 
-// Emits
+// Emits - 移除resize相关emit
 const emit = defineEmits<{
   'update:searchQuery': [value: string]
-  resizeTimeline: [event: MouseEvent]
   selectConnection: [connection: unknown]
 }>()
 
@@ -161,6 +277,8 @@ const handleFilter = () => {
 // 处理刷新
 const handleRefresh = () => {
   console.log('刷新数据')
+  // 可以在这里触发数据重新加载
+  processStore.refresh?.()
 }
 
 // 清空事件
@@ -179,6 +297,7 @@ const handleClearEvents = () => {
   min-height: 0;
   background: var(--bg-card);
   overflow: hidden;
+  height: 100%;
 }
 
 /* 顶部区域 */

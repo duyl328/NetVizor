@@ -3,7 +3,9 @@
     <!-- 主内容区域 - 可拖拽布局 -->
     <div class="main-content">
       <!-- 左侧边栏 -->
-      <MonitorSidebar :width="sidebarWidth"  />
+      <div class="sidebar-wrapper" :style="{ width: sidebarWidth + 'px' }">
+        <MonitorSidebar :width="sidebarWidth" />
+      </div>
 
       <!-- 左侧分割线 -->
       <div class="resize-handle-vertical" @mousedown="startResize('sidebar', $event)">
@@ -11,16 +13,18 @@
       </div>
 
       <!-- 中间主视图区域 -->
-      <MonitorMainPanel
-        :headerHeight="mainHeaderHeight"
-        :timelineHeight="timelineHeight"
-        :searchQuery="searchQuery"
-        :connections="mockConnections"
-        :events="mockEvents"
-        @update:searchQuery="searchQuery = $event"
-        @resizeTimeline="startResize('timeline', $event)"
-        @selectConnection="handleConnectionSelect"
-      />
+      <div class="main-panel-wrapper">
+        <MonitorMainPanel
+          :headerHeight="mainHeaderHeight"
+          :timelineHeight="timelineHeight"
+          :searchQuery="searchQuery"
+          :connections="mockConnections"
+          :events="mockEvents"
+          @update:searchQuery="searchQuery = $event"
+          @resizeTimeline="startResize('timeline', $event)"
+          @selectConnection="handleConnectionSelect"
+        />
+      </div>
 
       <!-- 右侧分割线 -->
       <div class="resize-handle-vertical" @mousedown="startResize('inspector', $event)">
@@ -28,10 +32,12 @@
       </div>
 
       <!-- 右侧检查器面板 -->
-      <MonitorInspector
-        :width="inspectorWidth"
-        :selectedConnection="selectedConnection"
-      />
+      <div class="inspector-wrapper" :style="{ width: inspectorWidth + 'px' }">
+        <MonitorInspector
+          :width="inspectorWidth"
+          :selectedConnection="selectedConnection"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -172,7 +178,7 @@ const handleConnectionSelect = (connection: any) => {
 
 // 重置布局
 const resetLayout = () => {
-  sidebarWidth.value = 300
+  sidebarWidth.value = 400
   inspectorWidth.value = 350
   timelineHeight.value = 200
 }
@@ -199,29 +205,59 @@ onMounted(() => {
 <style scoped>
 /* 监控视图容器 */
 .monitor-view {
-  height: 100%;
   width: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  /*  overflow: hidden;*/
+  overflow: hidden;
 }
 
 /* 主内容区域 */
 .main-content {
-  flex: 1;
   display: flex;
-  min-height: 0;
+  width: 100%;
+  height: 100%;
+  position: relative;
   overflow: hidden;
+}
+
+/* 侧边栏包装器 */
+.sidebar-wrapper {
+  height: 100%;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-primary);
+  overflow-y: auto;
+}
+
+/* 主面板包装器 */
+.main-panel-wrapper {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 检查器包装器 */
+.inspector-wrapper {
+  height: 100%;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-primary);
+  overflow-y: auto;
 }
 
 /* 拖拽分割线 */
 .resize-handle-vertical {
   width: 4px;
+  height: 100%;
   background: var(--border-tertiary);
   cursor: col-resize;
   transition: background-color 0.2s;
   position: relative;
-  z-index: 10;
+  z-index: 60;
   flex-shrink: 0;
 }
 
@@ -237,5 +273,30 @@ onMounted(() => {
 /* 拖拽时的视觉反馈 */
 .resize-handle-vertical:active {
   background-color: var(--accent-primary) !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .inspector-wrapper {
+    display: none;
+  }
+
+  .resize-handle-vertical:last-of-type {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-wrapper {
+    display: none;
+  }
+
+  .resize-handle-vertical:first-of-type {
+    display: none;
+  }
+
+  .main-panel-wrapper {
+    width: 100%;
+  }
 }
 </style>
