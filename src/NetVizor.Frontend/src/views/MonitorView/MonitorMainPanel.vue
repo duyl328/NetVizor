@@ -44,14 +44,8 @@
       <div class="resize-handle-hover-h"></div>
     </div>
 
-    <!-- 时间轴事件流 -->
-    <EventTimeline
-      :height="timelineHeight"
-      :events="events"
-      :isPaused="isTimelinePaused"
-      @pause="isTimelinePaused = !isTimelinePaused"
-      @clear="handleClearEvents"
-    />
+    <!-- 时间轴事件流 - 现在更简洁了 -->
+    <EventTimeline :height="timelineHeight" />
   </div>
 </template>
 
@@ -66,6 +60,7 @@ import { ResponseModel, SubscriptionInfo, SubscriptionProcessInfo } from '@/type
 import { httpClient } from '@/utils/http'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { useProcessStore } from '@/stores/processInfo'
+
 import ConnectionsTable1 from '@/views/MonitorView/components/ConnectionsTable1.vue'
 
 const webSocketStore = useWebSocketStore()
@@ -76,6 +71,10 @@ const { selectedApp } = storeToRefs(applicationStore)
 
 const processStore = useProcessStore()
 const { processInfos } = storeToRefs(processStore)
+
+
+
+// 订阅进程信息
 processStore.subscribe()
 
 // Props - 只保留必要的布局相关属性
@@ -142,19 +141,6 @@ const filteredConnections = computed(() => {
 
   return connections
 })
-
-// 模拟事件数据 - 将来可以从pinia获取
-const events = computed(() => [
-  {
-    id: 1,
-    time: new Date().toLocaleTimeString(),
-    type: 'connection',
-    eventType: '连接建立',
-    description: 'chrome.exe → google.com:443',
-  },
-  // ... 更多事件数据
-])
-
 // Timeline拖拽逻辑
 const startTimelineResize = (event: MouseEvent) => {
   event.preventDefault()
@@ -209,16 +195,10 @@ const handleRefresh = () => {
   processStore.refresh?.()
 }
 
-const handleClearEvents = () => {
-  console.log('清空事件')
-}
-
 // 监听选中应用的变化
 watch(selectedApp, (newVal, oldVal) => {
   // 进行更新，先把原始数据清空
   processStore.clear()
-  // 重置展开状态
-  expandedProcesses.value = []
   // 清空搜索
   searchQuery.value = ''
 

@@ -1563,32 +1563,6 @@ const handleDisconnect = (connection: ConnectionInfo) => {
   color: var(--text-muted);
 }
 
-/* 动画 */
-.sticky-slide-enter-active,
-.sticky-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sticky-slide-enter-from {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-.sticky-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
 /* CSS 变量定义 */
 :root {
   --bg-primary: #ffffff;
@@ -1743,4 +1717,10 @@ const handleDisconnect = (connection: ConnectionInfo) => {
 :deep(.n-virtual-list__content)::-webkit-scrollbar-thumb:active {
   background: var(--scrollbar-thumb-bg-active);
 }
+
+/* 加入滚动条动画 */
+:deep(.v-vl-visible-items){
+  /*transition: transform 0.1s ease-out;*/
+}
+
 </style>

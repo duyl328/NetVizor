@@ -11,11 +11,11 @@
           size="small"
           :type="isPaused ? 'info' : 'warning'"
           ghost
-          @click="$emit('pause')"
+          @click="handleTogglePause"
         >
           {{ isPaused ? '继续' : '暂停' }}
         </n-button>
-        <n-button size="small" ghost @click="$emit('clear')">清空</n-button>
+        <n-button size="small" ghost @click="handleClearEvents">清空</n-button>
       </div>
     </div>
 
@@ -50,44 +50,156 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { NButton } from 'naive-ui'
+import { useProcessStore } from '@/stores/processInfo'
+import { storeToRefs } from 'pinia'
 
-// Props
+// 只保留高度控制
 const props = defineProps<{
   height: number
-  events: Array<{
-    id: number
-    time: string
-    type: 'info' | 'warning' | 'success' | 'error'
-    eventType: string
-    description: string
-  }>
-  isPaused: boolean
 }>()
 
-// Emits
-const emit = defineEmits<{
-  pause: []
-  clear: []
-}>()
+// 使用 Process Store
+const processStore = useProcessStore()
+const { processInfos } = storeToRefs(processStore)
+
+// 组件内部状态管理
+const isPaused = ref(false)
+const internalEvents = ref<Array<{
+  id: number
+  time: string
+  type: 'info' | 'warning' | 'success' | 'error'
+  eventType: string
+  description: string
+  timestamp: number
+}>>([])
 
 // 显示的事件（添加动画标记）
-const displayEvents = ref(props.events.map(e => ({ ...e, isNew: false })))
+const displayEvents = ref(internalEvents.value.map(e => ({ ...e, isNew: false })))
 
-// 监听事件变化，标记新事件
-watch(() => props.events, (newEvents, oldEvents) => {
-  if (!props.isPaused) {
-    const oldIds = new Set(oldEvents?.map(e => e.id) || [])
-    displayEvents.value = newEvents.map(e => ({
-      ...e,
-      isNew: !oldIds.has(e.id)
-    }))
-
-    // 500ms后移除新事件标记
-    setTimeout(() => {
-      displayEvents.value = displayEvents.value.map(e => ({ ...e, isNew: false }))
-    }, 500)
+// 从 processInfos 派生事件数据
+const events = computed(() => {
+  if (isPaused.value) {
+    return internalEvents.value // 暂停时返回内部缓存的事件
   }
+  return internalEvents.value
+})
+
+// 添加事件的内部方法
+const addEvent = (event: {
+  time: string
+  type: 'info' | 'warning' | 'success' | 'error'
+  eventType: string
+  description: string
+}) => {
+  if (isPaused.value) return
+
+  const newEvent = {
+    ...event,
+    id: Date.now() + Math.random(),
+    timestamp: Date.now()
+  }
+
+  internalEvents.value.unshift(newEvent)
+
+  // 限制最大事件数量
+  if (internalEvents.value.length > 1000) {
+    internalEvents.value = internalEvents.value.slice(0, 1000)
+  }
+}
+
+// 监听 processInfos 变化，自动生成事件
+watch(processInfos, (newProcessInfos, oldProcessInfos) => {
+  if (!oldProcessInfos || oldProcessInfos.length === 0 || isPaused.value) return
+
+  const now = new Date().toLocaleTimeString()
+
+  newProcessInfos.forEach(newProcess => {
+    const oldProcess = oldProcessInfos.find(p => p.processId === newProcess.processId)
+
+    if (!oldProcess) {
+      // 新进程
+      addEvent({
+        time: now,
+        type: 'info',
+        eventType: '进程启动',
+        description: `${newProcess.processName} (PID: ${newProcess.processId})`
+      })
+    } else {
+      // 检测连接变化
+      const newConnections = newProcess.connections.filter(newConn =>
+        !oldProcess.connections.some(oldConn =>
+          oldConn.localEndpoint.address === newConn.localEndpoint.address &&
+          oldConn.localEndpoint.port === newConn.localEndpoint.port &&
+          oldConn.remoteEndpoint.address === newConn.remoteEndpoint.address &&
+          oldConn.remoteEndpoint.port === newConn.remoteEndpoint.port
+        )
+      )
+
+      newConnections.forEach(conn => {
+        addEvent({
+          time: now,
+          type: 'success',
+          eventType: '连接建立',
+          description: `${newProcess.processName} → ${conn.remoteEndpoint.address}:${conn.remoteEndpoint.port}`
+        })
+      })
+
+      // 检测连接断开
+      const closedConnections = oldProcess.connections.filter(oldConn =>
+        !newProcess.connections.some(newConn =>
+          oldConn.localEndpoint.address === newConn.localEndpoint.address &&
+          oldConn.localEndpoint.port === newConn.localEndpoint.port &&
+          oldConn.remoteEndpoint.address === newConn.remoteEndpoint.address &&
+          oldConn.remoteEndpoint.port === newConn.remoteEndpoint.port
+        )
+      )
+
+      closedConnections.forEach(conn => {
+        addEvent({
+          time: now,
+          type: 'warning',
+          eventType: '连接断开',
+          description: `${newProcess.processName} ✗ ${conn.remoteEndpoint.address}:${conn.remoteEndpoint.port}`
+        })
+      })
+    }
+  })
+
+  // 检测进程结束
+  oldProcessInfos.forEach(oldProcess => {
+    if (!newProcessInfos.find(p => p.processId === oldProcess.processId)) {
+      addEvent({
+        time: now,
+        type: 'error',
+        eventType: '进程结束',
+        description: `${oldProcess.processName} (PID: ${oldProcess.processId})`
+      })
+    }
+  })
 }, { deep: true })
+
+// 监听内部事件变化，标记新事件
+watch(internalEvents, (newEvents, oldEvents) => {
+  const oldIds = new Set(oldEvents?.map(e => e.id) || [])
+  displayEvents.value = newEvents.map(e => ({
+    ...e,
+    isNew: !oldIds.has(e.id)
+  }))
+
+  // 500ms后移除新事件标记
+  setTimeout(() => {
+    displayEvents.value = displayEvents.value.map(e => ({ ...e, isNew: false }))
+  }, 500)
+}, { deep: true })
+
+// 事件处理函数
+const handleTogglePause = () => {
+  isPaused.value = !isPaused.value
+}
+
+const handleClearEvents = () => {
+  internalEvents.value = []
+}
 </script>
 
 <style scoped>
