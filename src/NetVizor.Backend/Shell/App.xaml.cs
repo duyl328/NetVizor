@@ -323,6 +323,15 @@ public partial class App : System.Windows.Application
 
         #endregion
 
+        #region 软件信息获取
+
+        server.Get("/api/appinfo",
+            async (context) =>
+            {
+                await context.Response.WriteJsonAsync(new { message = "Hi!" });
+            });
+
+        #endregion
 
         #region 取消订阅
 
