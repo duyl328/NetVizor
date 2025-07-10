@@ -18,7 +18,7 @@ public class EnhancedEtwNetworkManager : IDisposable
     // 进程信息缓存
     private readonly ConcurrentDictionary<int, ProcessInfo> _processCache = new();
 
-    // DNS反向查询任务队列
+    // DNS 反向查询任务队列
     private readonly ConcurrentQueue<string> _dnsLookupQueue = new();
 
     private bool _isRunning = false;

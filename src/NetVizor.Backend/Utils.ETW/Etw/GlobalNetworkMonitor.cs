@@ -155,7 +155,7 @@ public sealed class GlobalNetworkMonitor
                     CurrentSendSpeed = 0,
                     CurrentReceiveSpeed = 0,
 
-                    // 📊 新增：重置计数器
+                    // 新增：重置计数器
                     ResetCount = 0,
                     TotalBytesSentAccumulated = networkModel.BytesSent,
                     TotalBytesReceivedAccumulated = networkModel.BytesReceived
@@ -169,14 +169,14 @@ public sealed class GlobalNetworkMonitor
                     existing.State = networkModel.State;
                     existing.IsActive = networkModel.State == ConnectionState.Connected;
 
-                    // 📈 改进的速率计算
+                    // 改进的速率计算
                     var timeDiff = (networkModel.LastSeenTime - existing.LastSpeedCalculationTime).TotalSeconds;
                     if (timeDiff > 0.1) // 避免时间间隔过小
                     {
                         var sentDiff = networkModel.BytesSent - existing.LastBytesSent;
                         var receivedDiff = networkModel.BytesReceived - existing.LastBytesReceived;
 
-                        // 🔄 智能重置检测
+                        // 智能重置检测
                         bool sentReset = DetectCounterReset(existing.LastBytesSent, networkModel.BytesSent, timeDiff);
                         bool receivedReset = DetectCounterReset(existing.LastBytesReceived, networkModel.BytesReceived,
                             timeDiff);
@@ -187,7 +187,7 @@ public sealed class GlobalNetworkMonitor
                             existing.TotalBytesSentAccumulated += networkModel.BytesSent;
                             sentDiff = networkModel.BytesSent; // 使用当前值作为增量
 
-                            // 🔕 减少日志噪音：只记录重要的重置
+                            // 减少日志噪音：只记录重要的重置
                             if (ShouldLogReset(existing.Protocol, existing.LocalEndpoint.Port, existing.ResetCount))
                             {
                                 // Console.WriteLine(
@@ -259,7 +259,7 @@ public sealed class GlobalNetworkMonitor
     }
 
     /// <summary>
-    /// 🧠 智能检测计数器重置
+    ///  智能检测计数器重置
     /// </summary>
     private bool DetectCounterReset(long previousValue, long currentValue, double timeDiffSeconds)
     {
