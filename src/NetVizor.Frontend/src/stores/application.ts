@@ -1,4 +1,4 @@
-import { ref, Ref, watch } from 'vue'
+import { ref, Ref, watch, computed } from 'vue'
 import { defineStore, storeToRefs } from 'pinia'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { WebSocketResponse } from '@/types/websocket'
@@ -8,11 +8,14 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
   const appInfos: Ref<ApplicationType[]> = ref([])
   // 状态
   const selectedApp = ref<ApplicationType | null>(null)
+  const inspectingAppDetails = ref<ApplicationType | null>(null)
 
   // 计算属性
   const activeApps = computed(() => {
     return appInfos.value.filter((app) => !app.ExitCode)
   })
+
+  const isInspecting = computed(() => !!inspectingAppDetails.value)
 
   const inactiveApps = computed(() => {
     return appInfos.value.filter((app) => !!app.ExitCode)
@@ -39,6 +42,10 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
     if (selectedApp.value && !apps.find((app) => app.id === selectedApp.value?.id)) {
       selectedApp.value = null
     }
+  }
+
+  const setInspectingAppDetails = (app: ApplicationType | null) => {
+    inspectingAppDetails.value = app
   }
 
   const setSelectedApp = (app: ApplicationType | null) => {
@@ -118,10 +125,14 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
     const { isOpen } = storeToRefs(webSocketStore)
     watch(
       isOpen,
-      (oldValue, newValue) => {
-        if (oldValue || newValue) {
+      (newValue) => {
+        if (newValue) {
           webSocketStore.registerHandler('ApplicationInfo', (data: WebSocketResponse) => {
             appInfos.value = JSON.parse(data.data)
+          })
+          webSocketStore.registerHandler('AppDetailInfo', (data: WebSocketResponse) => {
+            console.log('AppDetailInfo', data)
+            inspectingAppDetails.value = JSON.parse(data.data)
           })
         }
       },
@@ -133,6 +144,7 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
     subscribe, // 状态
     appInfos,
     selectedApp,
+    inspectingAppDetails,
 
     // 计算属性
     activeApps,
@@ -140,10 +152,12 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
     selectedAppIndex,
     totalMemoryUsage,
     totalProcessCount,
+    isInspecting,
 
     // 操作
     setAppInfos,
     setSelectedApp,
+    setInspectingAppDetails,
     selectNextApp,
     selectPreviousApp,
     updateApp,

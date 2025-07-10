@@ -4,58 +4,77 @@
       <div class="inspector-header">
         <h3 class="inspector-title">
           <span class="title-icon">🔍</span>
-          连接详情
+          应用详情
         </h3>
       </div>
 
-      <div v-if="selectedConnection" class="inspector-body">
-        <!-- 基本信息 -->
+      <div v-if="isInspecting && inspectingAppDetails" class="inspector-body">
         <div class="detail-section">
-          <h4 class="detail-section-title">基本信息</h4>
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span class="detail-label">进程</span>
-              <span class="detail-value">{{ selectedConnection.process }}</span>
+          <div class="app-header">
+            <div class="app-icon">
+              <img
+                v-if="inspectingAppDetails.iconBase64"
+                :src="'data:image/png;base64,' + inspectingAppDetails.iconBase64"
+                :alt="inspectingAppDetails.productName"
+              />
+              <div v-else class="app-icon-placeholder">?</div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">PID</span>
-              <span class="detail-value">{{ selectedConnection.pid || '12345' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">协议</span>
-              <span class="detail-value">{{ selectedConnection.protocol || 'TCP' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">状态</span>
-              <span class="detail-value" :class="`status-${selectedConnection.status}`">
-                {{ getStatusText(selectedConnection.status) }}
-              </span>
+            <div class="app-title-group">
+              <h4 class="app-title">{{ inspectingAppDetails.productName || '未知应用' }}</h4>
+              <p class="app-subtitle">{{ inspectingAppDetails.fileDescription }}</p>
             </div>
           </div>
         </div>
 
-        <!-- 网络信息 -->
+        <!-- 进程信息 -->
         <div class="detail-section">
-          <h4 class="detail-section-title">网络信息</h4>
-          <div class="network-info">
-            <div class="network-item">
-              <div class="network-label">本地地址</div>
-              <div class="network-value">{{ selectedConnection.localAddress }}:{{ selectedConnection.localPort || '54321' }}</div>
+          <h4 class="detail-section-title">进程信息</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">进程名称</span>
+              <span class="detail-value">{{ inspectingAppDetails.processName }}</span>
             </div>
-            <div class="network-item">
-              <div class="network-label">远程地址</div>
-              <div class="network-value">{{ selectedConnection.remoteIp || '142.250.191.14' }}:{{ selectedConnection.remotePort || '443' }}</div>
+            <div class="detail-item">
+              <span class="detail-label">进程数</span>
+              <span class="detail-value">{{ inspectingAppDetails.processIds.length }}</span>
             </div>
-            <div class="network-item">
-              <div class="network-label">域名</div>
-              <div class="network-value">{{ selectedConnection.remoteAddress }}</div>
+            <div class="detail-item">
+              <span class="detail-label">内存占用</span>
+              <span class="detail-value">{{ formatMemory(inspectingAppDetails.useMemory) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">线程数</span>
+              <span class="detail-value">{{ inspectingAppDetails.threadCount }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <span class="detail-label">文件路径</span>
+              <span class="detail-value code">{{ inspectingAppDetails.mainModulePath }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 文件详情 -->
+        <div class="detail-section">
+          <h4 class="detail-section-title">文件详情</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">公司</span>
+              <span class="detail-value">{{ inspectingAppDetails.companyName }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">版本</span>
+              <span class="detail-value">{{ inspectingAppDetails.version }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <span class="detail-label">版权</span>
+              <span class="detail-value">{{ inspectingAppDetails.legalCopyright }}</span>
             </div>
           </div>
         </div>
 
         <!-- 流量统计 -->
         <div class="detail-section">
-          <h4 class="detail-section-title">流量统计</h4>
+          <h4 class="detail-section-title">流量概览 (模拟)</h4>
           <div class="traffic-stats">
             <div class="traffic-item">
               <span class="traffic-label">上传</span>
@@ -65,106 +84,128 @@
               <span class="traffic-label">下载</span>
               <span class="traffic-value download">{{ trafficData.download }}</span>
             </div>
-            <div class="traffic-item">
-              <span class="traffic-label">总计</span>
-              <span class="traffic-value total">{{ trafficData.total }}</span>
-            </div>
           </div>
-
           <TrafficChart :data="chartData" />
-        </div>
-
-        <!-- 安全信息 -->
-        <div class="detail-section">
-          <h4 class="detail-section-title">安全信息</h4>
-          <div class="security-info">
-            <div class="security-item safe">
-              <div class="security-icon">✅</div>
-              <div class="security-text">
-                <div class="security-title">连接安全</div>
-                <div class="security-desc">HTTPS 加密连接</div>
-              </div>
-            </div>
-            <div class="security-item safe">
-              <div class="security-icon">🛡️</div>
-              <div class="security-text">
-                <div class="security-title">证书有效</div>
-                <div class="security-desc">由 Google Trust Services 签发</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      <!-- 空状态 -->
+      <!-- 加载或空状态 -->
       <div v-else class="empty-state">
-        <div class="empty-icon">📊</div>
-        <div class="empty-text">选择一个连接以查看详情</div>
+        <div v-if="selectedApp" class="empty-icon">⏳</div>
+        <div v-else class="empty-icon">📊</div>
+        <div class="empty-text">
+          {{ selectedApp ? '正在加载应用详情...' : '从左侧选择一个应用以查看详情' }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import TrafficChart from './components/TrafficChart.vue'
-// 假设我们有一个连接状态的store，将来可以添加
-// import { useConnectionStore } from '@/stores/connection'
+import { useApplicationStore } from '@/stores/application'
+import { useWebSocketStore } from '@/stores/websocketStore'
+import { httpClient } from '@/utils/http'
+import { SubscriptionInfo } from '@/types/response'
+import { convertFileSize } from '@/utils/fileUtil'
+import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
 
-// Props - 只保留布局相关的
-const props = defineProps<{
+// Props
+defineProps<{
   width: number
 }>()
 
-// 从store获取选中的连接 - 将来可以从pinia获取
-// const connectionStore = useConnectionStore()
-// const { selectedConnection } = storeToRefs(connectionStore)
+// Store
+const applicationStore = useApplicationStore()
+const webSocketStore = useWebSocketStore()
+const { selectedApp, inspectingAppDetails, isInspecting } = storeToRefs(applicationStore)
+const { isOpen } = storeToRefs(webSocketStore)
 
-// 临时使用ref，将来替换为store
-const selectedConnection = ref<any>(null)
-
-// 状态文本映射
-const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    established: '已建立',
-    listening: '监听中',
-    close_wait: '等待关闭',
-    time_wait: '时间等待',
-    closed: '已关闭'
+// 订阅应用详情
+const subscribeToAppDetails = (appPath: string) => {
+  if (!isOpen.value) return
+  console.log(`Subscribing to app details for: ${appPath}`)
+  const subInfo = {
+    subscriptionType: 'AppDetailInfoSubscribe',
+    interval: 1000,
+    applicationPath: appPath,
   }
-  return statusMap[status] || status
+  httpClient.post('/subscribe-appinfo', JSON.stringify(subInfo)).catch((err) => {
+    console.error('Failed to subscribe to app details:', err)
+  })
 }
 
-// 流量数据
-const trafficData = computed(() => {
-  if (!selectedConnection.value) {
-    return { upload: '0 B', download: '0 B', total: '0 B' }
+// 取消订阅应用详情
+const unsubscribeFromAppDetails = () => {
+  if (!isOpen.value) return
+  console.log('Unsubscribing from app details')
+  const subInfo: SubscriptionInfo = {
+    subscriptionType: 'AppDetailInfoSubscribe',
+    interval: 0,
   }
+  httpClient.post('/unsubscribe', JSON.stringify(subInfo)).catch((err) => {
+    console.error('Failed to unsubscribe from app details:', err)
+  })
+}
 
-  // 模拟数据 - 将来可以从store或API获取真实数据
+// 监听选中的应用变化
+watch(
+  selectedApp,
+  (newApp, oldApp) => {
+    // 清空旧的详情
+    applicationStore.setInspectingAppDetails(null)
+
+    if (newApp) {
+      // 订阅新的应用详情
+      if (newApp.mainModulePath) {
+        subscribeToAppDetails(newApp.mainModulePath)
+      }
+    } else if (oldApp) {
+      // 如果没有新应用选中（例如列表清空），取消订阅
+      unsubscribeFromAppDetails()
+    }
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  // 组件挂载时，如果已有选中的应用，则触发一次订阅
+  if (selectedApp.value && selectedApp.value.mainModulePath) {
+    subscribeToAppDetails(selectedApp.value.mainModulePath)
+  }
+})
+
+onUnmounted(() => {
+  // 组件卸载时取消订阅
+  unsubscribeFromAppDetails()
+  // 清空详情
+  applicationStore.setInspectingAppDetails(null)
+})
+
+// 格式化内存显示
+const formatMemory = (memoryInBytes: number): string => {
+  if (!memoryInBytes) return '0 B'
+  const result = convertFileSize(memoryInBytes, FILE_SIZE_UNIT_ENUM.B)
+  return result.size + result.unit
+}
+
+// 模拟流量数据
+const trafficData = computed(() => {
+  if (!isInspecting.value) {
+    return { upload: '0 B', download: '0 B' }
+  }
+  // 将来可以从API获取真实数据
   return {
     upload: '1.2 MB',
     download: '5.8 MB',
-    total: '7.0 MB'
   }
 })
 
-// 图表数据
+// 模拟图表数据
 const chartData = computed(() => {
-  // 生成模拟的流量图表数据 - 将来可以从store获取真实数据
   return Array.from({ length: 20 }, () => Math.random() * 100)
-})
-
-// 提供一个方法让外部组件设置选中的连接（过渡期使用）
-// 将来可以移除，直接通过store管理
-const setSelectedConnection = (connection: any) => {
-  selectedConnection.value = connection
-}
-
-// 暴露方法给父组件（如果需要的话）
-defineExpose({
-  setSelectedConnection
 })
 </script>
 
@@ -217,7 +258,7 @@ defineExpose({
 
 /* 详情区块 */
 .detail-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .detail-section:last-child {
@@ -233,6 +274,61 @@ defineExpose({
   border-bottom: 1px solid var(--border-tertiary);
 }
 
+/* 应用头部 */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.app-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.app-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.app-icon-placeholder {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--text-muted);
+}
+
+.app-title-group {
+  min-width: 0;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* 基本信息网格 */
 .detail-grid {
   display: grid;
@@ -244,6 +340,11 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
 }
 
 .detail-label {
@@ -258,40 +359,19 @@ defineExpose({
   font-size: 13px;
   color: var(--text-secondary);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.detail-value.status-established {
-  color: var(--accent-success);
-}
-
-/* 网络信息 */
-.network-info {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.network-item {
-  padding: 12px;
-  background: var(--bg-card);
-  border-radius: 8px;
-  border: 1px solid var(--border-tertiary);
-}
-
-.network-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.network-value {
-  font-size: 13px;
-  color: var(--text-secondary);
+.detail-value.code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-weight: 500;
+  background: var(--bg-card);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-tertiary);
+  word-break: break-all;
+  white-space: normal;
 }
 
 /* 流量统计 */
@@ -331,54 +411,6 @@ defineExpose({
   color: var(--accent-secondary);
 }
 
-.traffic-value.total {
-  color: var(--accent-purple);
-}
-
-/* 安全信息 */
-.security-info {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.security-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-tertiary);
-}
-
-.security-item.safe {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.2);
-}
-
-.security-icon {
-  font-size: 16px;
-  width: 24px;
-  text-align: center;
-}
-
-.security-text {
-  flex: 1;
-}
-
-.security-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  line-height: 1;
-}
-
-.security-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
 /* 空状态 */
 .empty-state {
   flex: 1;
@@ -388,17 +420,31 @@ defineExpose({
   justify-content: center;
   padding: 48px 24px;
   color: var(--text-muted);
+  text-align: center;
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
 }
 
 .empty-text {
   font-size: 14px;
-  text-align: center;
+  max-width: 200px;
 }
 
 /* 响应式 */
