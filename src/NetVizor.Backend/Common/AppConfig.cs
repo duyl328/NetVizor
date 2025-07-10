@@ -35,6 +35,8 @@ public sealed class AppConfig
     /// <summary>
     /// 订阅字符串
     /// </summary>
-    public static readonly string ApplicationInfoSubscribe= "ApplicationInfo";
-    public static readonly string ProcessInfoSubscribe= "ProcessInfo";
+    public static readonly string ApplicationInfoSubscribe = "ApplicationInfo";
+
+    public static readonly string ProcessInfoSubscribe = "ProcessInfo";
+    public static readonly string AppDetailInfoSubscribe = "AppDetailInfo";
 }

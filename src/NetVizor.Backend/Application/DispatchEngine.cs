@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Common;
@@ -270,7 +271,7 @@ public class DispatchEngine
                 {
                     continue;
                 }
-                
+
                 // 获取用户的订阅信息
                 var dispatchModel = processDispatchModel.Value;
 
@@ -278,7 +279,7 @@ public class DispatchEngine
                 {
                     continue;
                 }
-                
+
                 List<ProcessType> pts = new List<ProcessType>();
                 foreach (var processId in dispatchModel.ProcessIds)
                 {
@@ -289,7 +290,7 @@ public class DispatchEngine
                     {
                         continue;
                     }
-                    
+
                     ProcessType pt = new ProcessType();
                     // 上行总数据
                     long allBytesSent = 0;
@@ -328,10 +329,10 @@ public class DispatchEngine
                     pt.UploadSpeed = allSendSpeed;
                     pt.DownloadSpeed = allReceiveSpeed;
                     pt.Connections = connection;
-                    
+
                     pts.Add(pt);
                 }
-                
+
                 // 数据整理完毕，开始分发内容
                 var json = JsonHelper.ToJson(pts);
                 AppInfoLastSendTime[processDispatchModel.Key] = DateTime.Now;
@@ -344,9 +345,182 @@ public class DispatchEngine
                     Type = AppConfig.ProcessInfoSubscribe
                 };
                 WebSocketManager.Instance.SendToClient(processDispatchModel.Key, rm);
-
             }
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    #endregion
+
+    #region 软件详情信息订阅
+
+    /// <summary>
+    /// 特定软件详情的订阅
+    /// </summary>
+    private ConcurrentDictionary<string, AppDetailDispatchModel> AppDetailInfoDispatch = [];
+
+    /// <summary>
+    /// 特定软件详情上次发送时间
+    /// </summary>
+    private ConcurrentDictionary<string, DateTime> AppDetailInfoLastSendTime = [];
+
+    /// <summary>
+    /// 添加订阅
+    /// </summary>
+    public void AddAppDetailInfo(string clientId, AppDetailDispatchModel model)
+    {
+        // 一个客户端只能订阅一个应用的详情，新的订阅会覆盖旧的
+        AppDetailInfoDispatch[clientId] = model;
+    }
+
+    /// <summary>
+    /// 删除订阅
+    /// </summary>
+    public void DeleteAppDetailInfo(string clientId)
+    {
+        AppDetailInfoDispatch.TryRemove(clientId, out _);
+        AppDetailInfoLastSendTime.TryRemove(clientId, out _);
+    }
+
+    private Timer _appDetailInfoTimer;
+
+    /// <summary>
+    /// 特定软件详情分发
+    /// </summary>
+    public void AppDetailInfoDistribute()
+    {
+        _appDetailInfoTimer = new Timer(state =>
+        {
+            if (AppDetailInfoDispatch.IsEmpty)
+            {
+                return;
+            }
+
+            foreach (var keyValuePair in AppDetailInfoDispatch)
+            {
+                var clientId = keyValuePair.Key;
+                var dispatchModel = keyValuePair.Value;
+
+                // 检查是否到了发送时间
+                var isShouldSend = false;
+                if (AppDetailInfoLastSendTime.TryGetValue(clientId, out var lastSendTime))
+                {
+                    if ((DateTime.Now - lastSendTime).TotalMilliseconds >= dispatchModel.Interval)
+                    {
+                        isShouldSend = true;
+                    }
+                }
+                else
+                {
+                    isShouldSend = true; // 第一次发送
+                }
+
+                if (isShouldSend)
+                {
+                    // 获取数据
+                    var appDetails = GetApplicationDetails(dispatchModel.ApplicationPath);
+                    if (appDetails != null)
+                    {
+                        // 发送数据
+                        var rm = new ResponseMessage
+                        {
+                            Success = true,
+                            Data = JsonHelper.ToJson(appDetails),
+                            Message = "特定应用信息发送",
+                            Timestamp = DateTime.Now,
+                            Type = AppConfig.AppDetailInfoSubscribe
+                        };
+                        WebSocketManager.Instance.SendToClient(clientId, rm);
+
+                        // 更新发送时间
+                        AppDetailInfoLastSendTime[clientId] = DateTime.Now;
+                    }
+                }
+            }
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    /// <summary>
+    /// 获取指定路径应用程序的详细信息
+    /// </summary>
+    /// <param name="applicationPath">应用程序的主模块路径</param>
+    /// <returns>聚合后的应用程序信息，如果未找到则返回 null</returns>
+    private ApplicationInfoModel? GetApplicationDetails(string applicationPath)
+    {
+        if (string.IsNullOrWhiteSpace(applicationPath))
+        {
+            return null;
+        }
+
+        // 1. 获取所有正在运行的程序信息
+        var allPrograms = GlobalNetworkMonitor.Instance.GetAllPrograms();
+
+        // 2. 根据路径筛选出相关的所有进程
+        var matchingPrograms = allPrograms
+            .Where(p => applicationPath.Equals(p.MainModulePath, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (matchingPrograms.Count == 0)
+        {
+            return null; // 没有找到匹配的程序
+        }
+
+        // 3. 聚合信息（与 ApplicationInfoDistribute 中的逻辑类似）
+        var pi = new ApplicationInfoModel
+        {
+            Id = "null" // 稍后生成
+        };
+        var pids = new List<int>();
+        var startTime = DateTime.MaxValue;
+        var isExit = true;
+        var useMemory = 0L;
+        var threadCount = 0;
+        var idBuilder = new StringBuilder();
+
+        foreach (var programInfo in matchingPrograms)
+        {
+            pi.ProcessName ??= programInfo.ProcessName;
+            pi.ExitTime ??= programInfo.ExitTime;
+            pi.ExitCode ??= programInfo.ExitCode;
+            pi.MainModulePath ??= programInfo.MainModulePath;
+            pi.MainModuleName ??= programInfo.MainModuleName;
+            pi.FileDescription ??= programInfo.FileDescription;
+            pi.ProductName ??= programInfo.ProductName;
+            pi.CompanyName ??= programInfo.CompanyName;
+            pi.Version ??= programInfo.Version;
+            pi.LegalCopyright ??= programInfo.LegalCopyright;
+            // 使用最新的图标
+            if (!string.IsNullOrEmpty(programInfo.IconBase64))
+            {
+                pi.IconBase64 = programInfo.IconBase64;
+            }
+
+            idBuilder.Append(programInfo.ProcessId);
+            pids.Add(programInfo.ProcessId);
+
+            // 记录最早的启动时间
+            if (programInfo.StartTime < startTime)
+            {
+                startTime = programInfo.StartTime;
+            }
+
+            // 只要有一个进程在运行，应用就未退出
+            if (!programInfo.HasExited)
+            {
+                isExit = false;
+            }
+
+            useMemory += programInfo.UseMemory;
+            threadCount += programInfo.ThreadCount;
+        }
+
+        pi.Id = idBuilder.ToString();
+        pi.ProcessIds = pids;
+        pi.StartTime = startTime;
+        pi.HasExited = isExit;
+        pi.UseMemory = useMemory;
+        pi.ThreadCount = threadCount;
+
+        return pi;
     }
 
     #endregion
@@ -370,6 +544,17 @@ public class ProcessDispatchModel : DispatchModel
 {
     // 订阅的进程列表
     public List<int>? ProcessIds { get; set; }
+}
+
+/// <summary>
+/// 特定应用详情订阅模型
+/// </summary>
+public class AppDetailDispatchModel : DispatchModel
+{
+    /// <summary>
+    /// 订阅的应用程序路径
+    /// </summary>
+    public string ApplicationPath { get; set; }
 }
 
 /// <summary>

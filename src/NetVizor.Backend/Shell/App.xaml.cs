@@ -1,4 +1,4 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Net;
@@ -15,6 +15,7 @@ using Common.Net.HttpConn;
 using Common.Net.Models;
 using Common.Net.WebSocketConn;
 using Common.Utils;
+using Infrastructure.Models;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
 using Utils.ETW.Etw;
@@ -140,12 +141,14 @@ public partial class App : System.Windows.Application
                     {
                         DispatchEngine.Instance.DeleteApplicationInfo(args.Uuid);
                         DispatchEngine.Instance.DeleteProcessInfo(args.Uuid);
+                        DispatchEngine.Instance.DeleteAppDetailInfo(args.Uuid);
                     }
                 }
             ));
         // 开启 WebSocket 定时发送服务
         DispatchEngine.Instance.ApplicationInfoDistribute();
         DispatchEngine.Instance.ProcessInfoDistribute();
+        DispatchEngine.Instance.AppDetailInfoDistribute();
 
         // 启动 http 服务
         Task.Run(() => { _ = StartHttpServer(); });
@@ -323,13 +326,59 @@ public partial class App : System.Windows.Application
 
         #endregion
 
-        #region 软件信息获取
+        #region 软件详细信息订阅
 
-        server.Get("/api/appinfo",
-            async (context) =>
+        server.Post("/api/subscribe-appinfo", async (context) =>
+        {
+            if (string.IsNullOrEmpty(context.RequestBody))
             {
-                await context.Response.WriteJsonAsync(new { message = "Hi!" });
-            });
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(
+                    new ResponseModel<object> { Success = false, Message = "请求体不能为空" });
+                return;
+            }
+
+            try
+            {
+                string? uuid = context.Request.Headers["uuid"];
+                if (string.IsNullOrWhiteSpace(uuid))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                        { Success = false, Message = "用户 ID 丢失!" });
+                    return;
+                }
+
+                var subscriptionRequest = JsonHelper.FromJson<SubscriptionAppInfo>(context.RequestBody);
+                if (subscriptionRequest != null && !string.IsNullOrWhiteSpace(subscriptionRequest.ApplicationPath))
+                {
+                    DispatchEngine.Instance.AddAppDetailInfo(uuid, new AppDetailDispatchModel
+                    {
+                        Interval = subscriptionRequest.Interval,
+                        ApplicationPath = subscriptionRequest.ApplicationPath
+                    });
+                    Log.Information($"客户端 {uuid} 订阅了应用详情: {subscriptionRequest.ApplicationPath}");
+                }
+                else
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                        { Success = false, Message = "无效的订阅请求，缺少 'ApplicationPath'" });
+                    return;
+                }
+            }
+            catch (JsonException ex)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    { Success = false, Message = $"请求数据格式错误: {ex.Message}" });
+                return;
+            }
+
+            context.Response.StatusCode = 200;
+            await context.Response.WriteJsonAsync(new ResponseModel<string>
+                { Success = true, Data = "成功", Message = "订阅成功" });
+        });
 
         #endregion
 
@@ -372,6 +421,11 @@ public partial class App : System.Windows.Application
                     {
                         DispatchEngine.Instance.DeleteProcessInfo(uuid);
                     }
+                    // 特定应用详情订阅
+                    else if (AppConfig.AppDetailInfoSubscribe.Equals(subscriptionInfo.SubscriptionType))
+                    {
+                        DispatchEngine.Instance.DeleteAppDetailInfo(uuid);
+                    }
 
                     Log.Warning($"取消订阅的 名称: {subscriptionInfo.SubscriptionType}");
                 }
@@ -409,4 +463,15 @@ public partial class App : System.Windows.Application
             Console.WriteLine($"Server error: {ex.Message}");
         }
     }
+}
+
+/// <summary>
+/// 特定应用详情订阅的请求体模型
+/// </summary>
+public class SubscriptionAppInfo : SubscriptionInfo
+{
+    /// <summary>
+    /// 订阅的应用程序路径
+    /// </summary>
+    public string ApplicationPath { get; set; }
 }

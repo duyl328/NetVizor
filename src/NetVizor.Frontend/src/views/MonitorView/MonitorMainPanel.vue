@@ -40,12 +40,12 @@
     />
 
     <!-- 时间轴分割线 -->
-    <div class="resize-handle-horizontal" @mousedown="startTimelineResize">
-      <div class="resize-handle-hover-h"></div>
-    </div>
+<!--    <div class="resize-handle-horizontal" @mousedown="startTimelineResize">-->
+<!--      <div class="resize-handle-hover-h"></div>-->
+<!--    </div>-->
 
-    <!-- 时间轴事件流 - 现在更简洁了 -->
-    <EventTimeline :height="timelineHeight" />
+    <!-- 时间轴事件流 -->
+<!--    <EventTimeline :height="timelineHeight" />-->
   </div>
 </template>
 
