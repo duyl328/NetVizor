@@ -60,6 +60,8 @@
     &lt;TestId&gt;NUnit3x::B3F481C9-B351-449C-AE2B-CDEC29BD5DCC::net8.0::Common.Test.Tests.Test1&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;NUnit3x::B3F481C9-B351-449C-AE2B-CDEC29BD5DCC::net8.0::Common.Test.Logger.LogTest.Test1&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;NUnit3x::107A4E9F-39C9-4501-9323-73C9B62932EF::net8.0::Utils.ETW.Test.Tests.Test1&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::B3F481C9-B351-449C-AE2B-CDEC29BD5DCC::net8.0::Common.Test.NetworkInfoUtilTest.TestGetAllInterfaces&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::B3F481C9-B351-449C-AE2B-CDEC29BD5DCC::net8.0::Common.Test.NetworkInfoUtilTest.TestMonitorActiveInterfaceSpeed&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	</wpf:ResourceDictionary>
