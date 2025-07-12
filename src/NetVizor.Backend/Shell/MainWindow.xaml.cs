@@ -10,5 +10,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Console.WriteLine("1211111111111111111111111111。");
     }
 }

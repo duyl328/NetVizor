@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Web;
 using System.Windows;
 using System.Windows.Threading;
+using Application;
 using Application.Utils;
 using Common;
 using Common.Logger;
@@ -18,9 +19,10 @@ using Common.Utils;
 using Infrastructure.Models;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
+using Shell;
 using Utils.ETW.Etw;
 
-namespace Shell;
+namespace NetVizor;
 
 /// <summary>
 /// Interaction logic for App.xaml
@@ -36,8 +38,8 @@ public partial class App : System.Windows.Application
         Log.Initialize(configModelLogging);
         base.OnStartup(e);
 
-        // ✅ 启动你的服务（如 WebSocket、HTTP、端口监听等）
-        StartMyServer();
+        // 启动服务（如 WebSocket、HTTP、端口监听等）
+        // StartMyServer();
     }
 
     /// <summary>

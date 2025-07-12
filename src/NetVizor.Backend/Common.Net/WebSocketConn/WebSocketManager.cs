@@ -142,6 +142,7 @@ public class WebSocketManager
         {
             gzip.Write(inputBytes, 0, inputBytes.Length);
         }
+
         return outputStream.ToArray();
     }
 
@@ -243,7 +244,7 @@ public class WebSocketManager
         }
         else
         {
-            Console.WriteLine("连接缺少userId参数");
+            Log.Info("连接缺少userId参数");
             socket.Close();
         }
     }
@@ -268,7 +269,7 @@ public class WebSocketManager
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"解析userId时出错: {ex.Message}");
+            Log.Info($"解析userId时出错: {ex.Message}");
         }
 
         return null;
@@ -302,7 +303,7 @@ public class WebSocketManager
     {
         try
         {
-            Console.WriteLine(DateTime.Now);
+            Log.Info($"{DateTime.Now}");
             var commandMessage = JsonHelper.FromJson<CommandMessage>(message);
             if (commandMessage != null && !string.IsNullOrEmpty(commandMessage.Command))
             {
@@ -534,11 +535,11 @@ public static class WebSocketManagerUsageExample
 
     private static void OnConnectionClosed(ConnectionClosedEventArgs args)
     {
-        Console.WriteLine($"连接已关闭:");
-        Console.WriteLine($"  Socket ID: {args.SocketId}");
-        Console.WriteLine($"  UUID: {args.Uuid ?? "未知"}");
-        Console.WriteLine($"  关闭时间: {args.ClosedAt}");
-        Console.WriteLine($"  关闭原因: {args.Reason ?? "未知"}");
+        Log.Info($"连接已关闭:");
+        Log.Info($"  Socket ID: {args.SocketId}");
+        Log.Info($"  UUID: {args.Uuid ?? "未知"}");
+        Log.Info($"  关闭时间: {args.ClosedAt}");
+        Log.Info($"  关闭原因: {args.Reason ?? "未知"}");
 
         // 在这里可以执行清理逻辑，比如：
         // - 清理用户相关的缓存数据
@@ -556,6 +557,6 @@ public static class WebSocketManagerUsageExample
     private static void CleanupUserData(string uuid)
     {
         // 实现用户数据清理逻辑
-        Console.WriteLine($"清理用户 {uuid} 的相关数据");
+        Log.Info($"清理用户 {uuid} 的相关数据");
     }
 }

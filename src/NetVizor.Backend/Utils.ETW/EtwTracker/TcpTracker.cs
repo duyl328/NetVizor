@@ -67,8 +67,8 @@ public class TcpTracker : INetTracker
     /// <param name="tcpEvent"></param>
     public void ProcessTcpEvent(TcpConnectionEventData tcpEvent)
     {
-        Console.WriteLine($"[TCP] {tcpEvent.EventType}: {tcpEvent.SourceIp}:{tcpEvent.SourcePort} -> " +
-                          $"{tcpEvent.DestinationIp}:{tcpEvent.DestinationPort} ({tcpEvent.ProcessName})");
+        Log.Info($"[TCP] {tcpEvent.EventType}: {tcpEvent.SourceIp}:{tcpEvent.SourcePort} -> " +
+                 $"{tcpEvent.DestinationIp}:{tcpEvent.DestinationPort} ({tcpEvent.ProcessName})");
 
         switch (tcpEvent.EventType)
         {
@@ -277,21 +277,21 @@ public class TcpTracker : INetTracker
         // 1. 安全检查
         // if (IsExternalConnection(session.DestinationIp))
         // {
-        //     Console.WriteLine(
+        //     Log.Info(
         //         $"[SECURITY] 外部连接警告: {session.ProcessName} -> {session.DestinationIp}:{session.DestinationPort}");
         // }
 
         // 2. 业务监控
         // if (IsBusinessCriticalPort(session.DestinationPort))
         // {
-        //     Console.WriteLine($"[BUSINESS] 关键业务连接: {session.ProcessName} -> {session.DestinationPort}");
+        //     Log.Info($"[BUSINESS] 关键业务连接: {session.ProcessName} -> {session.DestinationPort}");
         // }
 
         // 3. 性能监控
         var tcpSize = NetworkInfoManger.Instance.GetTcpSize();
         if (tcpSize > 1000)
         {
-            Console.WriteLine($"[PERFORMANCE] 连接数量警告: 当前活跃连接 {tcpSize}");
+            Log.Info($"[PERFORMANCE] 连接数量警告: 当前活跃连接 {tcpSize}");
         }
     }
 

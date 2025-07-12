@@ -1,10 +1,10 @@
+using Common.Logger;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Session;
 using Utils.ETW.Models;
 
 namespace Utils.ETW.Core;
-
 
 // ETW网络事件处理器
 public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisposable
@@ -13,6 +13,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
     /// 此代码需要管理员权限
     /// </summary>
     private readonly TraceEventSession _session = new(sessionName);
+
     private readonly ETWTraceEventSource _source = new(sessionName, TraceEventSourceType.Session);
 
     /// <summary>
@@ -36,11 +37,12 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
     public delegate void NetworkErrorEventHandler(NetworkErrorEventData eventData);
 
     // 事件处理器
-    
+
     /// <summary>
     /// 通用网络事件处理，所有的网络事件都会进入该函数
     /// </summary>
     public event NetworkEventHandler? OnNetworkEvent;
+
     public event TcpConnectionEventHandler? OnTcpConnectionEvent;
     public event UdpPacketEventHandler? OnUdpPacketEvent;
     public event DnsEventHandler? OnDnsEvent;
@@ -68,11 +70,11 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             // 开始处理事件（这是阻塞调用）
             Task.Run(() => { _source.Process(); });
 
-            Console.WriteLine("ETW网络捕获已启动...");
+            Log.Info("ETW网络捕获已启动...");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"启动ETW捕获失败: {ex.Message}");
+            Log.Info($"启动ETW捕获失败: {ex.Message}");
             throw;
         }
     }
@@ -197,7 +199,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnTcpConnectionEvent?.Invoke(tcpEvent);
             OnNetworkEvent?.Invoke(tcpEvent);
         };
-        
+
         // TCP数据接收事件 ETW Event ID 11
         parser.TcpIpRecv += data =>
         {
@@ -270,12 +272,12 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             OnNetworkEvent?.Invoke(udpEvent);
         };
 // 建议添加进程事件监控以获取完整进程信息
-        parser.ProcessStart += data => {
+        parser.ProcessStart += data =>
+        {
             // 缓存进程信息，包括完整路径、命令行等
         };
         // 通用事件处理器，用于其他网络事件
         _source.Dynamic.All += ProcessDynamicEvent;
-        
     }
 
     /// <summary>
@@ -296,13 +298,13 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             case "Microsoft-Windows-NetworkProfile":
                 ProcessNetworkInterfaceEvent(data);
                 break;
-                // 负责 TCP/IP 协议栈事件，如连接、发送、接收、断开、重传等
-                // 用于监控 TCP 会话生命周期，是连接追踪的核心
+            // 负责 TCP/IP 协议栈事件，如连接、发送、接收、断开、重传等
+            // 用于监控 TCP 会话生命周期，是连接追踪的核心
             case "Microsoft-Windows-TCPIP":
-                // AFD（Ancillary Function Driver for WinSock）是 Winsock API 的核心内核模块
-                // 常用于检测哪一个进程创建了 socket，socket 和 TCP 会话的关联
+            // AFD（Ancillary Function Driver for WinSock）是 Winsock API 的核心内核模块
+            // 常用于检测哪一个进程创建了 socket，socket 和 TCP 会话的关联
             case "Microsoft-Windows-Winsock-AFD":
-                // 也叫 Kernel-Network
+            // 也叫 Kernel-Network
             case "MSNT_SystemTrace":
                 break;
             default:
@@ -337,7 +339,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理DNS事件时出错: {ex.Message}");
+            Log.Info($"处理DNS事件时出错: {ex.Message}");
         }
     }
 
@@ -366,7 +368,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理HTTP事件时出错: {ex.Message}");
+            Log.Info($"处理HTTP事件时出错: {ex.Message}");
         }
     }
 
@@ -396,7 +398,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理网络接口事件时出错: {ex.Message}");
+            Log.Info($"处理网络接口事件时出错: {ex.Message}");
         }
     }
 
@@ -416,7 +418,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
                 ThreadId = data.ThreadID,
                 ProcessName = data.ProcessName
             };
-            Console.WriteLine($"data.PayloadName :=> {data.ProviderName}");
+            Log.Info($"data.PayloadName :=> {data.ProviderName}");
 
             // 提取通用网络信息
             foreach (var payloadName in data.PayloadNames)
@@ -436,7 +438,7 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理通用网络事件时出错: {ex.Message}");
+            Log.Info($"处理通用网络事件时出错: {ex.Message}");
         }
     }
 
@@ -449,11 +451,11 @@ public class EtwNetworkCapture(string sessionName = "NetworkETWSession") : IDisp
             _isCapturing = false;
             _session.Stop();
             _source.Dispose();
-            Console.WriteLine("ETW网络捕获已停止");
+            Log.Info("ETW网络捕获已停止");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"停止ETW捕获时出错: {ex.Message}");
+            Log.Info($"停止ETW捕获时出错: {ex.Message}");
         }
     }
 

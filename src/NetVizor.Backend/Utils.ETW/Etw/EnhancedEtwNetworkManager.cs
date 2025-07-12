@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
+using Common.Logger;
 using Infrastructure.utils;
 using Utils.ETW.Core;
 using Utils.ETW.Models;
@@ -63,7 +64,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         Task.Run(() => ProcessDnsLookupsAsync(_cancellationTokenSource.Token));
         Task.Run(() => CleanupExpiredDataAsync(_cancellationTokenSource.Token));
 
-        Console.WriteLine("增强型网络监控已启动");
+        Log.Info("增强型网络监控已启动");
     }
 
     /// <summary>
@@ -77,7 +78,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         _cancellationTokenSource.Cancel();
         _networkCapture.StopCapture();
 
-        Console.WriteLine("增强型网络监控已停止");
+        Log.Info("增强型网络监控已停止");
     }
 
     #region 事件处理方法
@@ -146,7 +147,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理TCP事件时出错: {ex.Message}");
+            Log.Info($"处理TCP事件时出错: {ex.Message}");
         }
     }
 
@@ -195,7 +196,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理UDP事件时出错: {ex.Message}");
+            Log.Info($"处理UDP事件时出错: {ex.Message}");
         }
     }
 
@@ -214,7 +215,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理DNS事件时出错: {ex.Message}");
+            Log.Info($"处理DNS事件时出错: {ex.Message}");
         }
     }
 
@@ -223,11 +224,11 @@ public class EnhancedEtwNetworkManager : IDisposable
         try
         {
             // 可以从HTTP事件中提取更多应用层信息
-            Console.WriteLine($"[HTTP] {httpEvent.HttpMethod} {httpEvent.Url}");
+            Log.Info($"[HTTP] {httpEvent.HttpMethod} {httpEvent.Url}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"处理HTTP事件时出错: {ex.Message}");
+            Log.Info($"处理HTTP事件时出错: {ex.Message}");
         }
     }
 
@@ -255,7 +256,7 @@ public class EnhancedEtwNetworkManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"更新进程信息时出错: {ex.Message}");
+            Log.Info($"更新进程信息时出错: {ex.Message}");
         }
     }
 
@@ -291,7 +292,7 @@ public class EnhancedEtwNetworkManager : IDisposable
                     catch (Exception ex)
                     {
                         // 进程可能已经退出
-                        Console.WriteLine($"获取进程 {processInfo.ProcessId} 信息失败: {ex.Message}");
+                        Log.Info($"获取进程 {processInfo.ProcessId} 信息失败: {ex.Message}");
                         processInfo.NeedsUpdate = false;
                     }
                 }
@@ -300,7 +301,7 @@ public class EnhancedEtwNetworkManager : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"处理应用程序信息时出错: {ex.Message}");
+                Log.Info($"处理应用程序信息时出错: {ex.Message}");
             }
         }
     }
@@ -344,7 +345,7 @@ public class EnhancedEtwNetworkManager : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"处理DNS查询时出错: {ex.Message}");
+                Log.Info($"处理DNS查询时出错: {ex.Message}");
             }
         }
     }
@@ -367,7 +368,7 @@ public class EnhancedEtwNetworkManager : IDisposable
                     {
                         GlobalNetworkMonitor.Instance.RemoveConnection(conn.ConnectionKey);
                         // 这里可以添加清理逻辑
-                        Console.WriteLine(
+                        Log.Info(
                             $"清理过期连接: {app.ProgramInfo?.ProductName} - {conn.RemoteIp}:{conn.RemotePort}");
                     }
                 }
@@ -376,7 +377,7 @@ public class EnhancedEtwNetworkManager : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"清理过期数据时出错: {ex.Message}");
+                Log.Info($"清理过期数据时出错: {ex.Message}");
             }
         }
     }

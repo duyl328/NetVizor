@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="FirewallManager" Version="1.0.2"/>
       <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.21" />
       <PackageReference Include="System.Drawing.Common" Version="10.0.0-preview.4.25258.110" />
     </ItemGroup>

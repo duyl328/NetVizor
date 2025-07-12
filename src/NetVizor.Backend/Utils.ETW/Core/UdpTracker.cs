@@ -1,4 +1,5 @@
 using System.Net;
+using Common.Logger;
 using Utils.ETW.EtwTracker;
 using Utils.ETW.Models;
 
@@ -13,8 +14,8 @@ public class UdpTracker : INetTracker
     {
         networkCapture.OnUdpPacketEvent += (udpEvent) =>
         {
-            Console.WriteLine($"[UDP] {udpEvent.EventType}: {udpEvent.SourceIp}:{udpEvent.SourcePort} -> " +
-                              $"{udpEvent.DestinationIp}:{udpEvent.DestinationPort} ({udpEvent.DataLength} bytes)");
+            Log.Info($"[UDP] {udpEvent.EventType}: {udpEvent.SourceIp}:{udpEvent.SourcePort} -> " +
+                     $"{udpEvent.DestinationIp}:{udpEvent.DestinationPort} ({udpEvent.DataLength} bytes)");
 
             switch (udpEvent.EventType)
             {
@@ -100,9 +101,10 @@ public class UdpTracker : INetTracker
                 ProcessName = eventData.ProcessName
             };
 
-            NetworkInfoManger.Instance.SetUdpCache( networkModel);
+            NetworkInfoManger.Instance.SetUdpCache(networkModel);
 
-            string str = $"UDP 会话开始: {networkModel.SourceIp}:{networkModel.SourcePort} -> {networkModel.DestinationIp}:{networkModel.DestinationPort}";
+            string str =
+                $"UDP 会话开始: {networkModel.SourceIp}:{networkModel.SourcePort} -> {networkModel.DestinationIp}:{networkModel.DestinationPort}";
             NetworkInfoManger.Instance.RecordEvent(str);
         }
         else
@@ -111,19 +113,20 @@ public class UdpTracker : INetTracker
             existingSession.BytesSent += eventData.UdpLength;
             existingSession.LastSeenTime = now;
         }
-        
-     
+
+
         if (eventData.DataLength < 0)
         {
             throw new Exception("数据长度不可能为 0 !!");
         }
+
         // 统计端口流量
         NetworkInfoManger.Instance.PortTrafficSent.TryAdd(eventData.DestinationPort, 0);
         NetworkInfoManger.Instance.PortTrafficSent[eventData.DestinationPort] += (ulong)eventData.DataLength;
 
         NetworkInfoManger.Instance.SourceTrafficSent.TryAdd(eventData.SourceIp, 0);
         NetworkInfoManger.Instance.SourceTrafficSent[eventData.SourceIp] += (ulong)eventData.DataLength;
-            
+
         // UDP处理主要关注数据包本身，而不是连接状态
         UpdateTrafficStats(eventData);
     }
@@ -178,9 +181,10 @@ public class UdpTracker : INetTracker
                 ProcessName = eventData.ProcessName
             };
 
-            NetworkInfoManger.Instance.SetUdpCache( networkModel);
+            NetworkInfoManger.Instance.SetUdpCache(networkModel);
 
-            string str = $"UDP 会话开始: {networkModel.SourceIp}:{networkModel.SourcePort} -> {networkModel.DestinationIp}:{networkModel.DestinationPort}";
+            string str =
+                $"UDP 会话开始: {networkModel.SourceIp}:{networkModel.SourcePort} -> {networkModel.DestinationIp}:{networkModel.DestinationPort}";
             NetworkInfoManger.Instance.RecordEvent(str);
         }
         else
@@ -189,11 +193,12 @@ public class UdpTracker : INetTracker
             existingSession.BytesReceived += eventData.UdpLength;
             existingSession.LastSeenTime = now;
         }
-     
+
         if (eventData.DataLength < 0)
         {
             throw new Exception("数据长度不可能为 0 !!");
         }
+
         // 统计端口流量
         NetworkInfoManger.Instance.PortTrafficReceived.TryAdd(eventData.DestinationPort, 0);
         NetworkInfoManger.Instance.PortTrafficReceived[eventData.DestinationPort] += (ulong)eventData.DataLength;
@@ -214,7 +219,7 @@ public class UdpTracker : INetTracker
         sourceTraffic.TryAdd(udpEvent.SourceIp, 0);
         sourceTraffic[udpEvent.SourceIp] += udpEvent.DataLength;
     }
-    
+
     /// <summary>
     /// 因为 UDP 无断开标志，所以需要一个定期清理机制
     /// </summary>
@@ -229,7 +234,8 @@ public class UdpTracker : INetTracker
             {
                 NetworkInfoManger.Instance.RemoveUdpSession(session);
 
-                string str = $"UDP 会话结束: {session.SourceIp}:{session.SourcePort} -> {session.DestinationIp}:{session.DestinationPort}";
+                string str =
+                    $"UDP 会话结束: {session.SourceIp}:{session.SourcePort} -> {session.DestinationIp}:{session.DestinationPort}";
                 NetworkInfoManger.Instance.RecordEvent(str);
             }
         }
@@ -246,7 +252,7 @@ public class UdpTracker : INetTracker
 
     private void ProcessDhcpPacket(UdpPacketEventData udpEvent)
     {
-        Console.WriteLine($"[DHCP] DHCP通信: {udpEvent.SourceIp} <-> {udpEvent.DestinationIp}");
+        Log.Info($"[DHCP] DHCP通信: {udpEvent.SourceIp} <-> {udpEvent.DestinationIp}");
     }
 
     private void ProcessGenericUdpPacket(UdpPacketEventData udpEvent)
@@ -254,24 +260,24 @@ public class UdpTracker : INetTracker
         // 对于未知UDP流量，主要进行安全检查
         if (udpEvent.DataLength > 1024 * 64) // 64KB
         {
-            Console.WriteLine($"[UDP警告] 大型UDP数据包: {udpEvent.ProcessName} " +
-                              $"发送 {udpEvent.DataLength} 字节到 {udpEvent.DestinationIp}:{udpEvent.DestinationPort}");
+            Log.Info($"[UDP警告] 大型UDP数据包: {udpEvent.ProcessName} " +
+                     $"发送 {udpEvent.DataLength} 字节到 {udpEvent.DestinationIp}:{udpEvent.DestinationPort}");
         }
     }
 
     public void PrintTrafficSummary()
     {
-        Console.WriteLine("\n=== UDP流量统计 ===");
-        Console.WriteLine("端口流量TOP 10:");
+        Log.Info("\n=== UDP流量统计 ===");
+        Log.Info("端口流量TOP 10:");
         foreach (var item in portTraffic.OrderByDescending(x => x.Value).Take(10))
         {
-            Console.WriteLine($"  端口 {item.Key}: {item.Value / 1024}KB");
+            Log.Info($"  端口 {item.Key}: {item.Value / 1024}KB");
         }
 
-        Console.WriteLine("\n源IP流量TOP 10:");
+        Log.Info("\n源IP流量TOP 10:");
         foreach (var item in sourceTraffic.OrderByDescending(x => x.Value).Take(10))
         {
-            Console.WriteLine($"  {item.Key}: {item.Value / 1024}KB");
+            Log.Info($"  {item.Key}: {item.Value / 1024}KB");
         }
     }
 }

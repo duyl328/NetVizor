@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Common.Logger;
 using Common.Utils;
 using Utils.ETW.Core;
 
@@ -15,7 +16,7 @@ public class NetworkMonitorUsageExample
 
     public void RunExample()
     {
-        Console.WriteLine("启动网络监控系统...");
+        Log.Info("启动网络监控系统...");
 
         // 初始化网络管理器
         _networkManager = new EnhancedEtwNetworkManager();
@@ -32,7 +33,7 @@ public class NetworkMonitorUsageExample
             // 启动WebSocket推送任务（示例）
             // var websocketTask = Task.Run(() => SimulateWebSocketPush(_cancellationTokenSource.Token));
 
-            // Console.WriteLine("网络监控已启动，按任意键停止...");
+            // Log.Info("网络监控已启动，按任意键停止...");
             // Console.ReadKey();
             //
             // // 停止监控
@@ -42,7 +43,7 @@ public class NetworkMonitorUsageExample
         finally
         {
             // _networkManager?.Dispose();
-            // Console.WriteLine("网络监控已停止！！！！！！！！！！！！！11！！！！");
+            // Log.Info("网络监控已停止！！！！！！！！！！！！！11！！！！");
         }
     }
 
@@ -59,26 +60,26 @@ public class NetworkMonitorUsageExample
                 var snapshot = GlobalNetworkMonitor.Instance.GetSnapshot();
 
                 var serialize = JsonHelper.ToJson(snapshot);
-                Console.WriteLine("=================================================");
-                Console.WriteLine(serialize);
-                Console.WriteLine("=================================================");
+                Log.Info("=================================================");
+                Log.Info(serialize);
+                Log.Info("=================================================");
                 // 输出概要信息
-                Console.WriteLine($"\n========== 网络监控快照 {snapshot.SnapshotTime:yyyy-MM-dd HH:mm:ss} ==========");
-                Console.WriteLine($"活跃应用程序: {snapshot.GlobalStats.TotalApplications}");
-                Console.WriteLine(
+                Log.Info($"\n========== 网络监控快照 {snapshot.SnapshotTime:yyyy-MM-dd HH:mm:ss} ==========");
+                Log.Info($"活跃应用程序: {snapshot.GlobalStats.TotalApplications}");
+                Log.Info(
                     $"总连接数: {snapshot.GlobalStats.TotalConnections} (活跃: {snapshot.GlobalStats.ActiveConnections})");
 
                 // 输出每个应用的详细信息
                 // foreach (var app in snapshot.Applications.OrderByDescending(a =>
                 //              a.TotalSendSpeed + a.TotalReceiveSpeed))
                 // {
-                //     Console.WriteLine($"\n应用程序: {app.ApplicationName} (PID: {app.ProcessId})");
-                //     Console.WriteLine($"  路径: {app.ApplicationPath}");
-                //     Console.WriteLine($"  版本: {app.Version}");
-                //     Console.WriteLine($"  连接数: {app.ActiveConnections}/{app.TotalConnections}");
-                //     Console.WriteLine(
+                //     Log.Info($"\n应用程序: {app.ApplicationName} (PID: {app.ProcessId})");
+                //     Log.Info($"  路径: {app.ApplicationPath}");
+                //     Log.Info($"  版本: {app.Version}");
+                //     Log.Info($"  连接数: {app.ActiveConnections}/{app.TotalConnections}");
+                //     Log.Info(
                 //         $"  总流量: 发送 {FormatBytes(app.TotalBytesSent)}, 接收 {FormatBytes(app.TotalBytesReceived)}");
-                //     Console.WriteLine(
+                //     Log.Info(
                 //         $"  当前速度: ↑{FormatSpeed(app.TotalSendSpeed)} ↓{FormatSpeed(app.TotalReceiveSpeed)}");
                 //
                 //     // 显示前5个活跃连接
@@ -89,7 +90,7 @@ public class NetworkMonitorUsageExample
                 //
                 //     foreach (var conn in topConnections)
                 //     {
-                //         Console.WriteLine(
+                //         Log.Info(
                 //             $"    → {conn.Protocol} {conn.LocalPort} → {conn.RemoteIp}:{conn.RemotePort} " +
                 //             $"({conn.RemoteDomain ?? "未解析"}) " +
                 //             $"[{conn.State}] " +
@@ -98,24 +99,24 @@ public class NetworkMonitorUsageExample
                 // }
                 //
                 // // 输出端口流量TOP 5
-                // Console.WriteLine("\n端口流量 TOP 5:");
+                // Log.Info("\n端口流量 TOP 5:");
                 // var topPorts = snapshot.GlobalStats.PortTraffic
                 //     .OrderByDescending(p => p.TotalBytes)
                 //     .Take(5);
                 //
                 // foreach (var port in topPorts)
                 // {
-                //     Console.WriteLine($"  端口 {port.Port}: {FormatBytes(port.TotalBytes)} " +
+                //     Log.Info($"  端口 {port.Port}: {FormatBytes(port.TotalBytes)} " +
                 //                       $"(发送: {FormatBytes(port.BytesSent)}, 接收: {FormatBytes(port.BytesReceived)})");
                 // }
                 //
                 // // 输出IP流量TOP 5
-                // Console.WriteLine("\nIP流量 TOP 5:");
+                // Log.Info("\nIP流量 TOP 5:");
                 // var topIps = snapshot.GlobalStats.IpTraffic.Take(5);
                 //
                 // foreach (var ip in topIps)
                 // {
-                //     Console.WriteLine($"  {ip.IpAddress}: {FormatBytes(ip.TotalBytes)} " +
+                //     Log.Info($"  {ip.IpAddress}: {FormatBytes(ip.TotalBytes)} " +
                 //                       $"(发送: {FormatBytes(ip.BytesSent)}, 接收: {FormatBytes(ip.BytesReceived)})");
                 // }
 
@@ -123,7 +124,7 @@ public class NetworkMonitorUsageExample
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"读取网络数据时出错: {ex.Message}");
+                Log.Info($"读取网络数据时出错: {ex.Message}");
             }
         }
     }
@@ -187,13 +188,13 @@ public class NetworkMonitorUsageExample
     //
     //             // 这里应该通过WebSocket发送数据
     //             // await websocketClient.SendAsync(json);
-    //             Console.WriteLine($"\n[WebSocket模拟] 推送数据大小: {json.Length} 字节");
-    //             Console.WriteLine(json);
+    //             Log.Info($"\n[WebSocket模拟] 推送数据大小: {json.Length} 字节");
+    //             Log.Info(json);
     //             await Task.Delay(1000, cancellationToken); // 每秒推送一次
     //         }
     //         catch (Exception ex)
     //         {
-    //             Console.WriteLine($"WebSocket推送时出错: {ex.Message}");
+    //             Log.Info($"WebSocket推送时出错: {ex.Message}");
     //         }
     //     }
     // }

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Common.Logger;
 using Utils.ETW.EtwTracker;
 using Utils.ETW.Models;
 
@@ -8,10 +9,7 @@ public class HttpTracker : INetTracker
 {
     public void SetupEtwHandlers(EtwNetworkCapture networkCapture)
     {
-        networkCapture.OnHttpEvent += httpEvent =>
-        {
-            Console.WriteLine($"[HTTP] {httpEvent.HttpMethod} {httpEvent.Url}");
-        };
+        networkCapture.OnHttpEvent += httpEvent => { Log.Info($"[HTTP] {httpEvent.HttpMethod} {httpEvent.Url}"); };
     }
 }
 
@@ -21,7 +19,7 @@ public class NetworkProfileTracker : INetTracker
     {
         networkCapture.OnNetworkInterfaceEvent += interfaceEvent =>
         {
-            Console.WriteLine($"[Interface] {interfaceEvent.InterfaceName}: {interfaceEvent.InterfaceState}");
+            Log.Info($"[Interface] {interfaceEvent.InterfaceName}: {interfaceEvent.InterfaceState}");
         };
     }
 }
@@ -64,8 +62,8 @@ public class EtwNetworkManger
 
         // TCP
         // _tcpTracker.SetupEtwHandlers(networkCapture);
-        
-        Console.WriteLine("进入了！！！！！！！！！！");
+
+        Log.Info("进入了！！！！！！！！！！");
         // DNS
         dnsTracker.SetupEtwHandlers(networkCapture);
 

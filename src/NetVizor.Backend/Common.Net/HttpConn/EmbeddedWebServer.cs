@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Web;
+using Common.Logger;
 using Common.Utils;
 using Fleck;
 
@@ -105,6 +106,7 @@ public class HttpServer
     /// 便捷路由方法
     /// </summary>
     public void Get(string pattern, RequestHandler handler) => AddRoute(HttpMethod.GET, pattern, handler);
+
     public void Post(string pattern, RequestHandler handler) => AddRoute(HttpMethod.POST, pattern, handler);
     public void Put(string pattern, RequestHandler handler) => AddRoute(HttpMethod.PUT, pattern, handler);
     public void Delete(string pattern, RequestHandler handler) => AddRoute(HttpMethod.DELETE, pattern, handler);
@@ -116,7 +118,7 @@ public class HttpServer
     {
         _listener.Start();
         _isRunning = true;
-        Console.WriteLine($"HTTP Server started at {_prefix}");
+        Log.Info($"HTTP Server started at {_prefix}");
 
         while (_isRunning && !cancellationToken.IsCancellationRequested)
         {
@@ -135,7 +137,7 @@ public class HttpServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error accepting request: {ex.Message}");
+                Log.Info($"Error accepting request: {ex.Message}");
             }
         }
     }
@@ -146,7 +148,7 @@ public class HttpServer
         _isRunning = false;
         _listener.Stop();
         _listener.Close();
-        Console.WriteLine("HTTP Server stopped");
+        Log.Info("HTTP Server stopped");
     }
 
     // 处理请求
@@ -179,7 +181,7 @@ public class HttpServer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Request handling error: {ex}");
+            Log.Info($"Request handling error: {ex}");
             await SendInternalServerError(listenerContext.Response, ex);
         }
         finally
@@ -286,7 +288,7 @@ public static class HttpListenerResponseExtensions
     {
         response.ContentType = "application/json; charset=utf-8";
         var json = JsonHelper.ToJson(data);
-        
+
         var buffer = Encoding.UTF8.GetBytes(json);
         response.ContentLength64 = buffer.Length;
         await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
@@ -315,7 +317,6 @@ public static class Middlewares
     // CORS 中间件
     public static async Task<bool> Cors(HttpContext context)
     {
-        
         // 允许所有来源（生产环境应该指定具体域名）
         string? origin = context.Request.Headers["Origin"];
         context.Response.Headers.Add("Access-Control-Allow-Origin", !string.IsNullOrEmpty(origin) ? origin : "*");
@@ -324,7 +325,7 @@ public static class Middlewares
         context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
 
         // 关键：允许的请求头（包括你的uuid头）
-        context.Response.Headers.Add("Access-Control-Allow-Headers", 
+        context.Response.Headers.Add("Access-Control-Allow-Headers",
             "Content-Type, Authorization, X-Requested-With, uuid, Accept, Origin");
 
         // 允许携带凭据（如果需要）
@@ -349,7 +350,7 @@ public static class Middlewares
     public static async Task<bool> RequestLogging(HttpContext context)
     {
         var startTime = DateTime.UtcNow;
-        Console.WriteLine($"[{startTime:yyyy-MM-dd HH:mm:ss}] {context.Request.HttpMethod} {context.Request.Url}");
+        Log.Info($"[{startTime:yyyy-MM-dd HH:mm:ss}] {context.Request.HttpMethod} {context.Request.Url}");
 
         // 继续处理
         return await Task.FromResult(true);

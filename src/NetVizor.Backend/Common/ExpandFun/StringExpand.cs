@@ -1,6 +1,6 @@
-using Serilog;
+using Common.Logger;
 
-namespace Common.FunExpand;
+namespace Common.ExpandFun;
 
 public static class StringExpand
 {

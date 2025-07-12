@@ -30,21 +30,20 @@ public partial class WebPanel : UserControl
 
         // ETW 信息获取
         // 检查管理员权限
-        NewMethod();
+        // NewMethod();
     }
 
     private static async Task NewMethod()
     {
         if (!SysHelper.IsAdministrator())
         {
-            Console.WriteLine("此程序需要管理员权限才能运行ETW监控！");
-            Console.WriteLine("请以管理员身份重新运行程序。");
-            Console.ReadKey();
+            Log.Info("此程序需要管理员权限才能运行ETW监控！");
+            Log.Info("请以管理员身份重新运行程序。");
             return;
         }
 
-        var example = new NetworkMonitorUsageExample();
-        example.RunExample();
+        // var example = new NetworkMonitorUsageExample();
+        // example.RunExample();
 
         // 创建监听实例
         // var etwNetworkManger = new EtwNetworkManger();
@@ -60,8 +59,6 @@ public partial class WebPanel : UserControl
         // 获取网络状态
         webSocketManager.RegisterHandler("etwNetworkManger", async (cmd, socket) =>
         {
-            Console.WriteLine("开始测试");
-
             // 创建监听实例
             // var etwNetworkManger = new EtwNetworkManger();
 
@@ -166,8 +163,8 @@ public partial class WebPanel : UserControl
 
 public class JsMessage
 {
-public string Channel { get; set; }
-public JsData Payload { get; set; }
+    public string Channel { get; set; }
+    public JsData Payload { get; set; }
 
     public override string ToString()
     {
@@ -177,8 +174,8 @@ public JsData Payload { get; set; }
 
 public class JsData
 {
-public string Title { get; set; }
-public string Content { get; set; }
+    public string Title { get; set; }
+    public string Content { get; set; }
 
     public override string ToString()
     {

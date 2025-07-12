@@ -1,16 +1,13 @@
 using System.Collections.Concurrent;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Common;
-using Common.Logger;
 using Common.Net.WebSocketConn;
 using Common.Utils;
 using Infrastructure.Models;
 using Infrastructure.utils;
 using Utils.ETW.Etw;
 
-namespace Shell;
+namespace Application;
 
 public class DispatchEngine
 {
