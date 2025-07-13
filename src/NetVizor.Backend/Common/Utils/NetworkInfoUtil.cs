@@ -10,7 +10,7 @@ namespace Common.Utils
     /// <summary>
     /// 网络监控帮助类 - 使用 .NET 内置的 NetworkInterface 类
     /// </summary>
-    public class NetworkMonitorHelper1
+    public class NetworkMonitorHelper
     {
         #region 公共类和方法
 

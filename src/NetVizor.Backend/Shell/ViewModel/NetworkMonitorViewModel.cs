@@ -11,7 +11,7 @@ namespace Shell.ViewModel;
 public class NetworkMonitorViewModel : INotifyPropertyChanged
 {
     private readonly DispatcherTimer _updateTimer;
-    private List<NetworkMonitorHelper1.NetworkInterface> _interfaces;
+    private List<NetworkMonitorHelper.NetworkInterface> _interfaces;
     private const string SELECT_ALL_TEXT = "选择全部";
     private readonly bool _isDesignMode;
 
@@ -29,9 +29,9 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
         }
     }
 
-    private NetworkInterfaceItem _selectedInterface;
+    private NetworkInterfaceItem? _selectedInterface;
 
-    public NetworkInterfaceItem SelectedInterface
+    public NetworkInterfaceItem? SelectedInterface
     {
         get => _selectedInterface;
         set
@@ -207,7 +207,7 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
         try
         {
             // 获取所有网络接口
-            _interfaces = NetworkMonitorHelper1.GetNetworkInterfaces();
+            _interfaces = NetworkMonitorHelper.GetNetworkInterfaces();
 
             // 清除现有项目
             NetworkInterfaces.Clear();
@@ -273,7 +273,7 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
         TotalSpeed = "0.00 B/s";
 
         // 重置统计数据，以便立即开始新的统计
-        NetworkMonitorHelper1.ResetStatistics();
+        NetworkMonitorHelper.ResetStatistics();
     }
 
     private void UpdateDesignTimeSpeed()
@@ -334,12 +334,12 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
 
         try
         {
-            NetworkMonitorHelper1.NetworkSpeed speed;
+            NetworkMonitorHelper.NetworkSpeed speed;
 
             if (SelectedInterface.IsSelectAll)
             {
                 // 计算所有接口的总网速
-                speed = NetworkMonitorHelper1.CalculateTotalSpeed();
+                speed = NetworkMonitorHelper.CalculateTotalSpeed();
                 StatusText = "显示所有网络接口的总网速";
             }
             else
@@ -348,7 +348,7 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
                 var networkInterface = SelectedInterface.NetworkInterface;
                 if (networkInterface != null)
                 {
-                    speed = NetworkMonitorHelper1.CalculateSpeedByName(networkInterface.Name);
+                    speed = NetworkMonitorHelper.CalculateSpeedByName(networkInterface.Name);
 
                     // 显示接口状态
                     string statusText = $"正在监控: {networkInterface.Name} ({networkInterface.TypeDescription})";
@@ -392,7 +392,7 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
         _updateTimer.Stop();
 
         // 重置统计数据
-        NetworkMonitorHelper1.ResetStatistics();
+        NetworkMonitorHelper.ResetStatistics();
 
         // 重新加载接口
         LoadNetworkInterfaces();
@@ -455,7 +455,7 @@ public class NetworkInterfaceItem
     public string TypeDescription { get; set; }
     public bool IsConnected { get; set; }
     public bool IsSelectAll { get; set; }
-    public NetworkMonitorHelper1.NetworkInterface NetworkInterface { get; set; }
+    public NetworkMonitorHelper.NetworkInterface? NetworkInterface { get; set; }
 }
 
 public class RelayCommand : ICommand
