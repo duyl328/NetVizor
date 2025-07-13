@@ -1,19 +1,13 @@
-using System.Windows.Controls;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Windows;
+using System.Windows.Controls;
 using Application.Utils;
 using Common;
 using Common.Logger;
-using Common.Net;
 using Common.Net.WebSocketConn;
 using Common.Utils;
 using Infrastructure.utils;
-using Utils.ETW;
-using Utils.ETW.Core;
-using Utils.ETW.Etw;
 
-namespace Shell.Views;
+namespace Shell.UserControls;
 
 public partial class WebPanel : UserControl
 {

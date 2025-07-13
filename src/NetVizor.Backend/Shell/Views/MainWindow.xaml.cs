@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace Shell;
+namespace Shell.Views;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml

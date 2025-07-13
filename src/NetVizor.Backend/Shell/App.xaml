@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:NetVizor"
              xmlns:converters="clr-namespace:NetVizor.Views.Converters"
-             StartupUri="MainWindow.xaml">
+             StartupUri="/Views/NetView.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter" />

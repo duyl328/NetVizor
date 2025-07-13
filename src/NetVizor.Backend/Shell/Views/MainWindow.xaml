@@ -1,0 +1,17 @@
+﻿<Window
+    x:Class="Shell.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:NetVizor"
+    xmlns:views1="clr-namespace:Shell.Views"
+    xmlns:userControls="clr-namespace:Shell.UserControls"
+    mc:Ignorable="d"
+    Title="NetVizor Dashboard"
+    Height="700"
+    Width="1300">
+    <Grid>
+        <userControls:WebPanel />
+    </Grid>
+</Window>

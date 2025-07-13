@@ -1,8 +1,7 @@
-using System.Runtime.InteropServices;
 using System.Windows;
 using Shell.Utils;
 
-namespace Shell.Views;
+namespace Shell.UserControls;
 
 public partial class TaskbarWindow : Window
 {
