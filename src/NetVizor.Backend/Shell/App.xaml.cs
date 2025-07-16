@@ -20,6 +20,7 @@ using Infrastructure.Models;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
 using Shell;
+using Shell.Views;
 using Utils.ETW.Etw;
 
 namespace NetVizor;
@@ -40,6 +41,14 @@ public partial class App : System.Windows.Application
 
         // 启动服务（如 WebSocket、HTTP、端口监听等）
         // StartMyServer();
+        
+        // NetView
+        // var netView = new NetView();
+        // netView.Show();
+        
+        var window = new NetView();
+        window.Show();
+
     }
 
     /// <summary>
@@ -477,3 +486,22 @@ public class SubscriptionAppInfo : SubscriptionInfo
     /// </summary>
     public string ApplicationPath { get; set; }
 }
+
+// 对于C#来说，我想获取windows中的防火墙的信息？我在开发一个网络监控软件，我想顺便把防火墙管理给集成进去，前端搭配vue3展示，应该也能很漂亮。
+// 所以第一步是获取防火墙信息，并且要是结构化的，能够转换为json发给前端的，所以我应该如何做？虽然有可能有些可能用不到，不过我希望尽可能多的获取到防火墙的信息。
+// 我要完成的功能包括：获取所有防火墙信息，打开或关闭防火墙，更改某个规则（重命名、开关等），删除某个规则，增加新的规则。
+// 基于此，对于它的C#后端，我们应该定义和设计这些API？
+// 我想要获取尽可能全面的信息，包括但不限于出站、进站、程序、协议、端口、远程端口、作用域、操作、配置文件、名称等。
+// 我想尽可能的复现windows官方的防火墙中的全部功能。
+// 我们首先需要定义其全部的API，比如读取，修改，新增，删除。
+//
+//
+//
+// 我在开发一个网络监控软件，我想顺便把防火墙管理给集成进去，前端搭配vue3展示，应该也能很漂亮。
+// 我现在后端已经能拿到了很多信息， 包括但不限于出站、进站、程序、协议、端口、远程端口、作用域、操作、配置文件、名称等。
+// 我想尽可能的复现windows官方的防火墙中的全部功能。但是UI要更好看。
+// 但是我也尽可能贴近官方防火墙设置的功能比如：比如windows官方防火墙的 “程序”-》自定义服务设置-》应用于下列服务，它的服务有很多，我们需要展示提供选择。
+// 再有，“协议和端口”中的协议类型也有很多，我们也要展示。比如它甚至能指定用户，可以选择用户和组。
+// 所以基于上，我们几乎是重写了防火墙的页面。
+// 我现在需要你基于这个能获取到的信息（可能有些我没提到），使用html完成一个防火墙的看板，要点击某个规则可以编辑，可以新增。
+// 新增的窗口和交互都需要完成，数据的展示也需要完成。你用假数据替代数据填充即可，要求界面要现代化，美观，优雅
