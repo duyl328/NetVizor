@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>防火墙管理中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+            --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            padding: 20px 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--success), var(--warning));
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            transition: all 0.3s;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -8px rgba(37, 99, 235, 0.3);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-icon.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .stat-icon.total {
+            background: rgba(37, 99, 235, 0.2);
+            color: var(--primary);
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .stat-icon.blocked {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-light);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Rules Table */
+        .rules-container {
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .rules-table th {
+            background: var(--surface-light);
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        .rules-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        .rules-table tr {
+            transition: all 0.3s;
+        }
+
+        .rules-table tr:hover {
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.1));
+            cursor: pointer;
+            transform: scale(1.01);
+        }
+
+        .rules-table tr:hover td {
+            color: var(--text);
+        }
+
+        .rule-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .rule-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.2));
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        .status-enabled {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-disabled {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .direction-badge {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .direction-in {
+            background: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .direction-out {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .action-cell {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn.edit {
+            background: rgba(37, 99, 235, 0.2);
+            color: var(--primary);
+        }
+
+        .action-btn.delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--border);
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            padding: 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--surface), var(--surface-light));
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .close-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            background: var(--surface-light);
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: var(--danger);
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(37, 99, 235, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .form-section h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--background);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            transform: translateY(-1px);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .radio-item, .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .radio-item:hover, .checkbox-item:hover {
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .radio-item input[type="radio"],
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+            transition: all 0.3s;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab:hover {
+            color: var(--text);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background: var(--background);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .port-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .service-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            background: var(--background);
+        }
+
+        .service-item {
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .service-item:hover {
+            background: var(--surface-light);
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            background: rgba(37, 99, 235, 0.02);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideInRight 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .notification.success {
+            background: var(--success);
+        }
+
+        .notification.error {
+            background: var(--danger);
+        }
+
+        .notification.info {
+            background: var(--primary);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface-light);
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: none;
+            }
+            
+            .filter-buttons {
+                justify-content: center;
+            }
+            
+            .rules-table {
+                font-size: 12px;
+            }
+            
+            .rules-table th,
+            .rules-table td {
+                padding: 10px;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .modal-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>防火墙管理中心</h1>
+            <p style="color: var(--text-secondary);">实时监控和管理网络安全规则</p>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-icon active">✓</div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: 600;" id="activeRules">42</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">活动规则</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon total">🛡️</div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: 600;" id="totalRules">68</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">总规则数</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon blocked">🚫</div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: 600;" id="blockedToday">1,247</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">今日阻止</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索规则名称、程序、端口...">
+            </div>
+            <div class="filter-buttons">
+                <button class="btn btn-secondary active" onclick="filterRules('all')">全部</button>
+                <button class="btn btn-secondary" onclick="filterRules('inbound')">入站</button>
+                <button class="btn btn-secondary" onclick="filterRules('outbound')">出站</button>
+                <button class="btn btn-primary" onclick="openModal()">
+                    <span>+</span> 新建规则
+                </button>
+            </div>
+        </div>
+
+        <!-- Rules Table -->
+        <div class="rules-container">
+            <table class="rules-table">
+                <thead>
+                    <tr>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>方向</th>
+                        <th>程序</th>
+                        <th>协议/端口</th>
+                        <th>作用域</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="rulesTableBody">
+                    <!-- Rules will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="ruleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新建防火墙规则</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <!-- Basic Settings -->
+                    <div class="form-section">
+                        <h3>🔧 基本设置</h3>
+                        <div class="form-group">
+                            <label>规则名称 *</label>
+                            <input type="text" class="form-control" id="ruleName" placeholder="输入规则名称" required>
+                        </div>
+                        <div class="form-group">
+                            <label>描述（可选）</label>
+                            <input type="text" class="form-control" id="ruleDescription" placeholder="输入规则描述">
+                        </div>
+                        <div class="form-group">
+                            <label>方向</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="direction" value="inbound" checked>
+                                    <span>入站</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="direction" value="outbound">
+                                    <span>出站</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>操作</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="action" value="allow" checked>
+                                    <span>允许连接</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="action" value="block">
+                                    <span>阻止连接</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="action" value="secure">
+                                    <span>允许安全连接</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Program Settings -->
+                    <div class="form-section">
+                        <h3>📱 程序设置</h3>
+                        <div class="tabs">
+                            <button type="button" class="tab active" onclick="switchTab('program', 'allPrograms')">所有程序</button>
+                            <button type="button" class="tab" onclick="switchTab('program', 'specificProgram')">指定程序</button>
+                            <button type="button" class="tab" onclick="switchTab('program', 'service')">服务</button>
+                        </div>
+                        <div class="tab-content active" id="allPrograms">
+                            <p style="color: var(--text-secondary);">此规则适用于所有程序</p>
+                        </div>
+                        <div class="tab-content" id="specificProgram">
+                            <div class="form-group">
+                                <label>程序路径</label>
+                                <input type="text" class="form-control" id="programPath" placeholder="浏览或输入程序路径">
+                                <button type="button" class="btn btn-secondary" style="margin-top: 10px;" onclick="browseProgramPath()">浏览...</button>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="service">
+                            <div class="form-group">
+                                <label>选择服务</label>
+                                <div class="service-list">
+                                    <div class="service-item">
+                                        <input type="checkbox" id="service1" value="windows_update">
+                                        <label for="service1">Windows Update</label>
+                                    </div>
+                                    <div class="service-item">
+                                        <input type="checkbox" id="service2" value="remote_desktop">
+                                        <label for="service2">远程桌面服务</label>
+                                    </div>
+                                    <div class="service-item">
+                                        <input type="checkbox" id="service3" value="file_sharing">
+                                        <label for="service3">文件和打印机共享</label>
+                                    </div>
+                                    <div class="service-item">
+                                        <input type="checkbox" id="service4" value="sql_server">
+                                        <label for="service4">SQL Server</label>
+                                    </div>
+                                    <div class="service-item">
+                                        <input type="checkbox" id="service5" value="iis">
+                                        <label for="service5">IIS</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Protocol and Ports -->
+                    <div class="form-section">
+                        <h3>🔌 协议和端口</h3>
+                        <div class="form-group">
+                            <label>协议类型</label>
+                            <select class="form-control" id="protocol" onchange="updatePortOptions()">
+                                <option value="any">任意</option>
+                                <option value="tcp">TCP</option>
+                                <option value="udp">UDP</option>
+                                <option value="icmpv4">ICMPv4</option>
+                                <option value="icmpv6">ICMPv6</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="portSettings" style="display: none;">
+                            <label>端口</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="portType" value="all" checked onchange="togglePortRange()">
+                                    <span>所有端口</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="portType" value="specific" onchange="togglePortRange()">
+                                    <span>特定端口</span>
+                                </label>
+                            </div>
+                            <div class="port-range" style="margin-top: 10px; display: none;" id="portRange">
+                                <input type="text" class="form-control" id="portInput" placeholder="端口或范围 (如: 80, 443, 1000-2000)" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scope -->
+                    <div class="form-section">
+                        <h3>🌐 作用域</h3>
+                        <div class="form-group">
+                            <label>本地IP地址</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="localIP" value="any" checked onchange="toggleLocalIP()">
+                                    <span>任何IP地址</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="localIP" value="specific" onchange="toggleLocalIP()">
+                                    <span>指定IP地址</span>
+                                </label>
+                            </div>
+                            <div id="localIPInput" style="margin-top: 10px; display: none;">
+                                <input type="text" class="form-control" placeholder="输入IP地址或范围">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>远程IP地址</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="remoteIP" value="any" checked onchange="toggleRemoteIP()">
+                                    <span>任何IP地址</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="remoteIP" value="specific" onchange="toggleRemoteIP()">
+                                    <span>指定IP地址</span>
+                                </label>
+                            </div>
+                            <div id="remoteIPInput" style="margin-top: 10px; display: none;">
+                                <input type="text" class="form-control" placeholder="输入IP地址或范围">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced -->
+                    <div class="form-section">
+                        <h3>⚙️ 高级设置</h3>
+                        <div class="form-group">
+                            <label>配置文件</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" name="profile" value="domain" checked>
+                                    <span>域</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" name="profile" value="private" checked>
+                                    <span>专用</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" name="profile" value="public" checked>
+                                    <span>公用</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>启用规则</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="enableRule" checked>
+                                    <span>创建后立即启用此规则</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveRule()">保存规则</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let rules = [
+            {
+                id: 1,
+                name: "Chrome 浏览器",
+                status: "enabled",
+                direction: "outbound",
+                program: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                protocol: "TCP",
+                port: "80, 443",
+                scope: "任意",
+                action: "允许"
+            },
+            {
+                id: 2,
+                name: "远程桌面 - 用户模式 (TCP-In)",
+                status: "enabled",
+                direction: "inbound",
+                program: "系统",
+                protocol: "TCP",
+                port: "3389",
+                scope: "任意",
+                action: "允许"
+            },
+            {
+                id: 3,
+                name: "文件和打印机共享 (SMB-In)",
+                status: "disabled",
+                direction: "inbound",
+                program: "系统",
+                protocol: "TCP",
+                port: "445",
+                scope: "本地子网",
+                action: "允许"
+            },
+            {
+                id: 4,
+                name: "Windows Update",
+                status: "enabled",
+                direction: "outbound",
+                program: "svchost.exe",
+                protocol: "TCP/UDP",
+                port: "80, 443",
+                scope: "任意",
+                action: "允许"
+            },
+            {
+                id: 5,
+                name: "SQL Server",
+                status: "enabled",
+                direction: "inbound",
+                program: "sqlservr.exe",
+                protocol: "TCP",
+                port: "1433",
+                scope: "指定IP",
+                action: "允许"
+            },
+            {
+                id: 6,
+                name: "阻止可疑端口",
+                status: "enabled",
+                direction: "inbound",
+                program: "所有程序",
+                protocol: "TCP",
+                port: "135, 139, 445",
+                scope: "任意",
+                action: "阻止"
+            },
+            {
+                id: 7,
+                name: "SSH 服务",
+                status: "enabled",
+                direction: "inbound",
+                program: "sshd.exe",
+                protocol: "TCP",
+                port: "22",
+                scope: "指定IP",
+                action: "允许"
+            },
+            {
+                id: 8,
+                name: "HTTP 服务器",
+                status: "enabled",
+                direction: "inbound",
+                program: "httpd.exe",
+                protocol: "TCP",
+                port: "80",
+                scope: "任意",
+                action: "允许"
+            }
+        ];
+
+        let currentFilter = 'all';
+        let editingRuleId = null;
+
+        // Initialize application
+        function init() {
+            renderRules(rules);
+            updateStats();
+            setupEventListeners();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredRules = rules.filter(rule => {
+                    const matchesSearch = rule.name.toLowerCase().includes(searchTerm) ||
+                                        rule.program.toLowerCase().includes(searchTerm) ||
+                                        rule.port.toLowerCase().includes(searchTerm) ||
+                                        rule.protocol.toLowerCase().includes(searchTerm);
+                    
+                    const matchesFilter = currentFilter === 'all' || rule.direction === currentFilter;
+                    
+                    return matchesSearch && matchesFilter;
+                });
+                renderRules(filteredRules);
+            });
+
+            // Close modal when clicking outside
+            document.getElementById('ruleModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+
+            // Prevent form submission
+            document.getElementById('ruleForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveRule();
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            const activeRules = rules.filter(rule => rule.status === 'enabled').length;
+            const totalRules = rules.length;
+            const blockedToday = Math.floor(Math.random() * 2000) + 1000; // Simulated data
+
+            document.getElementById('activeRules').textContent = activeRules;
+            document.getElementById('totalRules').textContent = totalRules;
+            document.getElementById('blockedToday').textContent = blockedToday.toLocaleString();
+        }
+
+        // Render rules table
+        function renderRules(rulesToRender) {
+            const tbody = document.getElementById('rulesTableBody');
+            tbody.innerHTML = '';
+
+            if (rulesToRender.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        没有找到匹配的规则
+                    </td>
+                `;
+                tbody.appendChild(row);
+                return;
+            }
+
+            rulesToRender.forEach(rule => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="rule-name">
+                            <div class="rule-icon">${rule.direction === 'inbound' ? '↓' : '↑'}</div>
+                            <span>${rule.name}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-${rule.status}">
+                            ${rule.status === 'enabled' ? '已启用' : '已禁用'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="direction-badge direction-${rule.direction === 'inbound' ? 'in' : 'out'}">
+                            ${rule.direction === 'inbound' ? '入站' : '出站'}
+                        </span>
+                    </td>
+                    <td>${rule.program.split('\\').pop()}</td>
+                    <td>${rule.protocol}${rule.port !== '任意' ? ': ' + rule.port : ''}</td>
+                    <td>${rule.scope}</td>
+                    <td>
+                        <div class="action-cell">
+                            <button class="action-btn edit" onclick="editRule(${rule.id})" title="编辑">
+                                ✏️
+                            </button>
+                            <button class="action-btn delete" onclick="deleteRule(${rule.id})" title="删除">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter rules
+        function filterRules(type) {
+            currentFilter = type;
+            
+            // Update button states
+            const buttons = document.querySelectorAll('.filter-buttons .btn-secondary');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Apply filter
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = rules;
+            
+            if (type !== 'all') {
+                filtered = rules.filter(r => r.direction === type);
+            }
+            
+            if (searchTerm) {
+                filtered = filtered.filter(rule => {
+                    return rule.name.toLowerCase().includes(searchTerm) ||
+                           rule.program.toLowerCase().includes(searchTerm) ||
+                           rule.port.toLowerCase().includes(searchTerm) ||
+                           rule.protocol.toLowerCase().includes(searchTerm);
+                });
+            }
+            
+            renderRules(filtered);
+        }
+
+        // Modal functions
+        function openModal(ruleId = null) {
+            editingRuleId = ruleId;
+            const modal = document.getElementById('ruleModal');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            if (ruleId) {
+                const rule = rules.find(r => r.id === ruleId);
+                modalTitle.textContent = '编辑防火墙规则';
+                populateForm(rule);
+            } else {
+                modalTitle.textContent = '新建防火墙规则';
+                resetForm();
+            }
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('ruleModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+            editingRuleId = null;
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('ruleForm').reset();
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector('.tab').classList.add('active');
+            document.querySelector('.tab-content').classList.add('active');
+            document.getElementById('portSettings').style.display = 'none';
+            document.getElementById('portRange').style.display = 'none';
+        }
+
+        function populateForm(rule) {
+            document.getElementById('ruleName').value = rule.name;
+            document.querySelector(`input[name="direction"][value="${rule.direction}"]`).checked = true;
+            document.querySelector(`input[name="action"][value="${rule.action.toLowerCase()}"]`).checked = true;
+            document.getElementById('enableRule').checked = rule.status === 'enabled';
+            
+            // Set protocol and ports
+            if (rule.protocol !== '任意') {
+                const protocolSelect = document.getElementById('protocol');
+                if (rule.protocol.includes('/')) {
+                    protocolSelect.value = 'custom';
+                } else {
+                    protocolSelect.value = rule.protocol.toLowerCase();
+                }
+                updatePortOptions();
+                
+                if (rule.port !== '任意') {
+                    document.querySelector('input[name="portType"][value="specific"]').checked = true;
+                    togglePortRange();
+                    document.getElementById('portInput').value = rule.port;
+                }
+            }
+        }
+
+        // Tab switching
+        function switchTab(group, tabId) {
+            // Remove active class from all tabs in this group
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and its content
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Protocol and port handling
+        function updatePortOptions() {
+            const protocol = document.getElementById('protocol').value;
+            const portSettings = document.getElementById('portSettings');
+            
+            if (protocol === 'tcp' || protocol === 'udp' || protocol === 'custom') {
+                portSettings.style.display = 'block';
+            } else {
+                portSettings.style.display = 'none';
+            }
+        }
+
+        function togglePortRange() {
+            const portType = document.querySelector('input[name="portType"]:checked').value;
+            const portRange = document.getElementById('portRange');
+            
+            if (portType === 'specific') {
+                portRange.style.display = 'flex';
+            } else {
+                portRange.style.display = 'none';
+            }
+        }
+
+        function toggleLocalIP() {
+            const ipType = document.querySelector('input[name="localIP"]:checked').value;
+            const ipInput = document.getElementById('localIPInput');
+            
+            if (ipType === 'specific') {
+                ipInput.style.display = 'block';
+            } else {
+                ipInput.style.display = 'none';
+            }
+        }
+
+        function toggleRemoteIP() {
+            const ipType = document.querySelector('input[name="remoteIP"]:checked').value;
+            const ipInput = document.getElementById('remoteIPInput');
+            
+            if (ipType === 'specific') {
+                ipInput.style.display = 'block';
+            } else {
+                ipInput.style.display = 'none';
+            }
+        }
+
+        // Rule management
+        function saveRule() {
+            const form = document.getElementById('ruleForm');
+            const formData = new FormData(form);
+            
+            // Validate required fields
+            const ruleName = document.getElementById('ruleName').value.trim();
+            if (!ruleName) {
+                showNotification('请输入规则名称', 'error');
+                return;
+            }
+            
+            // Create rule object
+            const rule = {
+                id: editingRuleId || Date.now(),
+                name: ruleName,
+                description: document.getElementById('ruleDescription').value,
+                status: document.getElementById('enableRule').checked ? 'enabled' : 'disabled',
+                direction: document.querySelector('input[name="direction"]:checked').value,
+                action: document.querySelector('input[name="action"]:checked').value,
+                program: getProgramValue(),
+                protocol: getProtocolValue(),
+                port: getPortValue(),
+                scope: getScopeValue()
+            };
+            
+            if (editingRuleId) {
+                // Update existing rule
+                const index = rules.findIndex(r => r.id === editingRuleId);
+                if (index !== -1) {
+                    rules[index] = rule;
+                    showNotification('规则已更新', 'success');
+                }
+            } else {
+                // Add new rule
+                rules.push(rule);
+                showNotification('规则已创建', 'success');
+            }
+            
+            renderRules(rules);
+            updateStats();
+            closeModal();
+        }
+
+        function editRule(ruleId) {
+            openModal(ruleId);
+        }
+
+        function deleteRule(ruleId) {
+            if (confirm('确定要删除这个规则吗？')) {
+                rules = rules.filter(r => r.id !== ruleId);
+                renderRules(rules);
+                updateStats();
+                showNotification('规则已删除', 'info');
+            }
+        }
+
+        // Helper functions for form data
+        function getProgramValue() {
+            const activeTab = document.querySelector('.tab.active').textContent;
+            if (activeTab === '所有程序') {
+                return '所有程序';
+            } else if (activeTab === '指定程序') {
+                return document.getElementById('programPath').value || '指定程序';
+            } else {
+                const selectedServices = Array.from(document.querySelectorAll('#service input[type="checkbox"]:checked'))
+                    .map(cb => cb.nextElementSibling.textContent).join(', ');
+                return selectedServices || '服务';
+            }
+        }
+
+        function getProtocolValue() {
+            const protocol = document.getElementById('protocol').value;
+            return protocol === 'any' ? '任意' : protocol.toUpperCase();
+        }
+
+        function getPortValue() {
+            const protocol = document.getElementById('protocol').value;
+            if (protocol === 'any' || protocol === 'icmpv4' || protocol === 'icmpv6') {
+                return '任意';
+            }
+            
+            const portType = document.querySelector('input[name="portType"]:checked');
+            if (!portType || portType.value === 'all') {
+                return '任意';
+            }
+            
+            return document.getElementById('portInput').value || '任意';
+        }
+
+        function getScopeValue() {
+            const localIP = document.querySelector('input[name="localIP"]:checked').value;
+            const remoteIP = document.querySelector('input[name="remoteIP"]:checked').value;
+            
+            if (localIP === 'any' && remoteIP === 'any') {
+                return '任意';
+            } else if (localIP === 'specific' || remoteIP === 'specific') {
+                return '指定IP';
+            } else {
+                return '本地子网';
+            }
+        }
+
+        function browseProgramPath() {
+            // Simulate file browser (in real implementation, this would open a file dialog)
+            const path = prompt('请输入程序路径:', 'C:\\Program Files\\');
+            if (path) {
+                document.getElementById('programPath').value = path;
+            }
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

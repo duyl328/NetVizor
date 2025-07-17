@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>防火墙规则管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-color: #ffffff;
+            --surface-color: #f8fafc;
+            --card-color: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --card-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border-color: #475569;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            background-color: var(--surface-color);
+        }
+
+        .app-header {
+            background-color: var(--card-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--surface-color);
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .firewall-status {
+            background-color: var(--card-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .status-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .status-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .status-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 1rem;
+            background-color: var(--surface-color);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .status-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .rules-section {
+            background-color: var(--card-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .filters-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .rules-table th,
+        .rules-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .rules-table th {
+            font-weight: 600;
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .rules-table tr:hover {
+            background-color: var(--surface-color);
+        }
+
+        .rule-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .rule-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-enabled {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-disabled {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+        }
+
+        .direction-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .direction-inbound {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary-color);
+        }
+
+        .direction-outbound {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .action-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .action-allow {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .action-block {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+        }
+
+        .actions-menu {
+            position: relative;
+            display: inline-block;
+        }
+
+        .actions-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .actions-btn:hover {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background-color: var(--card-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+        }
+
+        .form-section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .form-input {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-select {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+
+        .form-checkbox input {
+            width: 1rem;
+            height: 1rem;
+            accent-color: var(--primary-color);
+        }
+
+        .form-checkbox label {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .form-radio-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .form-radio {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-radio input {
+            width: 1rem;
+            height: 1rem;
+            accent-color: var(--primary-color);
+        }
+
+        .form-radio label {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .port-input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .port-input-group input {
+            flex: 1;
+        }
+
+        .port-range-separator {
+            color: var(--text-secondary);
+        }
+
+        .file-picker {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .file-picker input {
+            flex: 1;
+        }
+
+        .file-picker button {
+            padding: 0.5rem 1rem;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .file-picker button:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .multi-select {
+            position: relative;
+        }
+
+        .multi-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .multi-select-trigger:hover {
+            border-color: var(--primary-color);
+        }
+
+        .multi-select-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .multi-select-tag {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .multi-select-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            font-size: 0.875rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .pagination-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn:disabled:hover {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .icon {
+            width: 1rem;
+            height: 1rem;
+            fill: currentColor;
+        }
+
+        .collapsible-section {
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            padding: 1rem;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .collapsible-header:hover {
+            background-color: var(--border-color);
+        }
+
+        .collapsible-content {
+            padding: 1rem;
+            display: none;
+        }
+
+        .collapsible-content.active {
+            display: block;
+        }
+
+        .collapsible-toggle {
+            transition: transform 0.2s ease;
+        }
+
+        .collapsible-toggle.active {
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 1rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                flex-direction: column;
+            }
+
+            .modal {
+                width: 95%;
+            }
+
+            .rules-table {
+                font-size: 0.875rem;
+            }
+
+            .rules-table th,
+            .rules-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">防火墙规则管理</h1>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Firewall Status -->
+            <div class="firewall-status">
+                <div class="status-header">
+                    <h2 class="status-title">防火墙状态</h2>
+                    <label class="status-toggle">
+                        <input type="checkbox" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="status-info">
+                    <div class="status-item">
+                        <div class="status-value">127</div>
+                        <div class="status-label">总规则数</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value">89</div>
+                        <div class="status-label">已启用</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value">38</div>
+                        <div class="status-label">已禁用</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value">12</div>
+                        <div class="status-label">待审核</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rules Management -->
+            <div class="rules-section">
+                <div class="section-header">
+                    <h2 class="section-title">规则管理</h2>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-secondary">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                            </svg>
+                            导出规则
+                        </button>
+                        <button class="btn btn-primary" onclick="openModal('add-rule-modal')">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M12 4v16m8-8H4"/>
+                            </svg>
+                            新增规则
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-bar">
+                    <div class="filter-group">
+                        <label>搜索</label>
+                        <input type="text" class="filter-input" placeholder="规则名称或描述">
+                    </div>
+                    <div class="filter-group">
+                        <label>状态</label>
+                        <select class="filter-select">
+                            <option value="">全部</option>
+                            <option value="enabled">已启用</option>
+                            <option value="disabled">已禁用</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>方向</label>
+                        <select class="filter-select">
+                            <option value="">全部</option>
+                            <option value="inbound">入站</option>
+                            <option value="outbound">出站</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>操作</label>
+                        <select class="filter-select">
+                            <option value="">全部</option>
+                            <option value="allow">允许</option>
+                            <option value="block">阻止</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Rules Table -->
+                <table class="rules-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox">
+                            </th>
+                            <th>规则名称</th>
+                            <th>状态</th>
+                            <th>方向</th>
+                            <th>操作</th>
+                            <th>协议</th>
+                            <th>端口</th>
+                            <th>程序</th>
+                            <th>优先级</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="rule-name">Windows 远程桌面</div>
+                                <div class="rule-description">允许远程桌面连接访问</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-enabled">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    已启用
+                                </span>
+                            </td>
+                            <td>
+                                <span class="direction-badge direction-inbound">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                    </svg>
+                                    入站
+                                </span>
+                            </td>
+                            <td>
+                                <span class="action-badge action-allow">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    允许
+                                </span>
+                            </td>
+                            <td>TCP</td>
+                            <td>3389</td>
+                            <td>任何</td>
+                            <td>100</td>
+                            <td>
+                                <div class="actions-menu">
+                                    <button class="actions-btn" onclick="openModal('edit-rule-modal')">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="rule-name">HTTP 服务</div>
+                                <div class="rule-description">允许 HTTP 服务对外访问</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-enabled">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    已启用
+                                </span>
+                            </td>
+                            <td>
+                                <span class="direction-badge direction-inbound">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                    </svg>
+                                    入站
+                                </span>
+                            </td>
+                            <td>
+                                <span class="action-badge action-allow">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    允许
+                                </span>
+                            </td>
+                            <td>TCP</td>
+                            <td>80</td>
+                            <td>任何</td>
+                            <td>200</td>
+                            <td>
+                                <div class="actions-menu">
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="rule-name">恶意软件阻止</div>
+                                <div class="rule-description">阻止已知恶意软件的网络访问</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-disabled">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    已禁用
+                                </span>
+                            </td>
+                            <td>
+                                <span class="direction-badge direction-outbound">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                    </svg>
+                                    出站
+                                </span>
+                            </td>
+                            <td>
+                                <span class="action-badge action-block">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
+                                    </svg>
+                                    阻止
+                                </span>
+                            </td>
+                            <td>任何</td>
+                            <td>任何</td>
+                            <td>C:\temp\malware.exe</td>
+                            <td>50</td>
+                            <td>
+                                <div class="actions-menu">
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="rule-name">SSH 管理访问</div>
+                                <div class="rule-description">仅允许管理员网段的 SSH 访问</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-enabled">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    已启用
+                                </span>
+                            </td>
+                            <td>
+                                <span class="direction-badge direction-inbound">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                    </svg>
+                                    入站
+                                </span>
+                            </td>
+                            <td>
+                                <span class="action-badge action-allow">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    允许
+                                </span>
+                            </td>
+                            <td>TCP</td>
+                            <td>22</td>
+                            <td>任何</td>
+                            <td>150</td>
+                            <td>
+                                <div class="actions-menu">
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="rule-name">FTP 数据传输</div>
+                                <div class="rule-description">允许 FTP 服务的数据传输</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-enabled">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    已启用
+                                </span>
+                            </td>
+                            <td>
+                                <span class="direction-badge direction-inbound">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M7 16l-4-4m0 0l4-4m-4 4h18"/>
+                                    </svg>
+                                    入站
+                                </span>
+                            </td>
+                            <td>
+                                <span class="action-badge action-allow">
+                                    <svg class="icon" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    允许
+                                </span>
+                            </td>
+                            <td>TCP</td>
+                            <td>21, 20000-20100</td>
+                            <td>任何</td>
+                            <td>300</td>
+                            <td>
+                                <div class="actions-menu">
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="actions-btn">
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <button class="pagination-btn" disabled>
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                    </button>
+                    <button class="pagination-btn active">1</button>
+                    <button class="pagination-btn">2</button>
+                    <button class="pagination-btn">3</button>
+                    <button class="pagination-btn">4</button>
+                    <button class="pagination-btn">5</button>
+                    <button class="pagination-btn">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Add/Edit Rule Modal -->
+        <div id="add-rule-modal" class="modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title">新增防火墙规则</h3>
+                    <button class="modal-close" onclick="closeModal('add-rule-modal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tabs -->
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('basic-tab')">基本信息</div>
+                        <div class="tab" onclick="switchTab('conditions-tab')">匹配条件</div>
+                        <div class="tab" onclick="switchTab('network-tab')">网络属性</div>
+                        <div class="tab" onclick="switchTab('security-tab')">安全控制</div>
+                    </div>
+
+                    <!-- Basic Information Tab -->
+                    <div id="basic-tab" class="tab-content active">
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                基本信息
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">规则名称 *</label>
+                                    <input type="text" class="form-input" placeholder="输入规则名称" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">优先级</label>
+                                    <input type="number" class="form-input" value="100" min="1" max="1000">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">描述</label>
+                                    <textarea class="form-textarea" placeholder="输入规则描述"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">所属策略组</label>
+                                    <select class="form-select">
+                                        <option value="">默认策略组</option>
+                                        <option value="web-server">Web 服务器</option>
+                                        <option value="database">数据库服务</option>
+                                        <option value="management">管理服务</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                规则配置
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">规则状态</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="rule-enabled" checked>
+                                        <label for="rule-enabled">启用此规则</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">方向</label>
+                                    <div class="form-radio-group">
+                                        <div class="form-radio">
+                                            <input type="radio" id="direction-inbound" name="direction" value="inbound" checked>
+                                            <label for="direction-inbound">入站</label>
+                                        </div>
+                                        <div class="form-radio">
+                                            <input type="radio" id="direction-outbound" name="direction" value="outbound">
+                                            <label for="direction-outbound">出站</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">操作</label>
+                                    <div class="form-radio-group">
+                                        <div class="form-radio">
+                                            <input type="radio" id="action-allow" name="action" value="allow" checked>
+                                            <label for="action-allow">允许</label>
+                                        </div>
+                                        <div class="form-radio">
+                                            <input type="radio" id="action-block" name="action" value="block">
+                                            <label for="action-block">阻止</label>
+                                        </div>
+                                        <div class="form-radio">
+                                            <input type="radio" id="action-ask" name="action" value="ask">
+                                            <label for="action-ask">询问</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">记录日志</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="log-enabled">
+                                        <label for="log-enabled">启用日志记录</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                                自定义标签
+                            </h4>
+                            <div class="form-group">
+                                <label class="form-label">标签</label>
+                                <div class="multi-select">
+                                    <div class="multi-select-trigger">
+                                        <div class="multi-select-tags">
+                                            <div class="multi-select-tag">
+                                                Web服务
+                                                <button type="button">×</button>
+                                            </div>
+                                            <div class="multi-select-tag">
+                                                高优先级
+                                                <button type="button">×</button>
+                                            </div>
+                                        </div>
+                                        <svg class="icon" viewBox="0 0 24 24">
+                                            <path d="M6 9l6 6 6-6"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Matching Conditions Tab -->
+                    <div id="conditions-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                程序和服务
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">程序路径</label>
+                                    <div class="file-picker">
+                                        <input type="text" class="form-input" placeholder="选择程序路径或留空表示任何程序">
+                                        <button type="button">浏览</button>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">服务</label>
+                                    <div class="multi-select">
+                                        <div class="multi-select-trigger">
+                                            <div class="multi-select-tags">
+                                                <div class="multi-select-tag">
+                                                    HTTP
+                                                    <button type="button">×</button>
+                                                </div>
+                                                <div class="multi-select-tag">
+                                                    HTTPS
+                                                    <button type="button">×</button>
+                                                </div>
+                                            </div>
+                                            <svg class="icon" viewBox="0 0 24 24">
+                                                <path d="M6 9l6 6 6-6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                                </svg>
+                                协议和端口
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">协议</label>
+                                    <select class="form-select">
+                                        <option value="any">任意</option>
+                                        <option value="tcp">TCP</option>
+                                        <option value="udp">UDP</option>
+                                        <option value="icmpv4">ICMPv4</option>
+                                        <option value="icmpv6">ICMPv6</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">本地端口</label>
+                                    <div class="port-input-group">
+                                        <input type="text" class="form-input" placeholder="起始端口">
+                                        <span class="port-range-separator">-</span>
+                                        <input type="text" class="form-input" placeholder="结束端口">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">远程端口</label>
+                                    <div class="port-input-group">
+                                        <input type="text" class="form-input" placeholder="起始端口">
+                                        <span class="port-range-separator">-</span>
+                                        <input type="text" class="form-input" placeholder="结束端口">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                                IP 地址
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">本地地址</label>
+                                    <input type="text" class="form-input" placeholder="IP 地址或 CIDR，留空表示任何地址">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">远程地址</label>
+                                    <input type="text" class="form-input" placeholder="IP 地址或 CIDR，留空表示任何地址">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                用户和用户组
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">用户</label>
+                                    <div class="multi-select">
+                                        <div class="multi-select-trigger">
+                                            <div class="multi-select-tags">
+                                                <div class="multi-select-tag">
+                                                    Administrators
+                                                    <button type="button">×</button>
+                                                </div>
+                                            </div>
+                                            <svg class="icon" viewBox="0 0 24 24">
+                                                <path d="M6 9l6 6 6-6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">用户组</label>
+                                    <div class="multi-select">
+                                        <div class="multi-select-trigger">
+                                            <div class="multi-select-tags">
+                                                <div class="multi-select-tag">
+                                                    Power Users
+                                                    <button type="button">×</button>
+                                                </div>
+                                            </div>
+                                            <svg class="icon" viewBox="0 0 24 24">
+                                                <path d="M6 9l6 6 6-6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network Properties Tab -->
+                    <div id="network-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+                                </svg>
+                                网络配置文件
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">配置文件</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="profile-domain" checked>
+                                        <label for="profile-domain">域</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="profile-private" checked>
+                                        <label for="profile-private">专用</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="profile-public">
+                                        <label for="profile-public">公用</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                接口类型
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">接口类型</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="interface-wireless" checked>
+                                        <label for="interface-wireless">无线</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="interface-lan" checked>
+                                        <label for="interface-lan">局域网</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="interface-ras">
+                                        <label for="interface-ras">远程访问</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                </svg>
+                                作用范围
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">作用范围</label>
+                                    <div class="form-radio-group">
+                                        <div class="form-radio">
+                                            <input type="radio" id="scope-all" name="scope" value="all" checked>
+                                            <label for="scope-all">全部</label>
+                                        </div>
+                                        <div class="form-radio">
+                                            <input type="radio" id="scope-subnet" name="scope" value="subnet">
+                                            <label for="scope-subnet">子网</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">子网设置</label>
+                                    <input type="text" class="form-input" placeholder="192.168.1.0/24" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Control Tab -->
+                    <div id="security-tab" class="tab-content">
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                安全连接
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">连接安全</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="require-secure">
+                                        <label for="require-secure">要求安全连接</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">IPsec 策略</label>
+                                    <select class="form-select">
+                                        <option value="">无</option>
+                                        <option value="request">请求身份验证</option>
+                                        <option value="require">需要身份验证</option>
+                                        <option value="require-encrypt">需要加密</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                日志记录
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">日志级别</label>
+                                    <select class="form-select">
+                                        <option value="none">不记录</option>
+                                        <option value="basic">基本</option>
+                                        <option value="detailed">详细</option>
+                                        <option value="debug">调试</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">日志选项</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="log-success">
+                                        <label for="log-success">记录成功连接</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="log-failure" checked>
+                                        <label for="log-failure">记录失败连接</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="log-dropped" checked>
+                                        <label for="log-dropped">记录丢弃的数据包</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="form-section-title">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                高级选项
+                            </h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">边缘遍历</label>
+                                    <select class="form-select">
+                                        <option value="block">阻止</option>
+                                        <option value="allow">允许</option>
+                                        <option value="defer-to-app">延迟到应用程序</option>
+                                        <option value="defer-to-user">延迟到用户</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">其他选项</label>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="allow-bypass">
+                                        <label for="allow-bypass">允许绕过</label>
+                                    </div>
+                                    <div class="form-checkbox">
+                                        <input type="checkbox" id="defer-authorization">
+                                        <label for="defer-authorization">延迟授权</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('add-rule-modal')">取消</button>
+                    <button class="btn btn-primary">保存规则</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Rule Modal -->
+        <div id="edit-rule-modal" class="modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title">编辑防火墙规则</h3>
+                    <button class="modal-close" onclick="closeModal('edit-rule-modal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>编辑规则表单内容与新增规则相同...</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('edit-rule-modal')">取消</button>
+                    <button class="btn btn-primary">保存更改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Modal functionality
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Tab switching
+        function switchTab(tabId) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

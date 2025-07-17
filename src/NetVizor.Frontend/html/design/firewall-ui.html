@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>防火墙规则管理系统</title>
+    <style>
+        /* 基础变量定义 */
+        :root {
+            /* 浅色主题 */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-hover: #f3f4f6;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            --border-color: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #6366f1;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+        
+        /* 深色主题 */
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-hover: #475569;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --border-color: #334155;
+            --border-hover: #475569;
+            --primary-color: #3b82f6;
+            --primary-hover: #60a5fa;
+            --success-color: #34d399;
+            --warning-color: #fbbf24;
+            --danger-color: #f87171;
+            --info-color: #818cf8;
+        }
+        
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* 布局容器 */
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 顶部导航栏 */
+        .app-header {
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        /* 卡片组件 */
+        .card {
+            background-color: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-body {
+            padding: 24px;
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--border-hover);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        .btn-icon {
+            padding: 8px;
+            width: 36px;
+            height: 36px;
+        }
+        
+        /* 图标 */
+        .icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+        
+        /* 状态开关 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-tertiary);
+            transition: 0.3s;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .switch input:checked + .switch-slider {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .switch input:checked + .switch-slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* 搜索框 */
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+        
+        /* 下拉菜单 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            margin-top: 4px;
+            background-color: var(--bg-primary);
+            min-width: 200px;
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            z-index: 50;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .dropdown-item:hover {
+            background-color: var(--bg-hover);
+        }
+        
+        /* 表格样式 */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--bg-primary);
+        }
+        
+        .table th {
+            background-color: var(--bg-secondary);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        
+        .table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .table tr:hover td {
+            background-color: var(--bg-hover);
+        }
+        
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* 标签样式 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 20px;
+            line-height: 1;
+        }
+        
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .badge-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        
+        .badge-info {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--info-color);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal-content {
+            background-color: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            animation: slideUp 0.3s;
+        }
+        
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(90vh - 140px);
+        }
+        
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+        
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+        
+        /* 单选框和复选框 */
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .radio-item,
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .radio-item input[type="radio"],
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        .tab:hover {
+            color: var(--text-primary);
+        }
+        
+        .tab.active {
+            color: var(--primary-color);
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+        
+        /* 工具栏 */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-left,
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* 筛选器 */
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+        
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* 分页 */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        
+        .page-item {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+        
+        .page-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .page-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 16px;
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .toolbar-left,
+            .toolbar-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .table-wrapper {
+                border-radius: 0;
+                margin: 0 -16px;
+                border-left: none;
+                border-right: none;
+            }
+            
+            .modal-content {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+        }
+        
+        /* 折叠面板 */
+        .collapse {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        
+        .collapse-header {
+            padding: 16px 20px;
+            background-color: var(--bg-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.3s;
+        }
+        
+        .collapse-header:hover {
+            background-color: var(--bg-hover);
+        }
+        
+        .collapse-title {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .collapse-content {
+            padding: 20px;
+            background-color: var(--bg-primary);
+            display: none;
+        }
+        
+        .collapse.active .collapse-content {
+            display: block;
+        }
+        
+        /* 端口输入组 */
+        .port-input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .port-input {
+            flex: 1;
+        }
+        
+        /* 地址输入组 */
+        .address-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .address-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background-color: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+        
+        /* 用户选择器 */
+        .user-selector {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 8px;
+        }
+        
+        .user-item {
+            padding: 10px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .user-item:hover {
+            background-color: var(--bg-hover);
+        }
+        
+        .user-item.selected {
+            background-color: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="app-container">
+        <!-- 顶部导航栏 -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19,11H13V5a1,1,0,0,0-2,0v6H5a1,1,0,0,0,0,2h6v6a1,1,0,0,0,2,0V13h6a1,1,0,0,0,0-2Z"/>
+                    </svg>
+                    <h1>防火墙规则管理</h1>
+                </div>
+                <div class="header-actions">
+                    <!-- 防火墙总开关 -->
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 8px 16px; background-color: var(--bg-secondary); border-radius: var(--radius-md);">
+                        <span style="font-size: 14px; color: var(--text-secondary);">防火墙状态</span>
+                        <label class="switch">
+                            <input type="checkbox" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <!-- 主题切换 -->
+                    <button class="btn btn-icon btn-secondary" onclick="toggleTheme()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 统计卡片 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                <div class="card">
+                    <div class="card-body" style="padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">总规则数</div>
+                                <div style="font-size: 28px; font-weight: 600; color: var(--text-primary);">127</div>
+                            </div>
+                            <div style="width: 48px; height: 48px; background-color: rgba(59, 130, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <svg class="icon" style="color: var(--primary-color);" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body" style="padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">启用规则</div>
+                                <div style="font-size: 28px; font-weight: 600; color: var(--success-color);">89</div>
+                            </div>
+                            <div style="width: 48px; height: 48px; background-color: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <svg class="icon" style="color: var(--success-color);" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm5.707,7.293-8,8a1,1,0,0,1-1.414,0l-3-3a1,1,0,1,1,1.414-1.414L9,15.172l7.293-7.293a1,1,0,0,1,1.414,1.414Z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body" style="padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">禁用规则</div>
+                                <div style="font-size: 28px; font-weight: 600; color: var(--text-tertiary);">38</div>
+                            </div>
+                            <div style="width: 48px; height: 48px; background-color: rgba(148, 163, 184, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <svg class="icon" style="color: var(--text-tertiary);" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/>
+                                    <path d="M12,7a1,1,0,0,0-1,1v8a1,1,0,0,0,2,0V8A1,1,0,0,0,12,7Z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body" style="padding: 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">阻止连接</div>
+                                <div style="font-size: 28px; font-weight: 600; color: var(--danger-color);">1,247</div>
+                            </div>
+                            <div style="width: 48px; height: 48px; background-color: rgba(239, 68, 68, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <svg class="icon" style="color: var(--danger-color);" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/>
+                                    <path d="M15.707,8.293a1,1,0,0,0-1.414,0L12,10.586,9.707,8.293A1,1,0,0,0,8.293,9.707L10.586,12l-2.293,2.293a1,1,0,1,0,1.414,1.414L12,13.414l2.293,2.293a1,1,0,0,0,1.414-1.414L13.414,12l2.293-2.293A1,1,0,0,0,15.707,8.293Z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 规则列表卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4,6H20a1,1,0,0,0,0-2H4A1,1,0,0,0,4,6ZM20,11H4a1,1,0,0,0,0,2H20a1,1,0,0,0,0-2Zm0,7H4a1,1,0,0,0,0,2H20a1,1,0,0,0,0-2Z"/>
+                        </svg>
+                        防火墙规则列表
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- 工具栏 -->
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <button class="btn btn-primary" onclick="document.getElementById('ruleModal').classList.add('show')">
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19,11H13V5a1,1,0,0,0-2,0v6H5a1,1,0,0,0,0,2h6v6a1,1,0,0,0,2,0V13h6a1,1,0,0,0,0-2Z"/>
+                                </svg>
+                                新建规则
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary">
+                                    批量操作
+                                    <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M7,10l5,5,5-5Z"/>
+                                    </svg>
+                                </button>
+                                <div class="dropdown-content">
+                                    <div class="dropdown-item">
+                                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm5.707,7.293-8,8a1,1,0,0,1-1.414,0l-3-3a1,1,0,1,1,1.414-1.414L9,15.172l7.293-7.293a1,1,0,0,1,1.414,1.414Z"/>
+                                        </svg>
+                                        启用选中
+                                    </div>
+                                    <div class="dropdown-item">
+                                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/>
+                                            <path d="M12,7a1,1,0,0,0-1,1v8a1,1,0,0,0,2,0V8A1,1,0,0,0,12,7Z"/>
+                                        </svg>
+                                        禁用选中
+                                    </div>
+                                    <div class="dropdown-item" style="color: var(--danger-color);">
+                                        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M21,4H8A1,1,0,0,0,8,6H20V19a1,1,0,0,0,2,0V5A1,1,0,0,0,21,4Z"/>
+                                            <path d="M4,8H16a1,1,0,0,1,1,1V21a1,1,0,0,1-1,1H4a1,1,0,0,1-1-1V9A1,1,0,0,1,4,8ZM6,12v6a1,1,0,0,0,2,0V12A1,1,0,0,0,6,12Zm4,0v6a1,1,0,0,0,2,0V12a1,1,0,0,0-2,0Zm4,0v6a1,1,0,0,0,2,0V12a1,1,0,0,0-2,0Z"/>
+                                        </svg>
+                                        删除选中
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="toolbar-right">
+                            <div class="search-box">
+                                <svg class="icon search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                                <input type="text" class="search-input" placeholder="搜索规则名称...">
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="4" y1="21" x2="4" y2="14"></line>
+                                        <line x1="4" y1="10" x2="4" y2="3"></line>
+                                        <line x1="12" y1="21" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12" y2="3"></line>
+                                        <line x1="20" y1="21" x2="20" y2="16"></line>
+                                        <line x1="20" y1="12" x2="20" y2="3"></line>
+                                        <line x1="1" y1="14" x2="7" y2="14"></line>
+                                        <line x1="9" y1="8" x2="15" y2="8"></line>
+                                        <line x1="17" y1="16" x2="23" y2="16"></line>
+                                    </svg>
+                                    筛选
+                                </button>
+                                <div class="dropdown-content" style="width: 300px; padding: 16px;">
+                                    <div class="form-group">
+                                        <label class="form-label">方向</label>
+                                        <div class="checkbox-group">
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" checked>
+                                                <span>入站</span>
+                                            </label>
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" checked>
+                                                <span>出站</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">操作</label>
+                                        <div class="checkbox-group">
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" checked>
+                                                <span>允许</span>
+                                            </label>
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" checked>
+                                                <span>阻止</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label class="form-label">配置文件</label>
+                                        <select class="form-select">
+                                            <option>全部</option>
+                                            <option>域</option>
+                                            <option>专用</option>
+                                            <option>公用</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 表格 -->
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox">
+                                    </th>
+                                    <th>规则名称</th>
+                                    <th>状态</th>
+                                    <th>方向</th>
+                                    <th>操作</th>
+                                    <th>程序/服务</th>
+                                    <th>协议</th>
+                                    <th>端口</th>
+                                    <th>配置文件</th>
+                                    <th style="width: 120px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox"></td>
+                                    <td>
+                                        <div style="font-weight: 500;">Windows 远程桌面</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">允许远程桌面连接</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">启用</span>
+                                    </td>
+                                    <td>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M11,16.414V7.828L8.707,10.121a1,1,0,0,1-1.414-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L13,7.828v8.586a1,1,0,0,1-2,0ZM20,12v7a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V12a1,1,0,0,1,2,0v6H18V12a1,1,0,0,1,2,0Z"/>
+                                            </svg>
+                                            入站
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">允许</span>
+                                    </td>
+                                    <td>系统服务</td>
+                                    <td>TCP</td>
+                                    <td>3389</td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <span class="badge badge-info">域</span>
+                                            <span class="badge badge-info">专用</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button class="btn btn-sm btn-secondary" onclick="document.getElementById('ruleModal').classList.add('show')">编辑</button>
+                                            <button class="btn btn-sm btn-danger">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td><input type="checkbox"></td>
+                                    <td>
+                                        <div style="font-weight: 500;">Microsoft Edge</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">允许浏览器访问网络</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">启用</span>
+                                    </td>
+                                    <td>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M13,7.828V16.414a1,1,0,0,1-2,0V7.828L8.707,10.121a1,1,0,0,1-1.414-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,0,1-1.414,1.414ZM20,12v7a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V12a1,1,0,0,1,2,0v6H18V12a1,1,0,0,1,2,0Z"/>
+                                            </svg>
+                                            出站
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">允许</span>
+                                    </td>
+                                    <td>C:\Program Files\Microsoft\Edge\msedge.exe</td>
+                                    <td>任意</td>
+                                    <td>任意</td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <span class="badge badge-info">域</span>
+                                            <span class="badge badge-info">专用</span>
+                                            <span class="badge badge-info">公用</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button class="btn btn-sm btn-secondary">编辑</button>
+                                            <button class="btn btn-sm btn-danger">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td><input type="checkbox"></td>
+                                    <td>
+                                        <div style="font-weight: 500;">阻止 Telnet</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">安全策略：阻止 Telnet 连接</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">启用</span>
+                                    </td>
+                                    <td>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M11,16.414V7.828L8.707,10.121a1,1,0,0,1-1.414-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L13,7.828v8.586a1,1,0,0,1-2,0ZM20,12v7a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V12a1,1,0,0,1,2,0v6H18V12a1,1,0,0,1,2,0Z"/>
+                                            </svg>
+                                            入站
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-danger">阻止</span>
+                                    </td>
+                                    <td>任意</td>
+                                    <td>TCP</td>
+                                    <td>23</td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <span class="badge badge-info">域</span>
+                                            <span class="badge badge-info">专用</span>
+                                            <span class="badge badge-info">公用</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button class="btn btn-sm btn-secondary">编辑</button>
+                                            <button class="btn btn-sm btn-danger">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td><input type="checkbox"></td>
+                                    <td>
+                                        <div style="font-weight: 500;">文件和打印机共享</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">允许局域网内文件共享</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background-color: rgba(148, 163, 184, 0.1); color: var(--text-tertiary); border: 1px solid rgba(148, 163, 184, 0.2);">禁用</span>
+                                    </td>
+                                    <td>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M11,16.414V7.828L8.707,10.121a1,1,0,0,1-1.414-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L13,7.828v8.586a1,1,0,0,1-2,0ZM20,12v7a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V12a1,1,0,0,1,2,0v6H18V12a1,1,0,0,1,2,0Z"/>
+                                            </svg>
+                                            入站
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">允许</span>
+                                    </td>
+                                    <td>系统服务</td>
+                                    <td>TCP</td>
+                                    <td>445, 139</td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <span class="badge badge-info">专用</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button class="btn btn-sm btn-secondary">编辑</button>
+                                            <button class="btn btn-sm btn-danger">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td><input type="checkbox"></td>
+                                    <td>
+                                        <div style="font-weight: 500;">HTTP 服务器</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">允许 Web 服务器接收请求</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">启用</span>
+                                    </td>
+                                    <td>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M11,16.414V7.828L8.707,10.121a1,1,0,0,1-1.414-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L13,7.828v8.586a1,1,0,0,1-2,0ZM20,12v7a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V12a1,1,0,0,1,2,0v6H18V12a1,1,0,0,1,2,0Z"/>
+                                            </svg>
+                                            入站
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-success">允许</span>
+                                    </td>
+                                    <td>任意</td>
+                                    <td>TCP</td>
+                                    <td>80, 443</td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <span class="badge badge-info">域</span>
+                                            <span class="badge badge-info">专用</span>
+                                            <span class="badge badge-info">公用</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button class="btn btn-sm btn-secondary">编辑</button>
+                                            <button class="btn btn-sm btn-danger">删除</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div class="pagination">
+                        <button class="page-item">
+                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M15.707,17.293,11.414,13l4.293-4.293a1,1,0,0,0-1.414-1.414l-5,5a1,1,0,0,0,0,1.414l5,5a1,1,0,0,0,1.414-1.414Z"/>
+                            </svg>
+                        </button>
+                        <button class="page-item active">1</button>
+                        <button class="page-item">2</button>
+                        <button class="page-item">3</button>
+                        <button class="page-item">...</button>
+                        <button class="page-item">12</button>
+                        <button class="page-item">
+                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8.293,17.293a1,1,0,0,0,1.414,1.414l5-5a1,1,0,0,0,0-1.414l-5-5A1,1,0,0,0,8.293,6.707L12.586,11,8.293,15.293Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 规则编辑模态框 -->
+    <div id="ruleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">新建防火墙规则</h3>
+                <button class="btn btn-icon btn-secondary" onclick="this.closest('.modal').classList.remove('show')">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.707,5.293a1,1,0,0,0-1.414,0L12,10.586,6.707,5.293A1,1,0,0,0,5.293,6.707L10.586,12l-5.293,5.293a1,1,0,1,0,1.414,1.414L12,13.414l5.293,5.293a1,1,0,0,0,1.414-1.414L13.414,12l5.293-5.293A1,1,0,0,0,18.707,5.293Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- 标签页 -->
+                <div class="tabs">
+                    <div class="tab active">基本信息</div>
+                    <div class="tab">匹配条件</div>
+                    <div class="tab">网络属性</div>
+                    <div class="tab">安全控制</div>
+                </div>
+                
+                <!-- 基本信息 -->
+                <div class="tab-content">
+                    <div class="collapse active">
+                        <div class="collapse-header">
+                            <span class="collapse-title">规则标识</span>
+                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M7,10l5,5,5-5Z"/>
+                            </svg>
+                        </div>
+                        <div class="collapse-content">
+                            <div class="form-group">
+                                <label class="form-label">规则名称 *</label>
+                                <input type="text" class="form-input" placeholder="输入规则名称">
+                                <div class="form-hint">请输入一个描述性的名称，便于识别规则用途</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">描述</label>
+                                <textarea class="form-textarea" placeholder="输入规则描述"></textarea>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label class="form-label">优先级</label>
+                                    <input type="number" class="form-input" value="100" min="0" max="999">
+                                    <div class="form-hint">数值越小优先级越高</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">策略组</label>
+                                    <select class="form-select">
+                                        <option>默认组</option>
+                                        <option>安全策略组</option>
+                                        <option>应用程序组</option>
+                                        <option>自定义组</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">标签</label>
+                                <input type="text" class="form-input" placeholder="输入标签，用逗号分隔">
+                                <div class="form-hint">例如: Web服务, 生产环境, 高优先级</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="collapse">
+                        <div class="collapse-header">
+                            <span class="collapse-title">规则行为</span>
+                            <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M7,10l5,5,5-5Z"/>
+                            </svg>
+                        </div>
+                        <div class="collapse-content">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label class="form-label">状态</label>
+                                    <div class="radio-group">
+                                        <label class="radio-item">
+                                            <input type="radio" name="status" checked>
+                                            <span>启用</span>
+                                        </label>
+                                        <label class="radio-item">
+                                            <input type="radio" name="status">
+                                            <span>禁用</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">方向</label>
+                                    <div class="radio-group">
+                                        <label class="radio-item">
+                                            <input type="radio" name="direction" checked>
+                                            <span>入站</span>
+                                        </label>
+                                        <label class="radio-item">
+                                            <input type="radio" name="direction">
+                                            <span>出站</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">操作</label>
+                                    <div class="radio-group">
+                                        <label class="radio-item">
+                                            <input type="radio" name="action" checked>
+                                            <span>允许</span>
+                                        </label>
+                                        <label class="radio-item">
+                                            <input type="radio" name="action">
+                                            <span>阻止</span>
+                                        </label>
+                                        <label class="radio-item">
+                                            <input type="radio" name="action">
+                                            <span>询问</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-item">
+                                    <input type="checkbox">
+                                    <span>记录匹配的连接日志</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 其他标签页内容暂时隐藏 -->
+                
+                <!-- 程序/服务选择器示例 -->
+                <div class="collapse">
+                    <div class="collapse-header">
+                        <span class="collapse-title">程序和服务</span>
+                        <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7,10l5,5,5-5Z"/>
+                        </svg>
+                    </div>
+                    <div class="collapse-content">
+                        <div class="form-group">
+                            <label class="form-label">应用程序</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="app" checked>
+                                    <span>所有程序</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="app">
+                                    <span>指定程序</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">程序路径</label>
+                            <div style="display: flex; gap: 12px;">
+                                <input type="text" class="form-input" placeholder="C:\Program Files\..." style="flex: 1;">
+                                <button class="btn btn-secondary">浏览</button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">系统服务</label>
+                            <div class="search-box" style="margin-bottom: 12px;">
+                                <svg class="icon search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                                <input type="text" class="search-input" placeholder="搜索服务...">
+                            </div>
+                            
+                            <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); max-height: 200px; overflow-y: auto;">
+                                <label class="checkbox-item" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); display: flex;">
+                                    <input type="checkbox">
+                                    <div style="margin-left: 8px;">
+                                        <div>Windows Update</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">wuauserv - 自动更新服务</div>
+                                    </div>
+                                </label>
+                                <label class="checkbox-item" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); display: flex;">
+                                    <input type="checkbox" checked>
+                                    <div style="margin-left: 8px;">
+                                        <div>远程桌面服务</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">TermService - 允许远程连接</div>
+                                    </div>
+                                </label>
+                                <label class="checkbox-item" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); display: flex;">
+                                    <input type="checkbox">
+                                    <div style="margin-left: 8px;">
+                                        <div>Windows Defender</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">WinDefend - 防病毒服务</div>
+                                    </div>
+                                </label>
+                                <label class="checkbox-item" style="padding: 10px 16px; display: flex;">
+                                    <input type="checkbox">
+                                    <div style="margin-left: 8px;">
+                                        <div>打印后台处理程序</div>
+                                        <div style="font-size: 12px; color: var(--text-tertiary);">Spooler - 管理打印作业</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 端口配置示例 -->
+                <div class="collapse">
+                    <div class="collapse-header">
+                        <span class="collapse-title">协议和端口</span>
+                        <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7,10l5,5,5-5Z"/>
+                        </svg>
+                    </div>
+                    <div class="collapse-content">
+                        <div class="form-group">
+                            <label class="form-label">协议类型</label>
+                            <select class="form-select">
+                                <option>任意</option>
+                                <option selected>TCP</option>
+                                <option>UDP</option>
+                                <option>ICMPv4</option>
+                                <option>ICMPv6</option>
+                                <option>自定义</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">本地端口</label>
+                                <div class="radio-group">
+                                    <label class="radio-item">
+                                        <input type="radio" name="local-port" checked>
+                                        <span>所有端口</span>
+                                    </label>
+                                    <label class="radio-item">
+                                        <input type="radio" name="local-port">
+                                        <span>指定端口</span>
+                                    </label>
+                                </div>
+                                <div class="port-input-group" style="margin-top: 12px;">
+                                    <input type="text" class="form-input port-input" placeholder="例: 80, 443, 8080-8090">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">远程端口</label>
+                                <div class="radio-group">
+                                    <label class="radio-item">
+                                        <input type="radio" name="remote-port" checked>
+                                        <span>所有端口</span>
+                                    </label>
+                                    <label class="radio-item">
+                                        <input type="radio" name="remote-port">
+                                        <span>指定端口</span>
+                                    </label>
+                                </div>
+                                <div class="port-input-group" style="margin-top: 12px;">
+                                    <input type="text" class="form-input port-input" placeholder="例: 80, 443, 8080-8090">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 用户选择器示例 -->
+                <div class="collapse">
+                    <div class="collapse-header">
+                        <span class="collapse-title">用户和用户组</span>
+                        <svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7,10l5,5,5-5Z"/>
+                        </svg>
+                    </div>
+                    <div class="collapse-content">
+                        <div class="form-group">
+                            <label class="form-label">应用到</label>
+                            <div class="radio-group">
+                                <label class="radio-item">
+                                    <input type="radio" name="user-scope" checked>
+                                    <span>所有用户</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="user-scope">
+                                    <span>指定用户/组</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">选择用户或用户组</label>
+                            <div class="user-selector">
+                                <div class="user-item">
+                                    <span>Everyone</span>
+                                    <input type="checkbox">
+                                </div>
+                                <div class="user-item">
+                                    <span>Administrators</span>
+                                    <input type="checkbox" checked>
+                                </div>
+                                <div class="user-item">
+                                    <span>Users</span>
+                                    <input type="checkbox">
+                                </div>
+                                <div class="user-item">
+                                    <span>Network Service</span>
+                                    <input type="checkbox">
+                                </div>
+                                <div class="user-item">
+                                    <span>Local Service</span>
+                                    <input type="checkbox">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">自定义 SID</label>
+                            <input type="text" class="form-input" placeholder="S-1-5-21-...">
+                            <div class="form-hint">输入安全标识符 (SID) 或用户名</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('show')">取消</button>
+                <button class="btn btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9,20.42l-6.21-6.21a1,1,0,0,1,0-1.42l1.42-1.42a1,1,0,0,1,1.41,0L9,14.77l9.38-9.38a1,1,0,0,1,1.41,0l1.42,1.42a1,1,0,0,1,0,1.41Z"/>
+                    </svg>
+                    保存规则
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 主题切换（仅用于演示）
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            body.setAttribute('data-theme', currentTheme === 'dark' ? 'light' : 'dark');
+        }
+        
+        // 折叠面板切换（仅用于演示）
+        document.querySelectorAll('.collapse-header').forEach(header => {
+            header.addEventListener('click', function() {
+                this.parentElement.classList.toggle('active');
+            });
+        });
+        
+        // 标签页切换（仅用于演示）
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

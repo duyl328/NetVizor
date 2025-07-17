@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>防火墙管理中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+            --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            padding: 20px 30px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stat-icon.active {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .stat-icon.total {
+            background: rgba(37, 99, 235, 0.2);
+            color: var(--primary);
+        }
+
+        .stat-icon.blocked {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-light);
+        }
+
+        .btn-secondary.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Rules Table */
+        .rules-container {
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .rules-table th {
+            background: var(--surface-light);
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rules-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+            font-size: 14px;
+        }
+
+        .rules-table tr:hover {
+            background: rgba(37, 99, 235, 0.05);
+            cursor: pointer;
+        }
+
+        .rules-table tr:hover td {
+            color: var(--text);
+        }
+
+        .rule-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rule-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-enabled {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-disabled {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .direction-badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .direction-in {
+            background: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+        }
+
+        .direction-out {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            padding: 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: var(--surface-light);
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: var(--danger);
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-section h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .radio-item, .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .radio-item input[type="radio"],
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        .tab.active {
+            color: var(--primary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .port-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .service-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            background: var(--background);
+        }
+
+        .service-item {
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .service-item:hover {
+            background: var(--surface-light);
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface-light);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>防火墙管理中心</h1>
+            <p style="color: var(--text-secondary);">实时监控和管理网络安全规则</p>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-icon active">✓</div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: 600;">42</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">活动规则</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon total">🛡️</div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: 600;">68</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">总规则数</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon blocked">🚫</div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: 600;">1,247</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">今日阻止</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" placeholder="搜索规则名称、程序、端口...">
+            </div>
+            <div class="filter-buttons">
+                <button class="btn btn-secondary active" onclick="filterRules('all')">全部</button>
+                <button class="btn btn-secondary" onclick="filterRules('inbound')">入站</button>
+                <button class="btn btn-secondary" onclick="filterRules('outbound')">出站</button>
+                <button class="btn btn-primary" onclick="openModal()">
+                    <span>+</span> 新建规则
+                </button>
+            </div>
+        </div>
+
+        <!-- Rules Table -->
+        <div class="rules-container">
+            <table class="rules-table">
+                <thead>
+                    <tr>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>方向</th>
+                        <th>程序</th>
+                        <th>协议/端口</th>
+                        <th>作用域</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="rulesTableBody">
+                    <!-- Rules will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="ruleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新建防火墙规则</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Basic Settings -->
+                <div class="form-section">
+                    <h3>🔧 基本设置</h3>
+                    <div class="form-group">
+                        <label>规则名称</label>
+                        <input type="text" class="form-control" id="ruleName" placeholder="输入规则名称">
+                    </div>
+                    <div class="form-group">
+                        <label>描述（可选）</label>
+                        <input type="text" class="form-control" id="ruleDescription" placeholder="输入规则描述">
+                    </div>
+                    <div class="form-group">
+                        <label>方向</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="direction" value="inbound" checked>
+                                <span>入站</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="direction" value="outbound">
+                                <span>出站</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>操作</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="action" value="allow" checked>
+                                <span>允许连接</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="action" value="block">
+                                <span>阻止连接</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="action" value="secure">
+                                <span>允许安全连接</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Program Settings -->
+                <div class="form-section">
+                    <h3>📱 程序设置</h3>
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab('program', 'allPrograms')">所有程序</button>
+                        <button class="tab" onclick="switchTab('program', 'specificProgram')">指定程序</button>
+                        <button class="tab" onclick="switchTab('program', 'service')">服务</button>
+                    </div>
+                    <div class="tab-content active" id="allPrograms">
+                        <p style="color: var(--text-secondary);">此规则适用于所有程序</p>
+                    </div>
+                    <div class="tab-content" id="specificProgram">
+                        <div class="form-group">
+                            <label>程序路径</label>
+                            <input type="text" class="form-control" placeholder="浏览或输入程序路径">
+                        </div>
+                    </div>
+                    <div class="tab-content" id="service">
+                        <div class="form-group">
+                            <label>选择服务</label>
+                            <div class="service-list">
+                                <div class="service-item">
+                                    <input type="checkbox" id="service1">
+                                    <label for="service1">Windows Update</label>
+                                </div>
+                                <div class="service-item">
+                                    <input type="checkbox" id="service2">
+                                    <label for="service2">远程桌面服务</label>
+                                </div>
+                                <div class="service-item">
+                                    <input type="checkbox" id="service3">
+                                    <label for="service3">文件和打印机共享</label>
+                                </div>
+                                <div class="service-item">
+                                    <input type="checkbox" id="service4">
+                                    <label for="service4">SQL Server</label>
+                                </div>
+                                <div class="service-item">
+                                    <input type="checkbox" id="service5">
+                                    <label for="service5">IIS</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Protocol and Ports -->
+                <div class="form-section">
+                    <h3>🔌 协议和端口</h3>
+                    <div class="form-group">
+                        <label>协议类型</label>
+                        <select class="form-control" id="protocol" onchange="updatePortOptions()">
+                            <option value="any">任意</option>
+                            <option value="tcp">TCP</option>
+                            <option value="udp">UDP</option>
+                            <option value="icmpv4">ICMPv4</option>
+                            <option value="icmpv6">ICMPv6</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="portSettings" style="display: none;">
+                        <label>端口</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="portType" value="all" checked>
+                                <span>所有端口</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="portType" value="specific">
+                                <span>特定端口</span>
+                            </label>
+                        </div>
+                        <div class="port-range" style="margin-top: 10px; display: none;" id="portRange">
+                            <input type="text" class="form-control" placeholder="端口或范围 (如: 80, 443, 1000-2000)" style="flex: 1;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scope -->
+                <div class="form-section">
+                    <h3>🌐 作用域</h3>
+                    <div class="form-group">
+                        <label>本地IP地址</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="localIP" value="any" checked>
+                                <span>任何IP地址</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="localIP" value="specific">
+                                <span>指定IP地址</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>远程IP地址</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="remoteIP" value="any" checked>
+                                <span>任何IP地址</span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="remoteIP" value="specific">
+                                <span>指定IP地址</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced -->
+                <div class="form-section">
+                    <h3>⚙️ 高级设置</h3>
+                    <div class="form-group">
+                        <label>配置文件</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" checked>
+                                <span>域</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" checked>
+                                <span>专用</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" checked>
+                                <span>公用</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>用户和组</label>
+                        <button class="btn btn-secondary">选择用户或组...</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveRule()">保存规则</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const rules = [
+            {
+                id: 1,
+                name: "Chrome 浏览器",
+                status: "enabled",
+                direction: "outbound",
+                program: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                protocol: "TCP",
+                port: "80, 443",
+                scope: "任意",
+                action: "允许"
+            },
+            {
+                id: 2,
+                name: "远程桌面 - 用户模式 (TCP-In)",
+                status: "enabled",
+                direction: "inbound",
+                program: "系统",
+                protocol: "TCP",
+                port: "3389",
+                scope: "任意",
+                action: "允许"
+            },
+            {
+                id: 3,
+                name: "文件和打印机共享 (SMB-In)",
+                status: "disabled",
+                direction: "inbound",
+                program: "系统",
+                protocol: "TCP",
+                port: "445",
+                scope: "本地子网",
+                action: "允许"
+            },
+            {
+                id: 4,
+                name: "Windows Update",
+                status: "enabled",
+                direction: "outbound",
+                program: "svchost.exe",
+                protocol: "TCP/UDP",
+                port: "80, 443",
+                scope: "任意",
+                action: "允许"
+            },
+            {
+                id: 5,
+                name: "SQL Server",
+                status: "enabled",
+                direction: "inbound",
+                program: "sqlservr.exe",
+                protocol: "TCP",
+                port: "1433",
+                scope: "指定IP",
+                action: "允许"
+            },
+            {
+                id: 6,
+                name: "阻止可疑端口",
+                status: "enabled",
+                direction: "inbound",
+                program: "所有程序",
+                protocol: "TCP",
+                port: "135, 139, 445",
+                scope: "任意",
+                action: "阻止"
+            }
+        ];
+
+        // Initialize
+        function init() {
+            renderRules(rules);
+        }
+
+        // Render rules table
+        function renderRules(rulesToRender) {
+            const tbody = document.getElementById('rulesTableBody');
+            tbody.innerHTML = '';
+
+            rulesToRender.forEach(rule => {
+                const row = document.createElement('tr');
+                row.onclick = () => editRule(rule);
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="rule-name">
+                            <div class="rule-icon">${rule.direction === 'inbound' ? '↓' : '↑'}</div>
+                            <span>${rule.name}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-${rule.status}">
+                            ${rule.status === 'enabled' ? '已启用' : '已禁用'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="direction-badge direction-${rule.direction === 'inbound' ? 'in' : 'out'}">
+                            ${rule.direction === 'inbound' ? '入站' : '出站'}
+                        </span>
+                    </td>
+                    <td>${rule.program.split('\\').pop()}</td>
+                    <td>${rule.protocol}${rule.port !== '任意' ? ': ' + rule.port : ''}</td>
+                    <td>${rule.scope}</td>
+                    <td>${rule.action}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter rules
+        function filterRules(type) {
+            const buttons = document.querySelectorAll('.filter-buttons .btn-secondary');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            let filtered = rules;
+            if (type === 'inbound') {
+                filtered = rules.filter(r => r.direction === 'inbound');
+            } else if (type === 'outbound') {
+                filtered = rules.filter(r => r.direction === 'outbound');
+            }
+            
+            renderRules(filtered);
+        }
+
+        // Search functionality
+        document.querySelector('.search-box input').addEventListener('input', function(e
