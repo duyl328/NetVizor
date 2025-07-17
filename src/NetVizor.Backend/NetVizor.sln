@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.ETW.Test", "Utils.ETW
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinDivertNet", "WinDivertNet\WinDivertNet.csproj", "{16805469-CDF3-4ED6-9E6C-70DDFB0DF8B3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils.Firewall", "Utils.Firewall\Utils.Firewall.csproj", "{596D1AAE-3763-4AB4-8BCD-262B2A54B781}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,5 +74,9 @@ Global
 		{16805469-CDF3-4ED6-9E6C-70DDFB0DF8B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16805469-CDF3-4ED6-9E6C-70DDFB0DF8B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16805469-CDF3-4ED6-9E6C-70DDFB0DF8B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{596D1AAE-3763-4AB4-8BCD-262B2A54B781}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{596D1AAE-3763-4AB4-8BCD-262B2A54B781}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{596D1AAE-3763-4AB4-8BCD-262B2A54B781}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{596D1AAE-3763-4AB4-8BCD-262B2A54B781}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -22,6 +22,7 @@
       <ProjectReference Include="..\Data\Data.csproj" />
       <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
       <ProjectReference Include="..\Utils.ETW\Utils.ETW.csproj" />
+      <ProjectReference Include="..\Utils.Firewall\Utils.Firewall.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -22,6 +22,7 @@ using Serilog.Events;
 using Shell;
 using Shell.Views;
 using Utils.ETW.Etw;
+using Utils.Firewall;
 
 namespace NetVizor;
 
@@ -45,10 +46,21 @@ public partial class App : System.Windows.Application
         // NetView
         // var netView = new NetView();
         // netView.Show();
-        
-        var window = new NetView();
-        window.Show();
 
+        Mouth();
+
+        // var window = new NetView();
+        // window.Show();
+
+    }
+
+    private async void Mouth()
+    {
+        var firewallService = new FirewallService();
+        // 防火墙状态
+        // var statusAsync = await firewallService.GetStatusAsync();
+        var rulesAsync =await firewallService.GetRulesAsync();
+        Console.WriteLine(JsonHelper.ToJson(rulesAsync));
     }
 
     /// <summary>
