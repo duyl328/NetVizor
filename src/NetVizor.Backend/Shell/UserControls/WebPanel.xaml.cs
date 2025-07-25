@@ -9,7 +9,7 @@ using Infrastructure.utils;
 
 namespace Shell.UserControls;
 
-public partial class WebPanel : UserControl
+public partial class WebPanel : System.Windows.Controls.UserControl
 {
     public WebPanel()
     {
@@ -87,7 +87,7 @@ public partial class WebPanel : UserControl
             switch (msg?.Channel)
             {
                 case "showMessage":
-                    MessageBox.Show(msg.Payload?.Content ?? "无内容", msg.Payload?.Title ?? "提示");
+                    System.Windows.MessageBox.Show(msg.Payload?.Content ?? "无内容", msg.Payload?.Title ?? "提示");
                     InitWebView1();
                     break;
                 case "GetNetInfo":

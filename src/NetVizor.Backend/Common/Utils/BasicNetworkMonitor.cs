@@ -151,7 +151,7 @@ namespace Common.Utils
                 totalSpeed.UploadSpeed += speed.UploadSpeed;
             }
 
-            Log.Info($"总网速 - 下载: {totalSpeed.DownloadSpeedText}, 上传: {totalSpeed.UploadSpeedText}");
+            // Log.Info($"总网速 - 下载: {totalSpeed.DownloadSpeedText}, 上传: {totalSpeed.UploadSpeedText}");
             return totalSpeed;
         }
 

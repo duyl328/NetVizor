@@ -6,14 +6,22 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
+        <UseWindowsForms>true</UseWindowsForms> <!-- 加上这句，才能正确启用 Forms 支持 -->
+        <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
 
     <ItemGroup>
+        <Folder Include="Assets\Icons\"/>
       <Folder Include="wwwroot\" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3240.44" />
+        <PackageReference Include="System.Drawing.Common" Version="10.0.0-preview.6.25358.103"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="System.Windows.Forms"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -30,6 +38,10 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
       <Content Update="WinDivert.dll">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+        <None Remove="Assets\Icons\app.ico"/>
+        <Content Include="Assets\Icons\app.ico">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>

@@ -15,7 +15,7 @@ public class WindowsFirewallApi : IFirewallApi
     /// Windows防火墙策略对象，用于访问防火墙的全局设置和状态
     /// </summary>
     private readonly INetFwPolicy2? _fwPolicy;
-    
+
     /// <summary>
     /// Windows防火墙规则集合对象，用于管理防火墙规则
     /// </summary>
@@ -73,9 +73,9 @@ public class WindowsFirewallApi : IFirewallApi
 
         // 获取规则统计信息
         var allRules = GetAllRules();
-        status.TotalRules = allRules.Count;                                    // 总规则数
-        status.EnabledRules = allRules.Count(r => r.Enabled);                // 已启用规则数
-        status.InboundRules = allRules.Count(r => r.Direction == RuleDirection.Inbound);   // 入站规则数
+        status.TotalRules = allRules.Count; // 总规则数
+        status.EnabledRules = allRules.Count(r => r.Enabled); // 已启用规则数
+        status.InboundRules = allRules.Count(r => r.Direction == RuleDirection.Inbound); // 入站规则数
         status.OutboundRules = allRules.Count(r => r.Direction == RuleDirection.Outbound); // 出站规则数
 
         return status;
@@ -164,12 +164,12 @@ public class WindowsFirewallApi : IFirewallApi
         return new ProfileStatus
         {
             Profile = profile,
-            IsEnabled = _fwPolicy.FirewallEnabled[profileType],                                    // 是否启用
-            BlockAllInboundTraffic = _fwPolicy.BlockAllInboundTraffic[profileType],              // 是否阻止所有入站流量
-            NotifyOnListen = _fwPolicy.NotificationsDisabled[profileType] == false,              // 是否显示通知
+            IsEnabled = _fwPolicy.FirewallEnabled[profileType], // 是否启用
+            BlockAllInboundTraffic = _fwPolicy.BlockAllInboundTraffic[profileType], // 是否阻止所有入站流量
+            NotifyOnListen = _fwPolicy.NotificationsDisabled[profileType] == false, // 是否显示通知
             UnicastResponsesDisabled = _fwPolicy.UnicastResponsesToMulticastBroadcastDisabled[profileType], // 单播响应设置
-            DefaultInboundAction = (RuleAction)_fwPolicy.DefaultInboundAction[profileType],      // 默认入站动作
-            DefaultOutboundAction = (RuleAction)_fwPolicy.DefaultOutboundAction[profileType]     // 默认出站动作
+            DefaultInboundAction = (RuleAction)_fwPolicy.DefaultInboundAction[profileType], // 默认入站动作
+            DefaultOutboundAction = (RuleAction)_fwPolicy.DefaultOutboundAction[profileType] // 默认出站动作
         };
     }
 
@@ -186,7 +186,7 @@ public class WindowsFirewallApi : IFirewallApi
             if (_fwPolicy == null) return false;
 
             var profileType = ConvertToNetFwProfile(profile);
-            
+
             // 设置各项配置
             _fwPolicy.FirewallEnabled[profileType] = status.IsEnabled;
             _fwPolicy.BlockAllInboundTraffic[profileType] = status.BlockAllInboundTraffic;
@@ -194,7 +194,7 @@ public class WindowsFirewallApi : IFirewallApi
             _fwPolicy.UnicastResponsesToMulticastBroadcastDisabled[profileType] = status.UnicastResponsesDisabled;
             _fwPolicy.DefaultInboundAction[profileType] = (NET_FW_ACTION_)status.DefaultInboundAction;
             _fwPolicy.DefaultOutboundAction[profileType] = (NET_FW_ACTION_)status.DefaultOutboundAction;
-            
+
             return true;
         }
         catch
@@ -219,7 +219,8 @@ public class WindowsFirewallApi : IFirewallApi
         // 遍历Windows防火墙中的所有规则并转换为自定义格式
         foreach (INetFwRule rule in _fwRules)
         {
-            rules.Add(ConvertToFirewallRule(rule));
+            var convertToFirewallRule = ConvertToFirewallRule(rule);
+            rules.Add(convertToFirewallRule);
         }
 
         return rules;
@@ -358,22 +359,22 @@ public class WindowsFirewallApi : IFirewallApi
             if (newRule == null) return false;
 
             // 设置规则的各项属性
-            newRule.Name = request.Name;                                    // 规则名称
-            newRule.Description = request.Description;                      // 规则描述
-            newRule.ApplicationName = request.ApplicationName;              // 应用程序路径
+            newRule.Name = request.Name; // 规则名称
+            newRule.Description = request.Description; // 规则描述
+            newRule.ApplicationName = request.ApplicationName; // 应用程序路径
             // 注意：INetFwRule 接口可能没有 ServiceName 属性，这里移除了对它的直接赋值
-            newRule.Protocol = (int)request.Protocol;                       // 协议类型
-            newRule.LocalPorts = request.LocalPorts;                        // 本地端口
-            newRule.RemotePorts = request.RemotePorts;                      // 远程端口
-            newRule.LocalAddresses = request.LocalAddresses;                // 本地地址
-            newRule.RemoteAddresses = request.RemoteAddresses;              // 远程地址
-            newRule.IcmpTypesAndCodes = request.IcmpTypesAndCodes;          // ICMP类型和代码
-            newRule.Direction = (NET_FW_RULE_DIRECTION_)request.Direction;  // 流量方向
-            newRule.Enabled = request.Enabled;                             // 是否启用
-            newRule.Profiles = ConvertToNetFwProfiles(request.Profiles);   // 适用的配置文件
-            newRule.Action = (NET_FW_ACTION_)request.Action;                // 规则动作
-            newRule.Grouping = request.Grouping;                           // 规则组
-            newRule.InterfaceTypes = request.InterfaceTypes;               // 接口类型
+            newRule.Protocol = (int)request.Protocol; // 协议类型
+            newRule.LocalPorts = request.LocalPorts; // 本地端口
+            newRule.RemotePorts = request.RemotePorts; // 远程端口
+            newRule.LocalAddresses = request.LocalAddresses; // 本地地址
+            newRule.RemoteAddresses = request.RemoteAddresses; // 远程地址
+            newRule.IcmpTypesAndCodes = request.IcmpTypesAndCodes; // ICMP类型和代码
+            newRule.Direction = (NET_FW_RULE_DIRECTION_)request.Direction; // 流量方向
+            newRule.Enabled = request.Enabled; // 是否启用
+            newRule.Profiles = ConvertToNetFwProfiles(request.Profiles); // 适用的配置文件
+            newRule.Action = (NET_FW_ACTION_)request.Action; // 规则动作
+            newRule.Grouping = request.Grouping; // 规则组
+            newRule.InterfaceTypes = request.InterfaceTypes; // 接口类型
 
             // 设置边缘遍历（用于某些特殊网络场景）
             if (request.EdgeTraversal)
@@ -469,7 +470,7 @@ public class WindowsFirewallApi : IFirewallApi
         {
             // 先获取组中的所有规则
             var rules = GetRulesByGroup(groupName);
-            
+
             // 逐一删除组中的每个规则
             foreach (var rule in rules)
             {
@@ -620,14 +621,14 @@ public class WindowsFirewallApi : IFirewallApi
         try
         {
             var rules = GetAllRules();
-            
+
             // 配置JSON序列化选项，包括缩进和枚举转换
             var json = JsonSerializer.Serialize(rules, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 Converters = { new JsonStringEnumConverter() }
             });
-            
+
             System.IO.File.WriteAllText(filePath, json);
             return true;
         }
@@ -647,7 +648,7 @@ public class WindowsFirewallApi : IFirewallApi
         try
         {
             var json = System.IO.File.ReadAllText(filePath);
-            
+
             // 反序列化JSON文件中的规则
             var rules = JsonSerializer.Deserialize<List<FirewallRule>>(json, new JsonSerializerOptions
             {
@@ -700,9 +701,9 @@ public class WindowsFirewallApi : IFirewallApi
         var rules = GetAllRules();
         var stats = new FirewallStatistics
         {
-            TotalRules = rules.Count,                           // 总规则数
-            EnabledRules = rules.Count(r => r.Enabled),        // 已启用规则数
-            DisabledRules = rules.Count(r => !r.Enabled)       // 已禁用规则数
+            TotalRules = rules.Count, // 总规则数
+            EnabledRules = rules.Count(r => r.Enabled), // 已启用规则数
+            DisabledRules = rules.Count(r => !r.Enabled) // 已禁用规则数
         };
 
         // 按流量方向统计规则数量
@@ -795,7 +796,7 @@ public class WindowsFirewallApi : IFirewallApi
     public bool BlockApplication(string applicationPath)
     {
         var fileName = System.IO.Path.GetFileName(applicationPath);
-        
+
         // 创建入站阻止规则
         var blockInbound = CreateRule(new CreateRuleRequest
         {
@@ -1043,25 +1044,25 @@ public class WindowsFirewallApi : IFirewallApi
     {
         return new FirewallRule
         {
-            Name = rule.Name ?? string.Empty,                               // 规则名称
-            Description = rule.Description ?? string.Empty,                // 规则描述
-            ApplicationName = rule.ApplicationName ?? string.Empty,        // 应用程序路径
+            Name = rule.Name ?? string.Empty, // 规则名称
+            Description = rule.Description ?? string.Empty, // 规则描述
+            ApplicationName = rule.ApplicationName ?? string.Empty, // 应用程序路径
             // ServiceName 在某些版本的 INetFwRule 中可能不存在，使用默认值
-            ServiceName = string.Empty,                                     // 服务名称
-            Protocol = (ProtocolType)rule.Protocol,                        // 协议类型
-            LocalPorts = rule.LocalPorts ?? string.Empty,                  // 本地端口
-            RemotePorts = rule.RemotePorts ?? string.Empty,                // 远程端口
-            LocalAddresses = rule.LocalAddresses ?? string.Empty,          // 本地地址
-            RemoteAddresses = rule.RemoteAddresses ?? string.Empty,        // 远程地址
-            IcmpTypesAndCodes = rule.IcmpTypesAndCodes ?? string.Empty,    // ICMP类型和代码
-            Direction = (RuleDirection)rule.Direction,                     // 流量方向
-            Enabled = rule.Enabled,                                        // 是否启用
-            Profiles = ConvertFromNetFwProfiles(rule.Profiles),           // 适用的配置文件
-            EdgeTraversal = rule.EdgeTraversal,                           // 边缘遍历设置
-            Action = (RuleAction)rule.Action,                              // 规则动作
-            Grouping = rule.Grouping ?? string.Empty,                     // 规则组
-            InterfaceTypes = rule.InterfaceTypes ?? string.Empty,         // 接口类型
-            Interfaces = ParseInterfaces(rule.Interfaces)                  // 接口列表
+            ServiceName = string.Empty, // 服务名称
+            Protocol = (ProtocolType)rule.Protocol, // 协议类型
+            LocalPorts = rule.LocalPorts ?? string.Empty, // 本地端口
+            RemotePorts = rule.RemotePorts ?? string.Empty, // 远程端口
+            LocalAddresses = rule.LocalAddresses ?? string.Empty, // 本地地址
+            RemoteAddresses = rule.RemoteAddresses ?? string.Empty, // 远程地址
+            IcmpTypesAndCodes = rule.IcmpTypesAndCodes ?? string.Empty, // ICMP类型和代码
+            Direction = (RuleDirection)rule.Direction, // 流量方向
+            Enabled = rule.Enabled, // 是否启用
+            Profiles = ConvertFromNetFwProfiles(rule.Profiles), // 适用的配置文件
+            EdgeTraversal = rule.EdgeTraversal, // 边缘遍历设置
+            Action = (RuleAction)rule.Action, // 规则动作
+            Grouping = rule.Grouping ?? string.Empty, // 规则组
+            InterfaceTypes = rule.InterfaceTypes ?? string.Empty, // 接口类型
+            Interfaces = ParseInterfaces(rule.Interfaces) // 接口列表
         };
     }
 

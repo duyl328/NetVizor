@@ -20,11 +20,15 @@ using Infrastructure.Models;
 using Microsoft.Extensions.Logging;
 using Serilog.Events;
 using Shell;
+using Shell.UserControls;
+using Shell.Utils;
 using Shell.Views;
 using Utils.ETW.Etw;
 using Utils.Firewall;
 
 namespace NetVizor;
+
+using System.Windows.Forms; // 引用 Windows Forms 命名空间
 
 /// <summary>
 /// Interaction logic for App.xaml
@@ -42,16 +46,20 @@ public partial class App : System.Windows.Application
 
         // 启动服务（如 WebSocket、HTTP、端口监听等）
         // StartMyServer();
-        
-        // NetView
-        // var netView = new NetView();
-        // netView.Show();
 
-        Mouth();
+        // NetView 网络监看
+        var netView = new NetView();
+        netView.Show();
 
+        // Mouth();
+
+
+        // 网速监视
         // var window = new NetView();
         // window.Show();
 
+        // 设置应用程序在关闭最后一个窗口时不自动退出
+        this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
     }
 
     private async void Mouth()
@@ -59,7 +67,7 @@ public partial class App : System.Windows.Application
         var firewallService = new FirewallService();
         // 防火墙状态
         // var statusAsync = await firewallService.GetStatusAsync();
-        var rulesAsync =await firewallService.GetRulesAsync();
+        var rulesAsync = await firewallService.GetRulesAsync();
         Console.WriteLine(JsonHelper.ToJson(rulesAsync));
     }
 
@@ -402,6 +410,10 @@ public partial class App : System.Windows.Application
             await context.Response.WriteJsonAsync(new ResponseModel<string>
                 { Success = true, Data = "成功", Message = "订阅成功" });
         });
+
+        #endregion
+
+        #region 获取防火墙信息
 
         #endregion
 
