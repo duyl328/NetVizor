@@ -20,13 +20,7 @@
         class="firewall-form"
       >
         <!-- 标签页 -->
-        <n-tabs
-          v-model:value="activeTab"
-          type="line"
-          size="medium"
-          animated
-          class="rule-tabs"
-        >
+        <n-tabs v-model:value="activeTab" type="line" size="medium" animated class="rule-tabs">
           <!-- 基本信息 -->
           <n-tab-pane name="basic" tab="基本信息">
             <div class="tab-content">
@@ -197,9 +191,7 @@
                       v-model:value="formData.localAddresses"
                       placeholder="例: 192.168.1.0/24, 10.0.0.1 (* 表示任何地址)"
                     />
-                    <template #feedback>
-                      支持单个IP、CIDR格式或逗号分隔的多个地址
-                    </template>
+                    <template #feedback> 支持单个IP、CIDR格式或逗号分隔的多个地址</template>
                   </n-form-item>
 
                   <n-form-item path="remoteAddresses" label="远程地址">
@@ -207,9 +199,7 @@
                       v-model:value="formData.remoteAddresses"
                       placeholder="例: 192.168.1.0/24, 10.0.0.1 (* 表示任何地址)"
                     />
-                    <template #feedback>
-                      支持单个IP、CIDR格式或逗号分隔的多个地址
-                    </template>
+                    <template #feedback> 支持单个IP、CIDR格式或逗号分隔的多个地址</template>
                   </n-form-item>
                 </div>
               </div>
@@ -262,9 +252,7 @@
                       v-model:value="formData.interfaces"
                       placeholder="添加网络接口名称"
                     />
-                    <template #feedback>
-                      可以指定特定的网络接口，留空表示所有接口
-                    </template>
+                    <template #feedback> 可以指定特定的网络接口，留空表示所有接口</template>
                   </n-form-item>
                 </div>
               </div>
@@ -387,12 +375,12 @@ import {
 // 枚举定义 - 对应后端模型
 enum RuleDirection {
   Inbound = 1,
-  Outbound = 2
+  Outbound = 2,
 }
 
 enum RuleAction {
   Block = 0,
-  Allow = 1
+  Allow = 1,
 }
 
 enum ProtocolType {
@@ -410,13 +398,13 @@ enum ProtocolType {
   IPv6Opts = 60,
   VRRP = 112,
   PGM = 113,
-  L2TP = 115
+  L2TP = 115,
 }
 
 enum FirewallProfile {
   Domain = 1,
   Private = 2,
-  Public = 4
+  Public = 4,
 }
 
 // 防火墙规则接口 - 对应后端 FirewallRule
@@ -516,17 +504,11 @@ const formData = ref<FirewallRule>({ ...defaultFormData })
 const formRules: FormRules = {
   name: [
     { required: true, message: '请输入规则名称', trigger: 'blur' },
-    { min: 1, max: 255, message: '规则名称长度应在1-255字符之间', trigger: 'blur' }
+    { min: 1, max: 255, message: '规则名称长度应在1-255字符之间', trigger: 'blur' },
   ],
-  direction: [
-    { required: true, message: '请选择规则方向', trigger: 'change', type: 'number' }
-  ],
-  action: [
-    { required: true, message: '请选择规则动作', trigger: 'change', type: 'number' }
-  ],
-  protocol: [
-    { required: true, message: '请选择协议类型', trigger: 'change', type: 'number' }
-  ],
+  direction: [{ required: true, message: '请选择规则方向', trigger: 'change', type: 'number' }],
+  action: [{ required: true, message: '请选择规则动作', trigger: 'change', type: 'number' }],
+  protocol: [{ required: true, message: '请选择协议类型', trigger: 'change', type: 'number' }],
   profiles: [
     {
       required: true,
@@ -534,9 +516,9 @@ const formRules: FormRules = {
       trigger: 'change',
       validator: (rule, value: FirewallProfile[]) => {
         return value && value.length > 0
-      }
-    }
-  ]
+      },
+    },
+  ],
 }
 
 // 选项数据
@@ -567,13 +549,17 @@ const serviceOptions = [
 ]
 
 // 监听编辑规则变化
-watch(() => props.editRule, (newRule) => {
-  if (newRule) {
-    formData.value = { ...newRule }
-  } else {
-    formData.value = { ...defaultFormData }
-  }
-}, { immediate: true })
+watch(
+  () => props.editRule,
+  (newRule) => {
+    if (newRule) {
+      formData.value = { ...newRule }
+    } else {
+      formData.value = { ...defaultFormData }
+    }
+  },
+  { immediate: true },
+)
 
 // 方法
 const handleClose = () => {
@@ -604,11 +590,11 @@ const handleSave = async () => {
     const saveData: CreateRuleRequest = {
       ...formData.value,
       // 将配置文件数组转换为位标志
-      profiles: formData.value.profiles.reduce((acc, profile) => acc | profile, 0)
+      profiles: formData.value.profiles.reduce((acc, profile) => acc | profile, 0),
     }
 
     // 模拟保存延迟
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     emit('save', saveData)
     message.success(isEdit.value ? '规则更新成功' : '规则创建成功')
@@ -651,6 +637,15 @@ const browseApplication = () => {
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+:deep(.firewall-rule-modal .n-card__content),
+.rule-form-container,
+.firewall-form,
+.rule-tabs,
+:deep(.rule-tabs .n-tabs-pane-wrapper),
+:deep(.rule-tabs .n-tabs-pane) {
+  overflow: hidden;
 }
 
 :deep(.firewall-rule-modal .n-card__footer) {
@@ -715,7 +710,7 @@ const browseApplication = () => {
   scroll-behavior: smooth;
   min-height: 0;
   /* 新增：计算可用高度 */
-  max-height: calc(90vh - 140px * 2); /* 90vh - header - footer - tabs nav */
+  max-height: calc(90vh - 220px);
 }
 
 .tab-content::-webkit-scrollbar {
@@ -915,8 +910,8 @@ const browseApplication = () => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   :deep(.firewall-rule-modal .n-card) {
-    width: 95vw !important;
-    height: 95vh !important;
+    width: 90vw !important;
+    height: 90vh !important;
   }
 
   .tab-content {
