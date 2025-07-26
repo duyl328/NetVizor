@@ -353,39 +353,64 @@ public class WindowsFirewallApi : IFirewallApi
             // 通过ProgID获取防火墙规则对象类型
             Type? netFwRuleType = Type.GetTypeFromProgID("HNetCfg.FWRule");
             if (netFwRuleType == null) return false;
-
+            
             // 创建新的防火墙规则实例
             INetFwRule? newRule = (INetFwRule?)Activator.CreateInstance(netFwRuleType);
             if (newRule == null) return false;
-
+            
             // 设置规则的各项属性
             newRule.Name = request.Name; // 规则名称
             newRule.Description = request.Description; // 规则描述
-            newRule.ApplicationName = request.ApplicationName; // 应用程序路径
+            newRule.ApplicationName = string.IsNullOrWhiteSpace(request.ApplicationName) ? null : request.ApplicationName; // 应用程序路径
             // 注意：INetFwRule 接口可能没有 ServiceName 属性，这里移除了对它的直接赋值
             newRule.Protocol = (int)request.Protocol; // 协议类型
-            newRule.LocalPorts = request.LocalPorts; // 本地端口
-            newRule.RemotePorts = request.RemotePorts; // 远程端口
-            newRule.LocalAddresses = request.LocalAddresses; // 本地地址
-            newRule.RemoteAddresses = request.RemoteAddresses; // 远程地址
-            newRule.IcmpTypesAndCodes = request.IcmpTypesAndCodes; // ICMP类型和代码
+            newRule.LocalAddresses = string.IsNullOrWhiteSpace(request.LocalAddresses) ? "*" : request.LocalAddresses; // 本地地址
+            newRule.RemoteAddresses = string.IsNullOrWhiteSpace(request.RemoteAddresses) ? "*" : request.RemoteAddresses; // 远程地址
+            newRule.Protocol = (int)request.Protocol;
+            
+            // 设置为 1 表示 ICMP，6 表示 TCP，17 表示 UDP
+            if ((int)request.Protocol == 1) // ICMP
+            {
+                newRule.LocalPorts = null;
+                newRule.RemotePorts = null;
+                if (!string.IsNullOrWhiteSpace(request.IcmpTypesAndCodes))
+                {
+                    newRule.IcmpTypesAndCodes = request.IcmpTypesAndCodes;
+                }
+            }
+            else
+            {
+                // 非 ICMP 时不要设置 IcmpTypesAndCodes，否则抛异常
+                // 仅在 Protocol == 1 时有效，否则抛出异常
+                // newRule.IcmpTypesAndCodes = null;
+                if (!string.IsNullOrWhiteSpace(request.LocalPorts))
+                {
+                    newRule.LocalPorts = request.LocalPorts; // 本地端口
+                }
+                if (!string.IsNullOrWhiteSpace(request.RemotePorts))
+                {
+                    newRule.RemotePorts = request.RemotePorts; // 本地端口
+                }
+            }
             newRule.Direction = (NET_FW_RULE_DIRECTION_)request.Direction; // 流量方向
             newRule.Enabled = request.Enabled; // 是否启用
             newRule.Profiles = ConvertToNetFwProfiles(request.Profiles); // 适用的配置文件
             newRule.Action = (NET_FW_ACTION_)request.Action; // 规则动作
-            newRule.Grouping = request.Grouping; // 规则组
-            newRule.InterfaceTypes = request.InterfaceTypes; // 接口类型
-
+            newRule.Grouping = string.IsNullOrWhiteSpace(request.Grouping) ? null : request.Grouping; // 规则组
+            newRule.InterfaceTypes = string.IsNullOrWhiteSpace(request.InterfaceTypes) ? "All" : request.InterfaceTypes; // 接口类型
+            
             // 设置边缘遍历（用于某些特殊网络场景）
             if (request.EdgeTraversal)
                 newRule.EdgeTraversal = request.EdgeTraversal;
-
+            
             // 将新规则添加到防火墙
             _fwRules.Add(newRule);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            var format = ex.ToString();
+            Console.WriteLine(format); // 包含类型、消息、堆栈跟踪
             return false;
         }
     }

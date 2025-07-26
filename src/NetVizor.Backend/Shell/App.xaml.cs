@@ -33,7 +33,7 @@ public partial class App : System.Windows.Application
         base.OnStartup(e);
 
         // 启动服务（如 WebSocket、HTTP、端口监听等）
-        // StartMyServer();
+        StartMyServer();
 
         // NetView 网络监看
         var netView = new NetView();
@@ -403,6 +403,286 @@ public partial class App : System.Windows.Application
 
         #region 获取防火墙信息
 
+        // 查询防火墙规则 - 支持分页和筛选
+        server.Get("/api/firewall/rules", async (context) =>
+        {
+            try
+            {
+                var firewallApi = new WindowsFirewallApi();
+                
+                // 获取查询参数
+                var queryParams = context.QueryParams;
+                var startIndex = !string.IsNullOrEmpty(queryParams["start"]) ? int.Parse(queryParams["start"]) : 0;
+                var limit = !string.IsNullOrEmpty(queryParams["limit"]) ? int.Parse(queryParams["limit"]) : 50;
+                
+                // 构建筛选条件
+                var filter = new RuleFilter();
+                if (!string.IsNullOrEmpty(queryParams["name"])) filter.NamePattern = queryParams["name"];
+                if (!string.IsNullOrEmpty(queryParams["direction"]) && Enum.TryParse<RuleDirection>(queryParams["direction"], true, out var direction))
+                    filter.Direction = direction;
+                if (!string.IsNullOrEmpty(queryParams["enabled"]) && bool.TryParse(queryParams["enabled"], out var enabled))
+                    filter.Enabled = enabled;
+                if (!string.IsNullOrEmpty(queryParams["protocol"]) && Enum.TryParse<ProtocolType>(queryParams["protocol"], true, out var protocol))
+                    filter.Protocol = protocol;
+                if (!string.IsNullOrEmpty(queryParams["action"]) && Enum.TryParse<RuleAction>(queryParams["action"], true, out var action))
+                    filter.Action = action;
+                if (!string.IsNullOrEmpty(queryParams["application"])) filter.ApplicationName = queryParams["application"];
+                if (!string.IsNullOrEmpty(queryParams["port"])) filter.Port = queryParams["port"];
+
+                // 获取筛选后的规则
+                var allRules = firewallApi.GetRulesByFilter(filter);
+                var totalCount = allRules.Count;
+                
+                // 分页
+                var pagedRules = allRules.Skip(startIndex).Take(limit).ToList();
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = new 
+                    {
+                        rules = pagedRules,
+                        totalCount = totalCount,
+                        startIndex = startIndex,
+                        limit = limit,
+                        hasMore = startIndex + limit < totalCount
+                    },
+                    Message = "查询成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"查询防火墙规则失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 新增防火墙规则
+        server.Post("/api/firewall/rules", async (context) =>
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(context.RequestBody))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "请求体不能为空"
+                    });
+                    return;
+                }
+
+                var createRequest = JsonHelper.FromJson<CreateRuleRequest>(context.RequestBody);
+                if (createRequest == null)
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "请求数据格式错误"
+                    });
+                    return;
+                }
+
+                var firewallApi = new WindowsFirewallApi();
+                var success = firewallApi.CreateRule(createRequest);
+
+                if (success)
+                {
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = true,
+                        Message = "防火墙规则创建成功"
+                    });
+                }
+                else
+                {
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "防火墙规则创建失败"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"创建防火墙规则失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 编辑防火墙规则
+        server.Put("/api/firewall/rules", async (context) =>
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(context.RequestBody))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "请求体不能为空"
+                    });
+                    return;
+                }
+
+                var updateRequest = JsonHelper.FromJson<UpdateRuleRequest>(context.RequestBody);
+                if (updateRequest == null || string.IsNullOrEmpty(updateRequest.CurrentName))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "请求数据格式错误或缺少规则名称"
+                    });
+                    return;
+                }
+
+                var firewallApi = new WindowsFirewallApi();
+                var success = firewallApi.UpdateRule(updateRequest);
+
+                if (success)
+                {
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = true,
+                        Message = "防火墙规则更新成功"
+                    });
+                }
+                else
+                {
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "防火墙规则更新失败，可能规则不存在"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"更新防火墙规则失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 删除防火墙规则
+        server.Delete("/api/firewall/rules", async (context) =>
+        {
+            try
+            {
+                var queryParams = context.QueryParams;
+                if (string.IsNullOrEmpty(queryParams["name"]))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "缺少规则名称参数"
+                    });
+                    return;
+                }
+
+                var ruleName = queryParams["name"];
+                var firewallApi = new WindowsFirewallApi();
+                var success = firewallApi.DeleteRule(ruleName);
+
+                if (success)
+                {
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = true,
+                        Message = "防火墙规则删除成功"
+                    });
+                }
+                else
+                {
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "防火墙规则删除失败，可能规则不存在"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"删除防火墙规则失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取防火墙状态
+        server.Get("/api/firewall/status", async (context) =>
+        {
+            try
+            {
+                var firewallApi = new WindowsFirewallApi();
+                var status = firewallApi.GetFirewallStatus();
+
+                await context.Response.WriteJsonAsync(new ResponseModel<FirewallStatus>
+                {
+                    Success = true,
+                    Data = status,
+                    Message = "获取防火墙状态成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取防火墙状态失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取防火墙统计信息
+        server.Get("/api/firewall/statistics", async (context) =>
+        {
+            try
+            {
+                var firewallApi = new WindowsFirewallApi();
+                var statistics = firewallApi.GetStatistics();
+
+                await context.Response.WriteJsonAsync(new ResponseModel<FirewallStatistics>
+                {
+                    Success = true,
+                    Data = statistics,
+                    Message = "获取防火墙统计信息成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取防火墙统计信息失败: {ex.Message}"
+                });
+            }
+        });
+
         #endregion
 
         #region 取消订阅
@@ -498,22 +778,3 @@ public class SubscriptionAppInfo : SubscriptionInfo
     /// </summary>
     public string ApplicationPath { get; set; }
 }
-
-// 对于C#来说，我想获取windows中的防火墙的信息？我在开发一个网络监控软件，我想顺便把防火墙管理给集成进去，前端搭配vue3展示，应该也能很漂亮。
-// 所以第一步是获取防火墙信息，并且要是结构化的，能够转换为json发给前端的，所以我应该如何做？虽然有可能有些可能用不到，不过我希望尽可能多的获取到防火墙的信息。
-// 我要完成的功能包括：获取所有防火墙信息，打开或关闭防火墙，更改某个规则（重命名、开关等），删除某个规则，增加新的规则。
-// 基于此，对于它的C#后端，我们应该定义和设计这些API？
-// 我想要获取尽可能全面的信息，包括但不限于出站、进站、程序、协议、端口、远程端口、作用域、操作、配置文件、名称等。
-// 我想尽可能的复现windows官方的防火墙中的全部功能。
-// 我们首先需要定义其全部的API，比如读取，修改，新增，删除。
-//
-//
-//
-// 我在开发一个网络监控软件，我想顺便把防火墙管理给集成进去，前端搭配vue3展示，应该也能很漂亮。
-// 我现在后端已经能拿到了很多信息， 包括但不限于出站、进站、程序、协议、端口、远程端口、作用域、操作、配置文件、名称等。
-// 我想尽可能的复现windows官方的防火墙中的全部功能。但是UI要更好看。
-// 但是我也尽可能贴近官方防火墙设置的功能比如：比如windows官方防火墙的 “程序”-》自定义服务设置-》应用于下列服务，它的服务有很多，我们需要展示提供选择。
-// 再有，“协议和端口”中的协议类型也有很多，我们也要展示。比如它甚至能指定用户，可以选择用户和组。
-// 所以基于上，我们几乎是重写了防火墙的页面。
-// 我现在需要你基于这个能获取到的信息（可能有些我没提到），使用html完成一个防火墙的看板，要点击某个规则可以编辑，可以新增。
-// 新增的窗口和交互都需要完成，数据的展示也需要完成。你用假数据替代数据填充即可，要求界面要现代化，美观，优雅

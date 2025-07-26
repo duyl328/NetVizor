@@ -200,3 +200,4 @@ public class FirewallStatistics
     public List<string> TopApplications { get; set; } = new();
     public List<string> TopPorts { get; set; } = new();
 }
+
