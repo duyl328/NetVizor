@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
@@ -13,8 +14,28 @@ public partial class TrayMenuWindow : Window
     public event Action OnHideToTray;
 
     // 菜单的固定尺寸（与XAML中设置的一致）
-    private const double MENU_WIDTH = 180;
-    private const double MENU_HEIGHT = 200;
+    private const double MENU_WIDTH = 150;
+    private const double MENU_HEIGHT = 180;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmEnableBlurBehindWindow(IntPtr hwnd, ref DWM_BLURBEHIND blurBehind);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DWM_BLURBEHIND
+    {
+        public DWM_BB dwFlags;
+        public bool fEnable;
+        public IntPtr hRgnBlur;
+        public bool fTransitionOnMaximized;
+    }
+
+    [Flags]
+    private enum DWM_BB : uint
+    {
+        Enable = 0x00000001,
+        BlurRegion = 0x00000002,
+        TransitionMaximized = 0x00000004
+    }
 
     public TrayMenuWindow()
     {
@@ -33,6 +54,24 @@ public partial class TrayMenuWindow : Window
         };
     }
 
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        EnableBlur();
+    }
+
+    private void EnableBlur()
+    {
+        var windowHelper = new WindowInteropHelper(this);
+        var blur = new DWM_BLURBEHIND
+        {
+            fEnable = true,
+            dwFlags = DWM_BB.Enable,
+            hRgnBlur = IntPtr.Zero,
+            fTransitionOnMaximized = false
+        };
+        DwmEnableBlurBehindWindow(windowHelper.Handle, ref blur);
+    }
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         // 处理DPI变化消息
@@ -49,22 +88,22 @@ public partial class TrayMenuWindow : Window
     private void TrayMenuWindow_Loaded(object sender, RoutedEventArgs e)
     {
         // 添加淡入动画
-        // var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
-        // this.BeginAnimation(OpacityProperty, fadeIn);
+        var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
+        this.BeginAnimation(OpacityProperty, fadeIn);
 
         // 添加缩放动画
-        // var scaleTransform = new System.Windows.Media.ScaleTransform(0.8, 0.8);
+        var scaleTransform = new System.Windows.Media.ScaleTransform(0.8, 0.8);
         // this.RenderTransform = scaleTransform;
         // this.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
 
-        // var scaleXAnimation = new DoubleAnimation(0.8, 1, TimeSpan.FromMilliseconds(200));
-        // var scaleYAnimation = new DoubleAnimation(0.8, 1, TimeSpan.FromMilliseconds(200));
+        var scaleXAnimation = new DoubleAnimation(0.8, 1, TimeSpan.FromMilliseconds(200));
+        var scaleYAnimation = new DoubleAnimation(0.8, 1, TimeSpan.FromMilliseconds(200));
 
-        // scaleXAnimation.EasingFunction = new QuadraticEase();
-        // scaleYAnimation.EasingFunction = new QuadraticEase();
+        scaleXAnimation.EasingFunction = new QuadraticEase();
+        scaleYAnimation.EasingFunction = new QuadraticEase();
 
-        // scaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleXAnimation);
-        // scaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleYAnimation);
+        scaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scaleXAnimation);
+        scaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scaleYAnimation);
     }
 
     public void ShowAt(int x, int y)

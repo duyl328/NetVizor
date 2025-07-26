@@ -1,11 +1,5 @@
-using System.Configuration;
-using System.Data;
-using System.IO;
-using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Web;
 using System.Windows;
 using System.Windows.Threading;
 using Application;
@@ -16,19 +10,13 @@ using Common.Net.HttpConn;
 using Common.Net.Models;
 using Common.Net.WebSocketConn;
 using Common.Utils;
-using Infrastructure.Models;
-using Microsoft.Extensions.Logging;
-using Serilog.Events;
-using Shell;
-using Shell.UserControls;
-using Shell.Utils;
 using Shell.Views;
 using Utils.ETW.Etw;
 using Utils.Firewall;
+using MessageBox = System.Windows.Forms.MessageBox;
 
-namespace NetVizor;
-
-using System.Windows.Forms; // 引用 Windows Forms 命名空间
+namespace Shell;
+// 引用 Windows Forms 命名空间
 
 /// <summary>
 /// Interaction logic for App.xaml
