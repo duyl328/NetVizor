@@ -113,7 +113,7 @@ namespace Common.Utils
                     // 跳过环回接口
                     if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback)
                     {
-                        Log.Info($"跳过环回接口: {ni.Name}");
+                        //Log.Info($"跳过环回接口: {ni.Name}");
                         continue;
                     }
 
@@ -291,7 +291,7 @@ namespace Common.Utils
                 }
             }
 
-            Log.Info($"总网速 - 下载: {totalSpeed.DownloadSpeedText}, 上传: {totalSpeed.UploadSpeedText}");
+            // Log.Info($"总网速 - 下载: {totalSpeed.DownloadSpeedText}, 上传: {totalSpeed.UploadSpeedText}");
 
             return totalSpeed;
         }

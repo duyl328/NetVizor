@@ -8,7 +8,7 @@ namespace Shell.UserControls
     /// <summary>
     /// Interaction logic for NetworkMonitorView.xaml
     /// </summary>
-    public partial class NetworkMonitorView : UserControl
+    public partial class NetworkMonitorView : System.Windows.Controls.UserControl
     {
         private NetworkMonitorViewModel _viewModel;
 

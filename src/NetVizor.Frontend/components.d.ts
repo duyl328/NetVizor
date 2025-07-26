@@ -9,14 +9,16 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CommandManager: typeof import('./src/components/CommandManager.vue')['default']
+    FirewallRuleForm: typeof import('./src/components/FirewallRuleForm.vue')['default']
     IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
     IconDocumentation: typeof import('./src/components/icons/IconDocumentation.vue')['default']
     IconEcosystem: typeof import('./src/components/icons/IconEcosystem.vue')['default']
     IconSupport: typeof import('./src/components/icons/IconSupport.vue')['default']
     IconTooling: typeof import('./src/components/icons/IconTooling.vue')['default']
     NetworkConnectionPanel2: typeof import('./src/components/NetworkConnectionPanel2.vue')['default']
+    NHighlight: typeof import('naive-ui')['NHighlight']
+    NInput: typeof import('naive-ui')['NInput']
     NMessageProvider: typeof import('naive-ui')['NMessageProvider']
-    NVirtualList: typeof import('naive-ui')['NVirtualList']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TitleBar: typeof import('./src/components/TitleBar.vue')['default']

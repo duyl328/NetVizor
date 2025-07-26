@@ -14,9 +14,13 @@
 [English](#english) | [中文](#chinese)
 </div>
 
-> **目前项目正在积极开发阶段, 在 `1.0` 版本前不保证项目可用性.**
-> 
-> **The project is currently in active development, and there is no guarantee of project availability until the '1.0' release.**
+<p style="color: red; font-weight: bold;">
+  🚧 当前项目正在积极开发阶段，在 <code>1.0</code> 版本前不保证项目可用性。
+</p>
+
+<p style="color: red; font-weight: bold;">
+  🚧 The project is currently in active development, and there is no guarantee of project availability until the <code>1.0</code> release.
+</p>
 
 ---
 
