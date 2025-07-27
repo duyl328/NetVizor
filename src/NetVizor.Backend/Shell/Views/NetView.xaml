@@ -7,10 +7,79 @@
     xmlns:local="clr-namespace:Shell"
     xmlns:userControls="clr-namespace:Shell.UserControls"
     mc:Ignorable="d"
-    Title="NetView"
-    Height="450"
-    Width="800">
-    <Grid>
+    Title="NetVizor - 网速监控"
+    Height="60"
+    Width="100"
+    WindowStyle="None"
+    AllowsTransparency="True"
+    Background="Transparent"
+    Topmost="True"
+    ShowInTaskbar="False"
+    ResizeMode="CanResize"
+    Left="{Binding WindowLeft, Mode=TwoWay}"
+    Top="{Binding WindowTop, Mode=TwoWay}">
+    
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="重置窗口位置" Click="ResetPosition_Click">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="锁定窗口位置" Click="LockPosition_Click" IsCheckable="True" x:Name="LockPositionMenuItem">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="启用点击穿透" Click="ToggleClickThrough_Click" IsCheckable="True" x:Name="ClickThroughMenuItem">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="始终置顶" Click="ToggleTopmost_Click" IsCheckable="True" IsChecked="True" x:Name="TopmostMenuItem">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="不能超出屏幕" Click="ToggleSnapToScreen_Click" IsCheckable="True" x:Name="SnapToScreenMenuItem">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="切换监控网络" x:Name="NetworkSelectionMenuItem">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+                <!-- Submenu items will be populated dynamically -->
+            </MenuItem>
+            <MenuItem Header="显示详细信息" Click="ToggleDetailedInfo_Click" IsCheckable="True" x:Name="DetailedInfoMenuItem">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="流量统计与分析" Click="OpenTrafficAnalysis_Click">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="隐藏到托盘" Click="HideToTray_Click">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="退出程序" Click="ExitApplication_Click">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" Foreground="#D32F2F" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </Window.ContextMenu>
+    
+    <Grid MouseLeftButtonDown="Grid_MouseLeftButtonDown">
         <userControls:NetworkMonitorView />
     </Grid>
 </Window>

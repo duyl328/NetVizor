@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Controls;
 
 namespace Shell.UserControls;
 
@@ -12,10 +13,20 @@ public partial class TrayMenuWindow : Window
     public event Action OnShowMainWindow;
     public event Action OnExitApplication;
     public event Action OnHideToTray;
+    public event Action OnShowNetMonitor;
+    public event Action OnResetWindowPosition;
+    public event Action OnToggleClickThrough;
+    public event Action OnToggleTopmost;
+
+    // Properties to track NetView state
+    public bool IsNetViewVisible { get; set; } = true;
+    public bool IsClickThroughEnabled { get; set; } = false;
+    public bool IsTopmostEnabled { get; set; } = true;
+    public bool IsPositionLocked { get; set; } = false;
 
     // 菜单的固定尺寸（与XAML中设置的一致）
     private const double MENU_WIDTH = 150;
-    private const double MENU_HEIGHT = 180;
+    private const double MENU_HEIGHT = 320;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmEnableBlurBehindWindow(IntPtr hwnd, ref DWM_BLURBEHIND blurBehind);
@@ -285,6 +296,48 @@ public partial class TrayMenuWindow : Window
         }
 
         this.Hide();
+    }
+
+    private void ShowNetMonitor_Click(object sender, MouseButtonEventArgs e)
+    {
+        OnShowNetMonitor?.Invoke();
+        this.Hide();
+    }
+
+    private void ResetWindowPosition_Click(object sender, MouseButtonEventArgs e)
+    {
+        OnResetWindowPosition?.Invoke();
+        this.Hide();
+    }
+
+    private void ToggleClickThrough_Click(object sender, MouseButtonEventArgs e)
+    {
+        OnToggleClickThrough?.Invoke();
+        this.Hide();
+    }
+
+    private void ToggleTopmost_Click(object sender, MouseButtonEventArgs e)
+    {
+        OnToggleTopmost?.Invoke();
+        this.Hide();
+    }
+
+    public void UpdateMenuStates(bool netViewVisible, bool clickThrough, bool topmost, bool positionLocked)
+    {
+        IsNetViewVisible = netViewVisible;
+        IsClickThroughEnabled = clickThrough;
+        IsTopmostEnabled = topmost;
+        IsPositionLocked = positionLocked;
+        
+        // Update menu item texts directly
+        if (NetMonitorText != null)
+            NetMonitorText.Text = IsNetViewVisible ? "隐藏网速悬浮窗" : "显示网速悬浮窗";
+            
+        if (ClickThroughText != null)
+            ClickThroughText.Text = IsClickThroughEnabled ? "禁用点击穿透" : "启用点击穿透";
+            
+        if (TopmostText != null)
+            TopmostText.Text = IsTopmostEnabled ? "取消置顶" : "设为置顶";
     }
 
     private void Window_Deactivated(object sender, EventArgs e)

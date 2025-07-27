@@ -171,8 +171,18 @@ public class TrayIconManager : IDisposable
             _trayMenu.OnShowMainWindow += () => ShowMainWindow();
             _trayMenu.OnExitApplication += () => System.Windows.Application.Current.Shutdown();
             _trayMenu.OnHideToTray += () => _mainWindow?.Hide();
+            
+            // Connect new NetView-specific functionality
+            _trayMenu.OnShowNetMonitor += () => ShowNetMonitor();
+            _trayMenu.OnResetWindowPosition += () => ResetNetViewPosition();
+            _trayMenu.OnToggleClickThrough += () => ToggleNetViewClickThrough();
+            _trayMenu.OnToggleTopmost += () => ToggleNetViewTopmost();
+            
             Console.WriteLine("创建新的TrayMenuWindow");
         }
+
+        // Update menu states before showing
+        UpdateTrayMenuStates();
 
         // 使用Win32 API获取鼠标位置
         if (GetCursorPos(out POINT mousePos))
@@ -288,6 +298,102 @@ public class TrayIconManager : IDisposable
         }
 
         return (workArea, dpiScaleX, dpiScaleY);
+    }
+
+    private void ShowNetMonitor()
+    {
+        if (_mainWindow != null)
+        {
+            _mainWindow.Show();
+            _mainWindow.Activate();
+        }
+    }
+
+    private void ResetNetViewPosition()
+    {
+        if (_mainWindow is Shell.Views.NetView netView)
+        {
+            // Call the public method to reset position
+            var workArea = SystemParameters.WorkArea;
+            netView.Left = workArea.Right - netView.Width - 20;
+            netView.Top = workArea.Top + 20;
+        }
+    }
+
+    private void ToggleNetViewClickThrough()
+    {
+        if (_mainWindow is Shell.Views.NetView netView)
+        {
+            // Access the NetView's private method through a public interface
+            // For now, let's access the property directly if possible
+            var contextMenu = netView.ContextMenu;
+            if (contextMenu?.Items != null)
+            {
+                foreach (var item in contextMenu.Items)
+                {
+                    if (item is System.Windows.Controls.MenuItem menuItem && 
+                        menuItem.Name == "ClickThroughMenuItem")
+                    {
+                        menuItem.IsChecked = !menuItem.IsChecked;
+                        var routedEventArgs = new System.Windows.RoutedEventArgs(System.Windows.Controls.MenuItem.ClickEvent);
+                        menuItem.RaiseEvent(routedEventArgs);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void ToggleNetViewTopmost()
+    {
+        if (_mainWindow is Shell.Views.NetView netView)
+        {
+            netView.Topmost = !netView.Topmost;
+            
+            // Update the context menu item
+            var contextMenu = netView.ContextMenu;
+            if (contextMenu?.Items != null)
+            {
+                foreach (var item in contextMenu.Items)
+                {
+                    if (item is System.Windows.Controls.MenuItem menuItem && 
+                        menuItem.Name == "TopmostMenuItem")
+                    {
+                        menuItem.IsChecked = netView.Topmost;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void UpdateTrayMenuStates()
+    {
+        if (_mainWindow is Shell.Views.NetView netView && _trayMenu != null)
+        {
+            // Get current state from NetView
+            bool isVisible = netView.IsVisible;
+            bool isTopmost = netView.Topmost;
+            
+            // Get click-through state from context menu
+            bool isClickThrough = false;
+            var contextMenu = netView.ContextMenu;
+            if (contextMenu?.Items != null)
+            {
+                foreach (var item in contextMenu.Items)
+                {
+                    if (item is System.Windows.Controls.MenuItem menuItem && 
+                        menuItem.Name == "ClickThroughMenuItem")
+                    {
+                        isClickThrough = menuItem.IsChecked;
+                        break;
+                    }
+                }
+            }
+            
+            // Update tray menu with current states
+            _trayMenu.UpdateMenuStates(isVisible, isClickThrough, isTopmost, false);
+        }
     }
 
     public void Dispose()

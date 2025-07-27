@@ -7,7 +7,7 @@
     xmlns:local="clr-namespace:Shell.UserControls"
     mc:Ignorable="d"
     Title="TrayMenu"
-    Height="180"
+    Height="320"
     Width="150"
     Topmost="True"
     ShowInTaskbar="False"
@@ -130,6 +130,68 @@
                         <TextBlock
                             Text="打开主窗口"
                             Style="{StaticResource TextStyle}" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Style="{StaticResource MenuItemStyle}"
+                    MouseLeftButtonDown="ShowNetMonitor_Click">
+                    <StackPanel
+                        Orientation="Horizontal">
+                        <TextBlock
+                            Text=""
+                            Style="{StaticResource IconStyle}" />
+                        <TextBlock
+                            Text="显示网速悬浮窗"
+                            Style="{StaticResource TextStyle}"
+                            x:Name="NetMonitorText" />
+                    </StackPanel>
+                </Border>
+
+                <Rectangle
+                    Style="{StaticResource SeparatorStyle}" />
+
+                <Border
+                    Style="{StaticResource MenuItemStyle}"
+                    MouseLeftButtonDown="ResetWindowPosition_Click">
+                    <StackPanel
+                        Orientation="Horizontal">
+                        <TextBlock
+                            Text=""
+                            Style="{StaticResource IconStyle}" />
+                        <TextBlock
+                            Text="重置悬浮窗位置"
+                            Style="{StaticResource TextStyle}" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Style="{StaticResource MenuItemStyle}"
+                    MouseLeftButtonDown="ToggleClickThrough_Click">
+                    <StackPanel
+                        Orientation="Horizontal">
+                        <TextBlock
+                            Text=""
+                            Style="{StaticResource IconStyle}" />
+                        <TextBlock
+                            Text="切换点击穿透"
+                            Style="{StaticResource TextStyle}"
+                            x:Name="ClickThroughText" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Style="{StaticResource MenuItemStyle}"
+                    MouseLeftButtonDown="ToggleTopmost_Click">
+                    <StackPanel
+                        Orientation="Horizontal">
+                        <TextBlock
+                            Text=""
+                            Style="{StaticResource IconStyle}" />
+                        <TextBlock
+                            Text="切换置顶状态"
+                            Style="{StaticResource TextStyle}"
+                            x:Name="TopmostText" />
                     </StackPanel>
                 </Border>
 
