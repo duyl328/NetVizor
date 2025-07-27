@@ -229,11 +229,11 @@
       <!-- Vue Virtual Scroller - 表格化连接列表 -->
       <div class="connections-table">
         <div class="table-header">
+          <div class="table-cell header-cell protocol">协议</div>
           <div class="table-cell header-cell status">状态</div>
           <div class="table-cell header-cell endpoints">连接信息</div>
           <div class="table-cell header-cell traffic">流量</div>
           <div class="table-cell header-cell time">时间</div>
-          <div class="table-cell header-cell actions">操作</div>
         </div>
 
         <RecycleScroller
@@ -252,29 +252,29 @@
               'is-selected-process': selectedProcessIds.has(item.processId)
             }"
           >
+            <div class="table-cell protocol-cell">
+              <n-tag 
+                :type="getProtocolTagType(item.protocol)"
+                size="tiny" 
+                round
+              >
+                {{ formatProtocol(item.protocol) }}
+              </n-tag>
+            </div>
+
             <div class="table-cell status-cell">
               <div
                 class="status-indicator"
                 :class="item.isActive ? 'active' : 'inactive'"
                 :title="item.isActive ? '活跃' : '空闲'"
               ></div>
-              <div class="status-info">
-                <n-tag
-                  :type="getConnectionStateTagType(item.state, item.isActive)"
-                  size="tiny"
-                  round
-                >
-                  {{ formatConnectionState(item.state) }}
-                </n-tag>
-                <n-tag
-                  :type="getProtocolTagType(item.protocol)"
-                  size="tiny"
-                  round
-                  style="margin-left: 4px;"
-                >
-                  {{ formatProtocol(item.protocol) }}
-                </n-tag>
-              </div>
+              <n-tag
+                :type="getConnectionStateTagType(item.state, item.isActive)"
+                size="tiny"
+                round
+              >
+                {{ formatConnectionState(item.state) }}
+              </n-tag>
             </div>
 
             <div class="table-cell endpoints-cell">
@@ -311,19 +311,6 @@
                   {{ getTimeSinceActive(new Date(item.lastActiveTime)) }}前
                 </span>
               </div>
-            </div>
-
-            <div class="table-cell actions-cell">
-              <n-button size="tiny" circle quaternary type="info" @click.stop="handleViewDetails(item)">
-                <template #icon>
-                  <n-icon :component="InformationCircleOutline" />
-                </template>
-              </n-button>
-              <n-button size="tiny" circle quaternary type="warning" @click.stop="handleDisconnect(item)">
-                <template #icon>
-                  <n-icon :component="StopCircleOutline" />
-                </template>
-              </n-button>
             </div>
           </div>
         </RecycleScroller>
@@ -454,7 +441,7 @@ const stats = computed(() => {
 
 // 获取所有连接列表（统一显示）
 const allConnections = computed(() => {
-  const connections: any[] = []
+  const connections: unknown[] = []
 
   filteredProcesses.value.forEach((process) => {
     process.connections.forEach((connection, index) => {
@@ -533,7 +520,7 @@ const toggleProcessDetails = () => {
 }
 
 // 格式化协议类型
-const formatProtocol = (protocol: any): string => {
+const formatProtocol = (protocol: unknown): string => {
   // 如果是数字，转换为对应的协议名称
   if (typeof protocol === 'number') {
     switch (protocol) {
@@ -552,7 +539,7 @@ const formatProtocol = (protocol: any): string => {
 }
 
 // 格式化连接状态
-const formatConnectionState = (state: any): string => {
+const formatConnectionState = (state: unknown): string => {
   // 如果是数字，转换为对应的状态名称
   if (typeof state === 'number') {
     switch (state) {
@@ -681,7 +668,7 @@ const getTimeSinceActive = (lastActive: Date): string => {
 }
 
 // 获取协议标签类型
-const getProtocolTagType = (protocol: any) => {
+const getProtocolTagType = (protocol: unknown) => {
   const protocolStr = formatProtocol(protocol)
   switch (protocolStr) {
     case 'TCP':
@@ -696,7 +683,7 @@ const getProtocolTagType = (protocol: any) => {
 }
 
 // 获取连接状态标签类型
-const getConnectionStateTagType = (state: any, isActive: boolean) => {
+const getConnectionStateTagType = (state: unknown, isActive: boolean) => {
   if (!isActive) return 'default' as const
 
   const stateStr = String(state || '')
@@ -1203,7 +1190,7 @@ onUnmounted(() => {
 
 .table-header {
   display: grid;
-  grid-template-columns: 120px 1fr 120px 100px 80px;
+  grid-template-columns: 80px 100px 1fr 120px 100px;
   gap: 12px;
   padding: 8px 12px;
   background: var(--bg-card);
@@ -1230,7 +1217,7 @@ onUnmounted(() => {
 
 .table-row {
   display: grid;
-  grid-template-columns: 120px 1fr 120px 100px 80px;
+  grid-template-columns: 80px 100px 1fr 120px 100px;
   gap: 12px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-secondary);
@@ -1258,63 +1245,70 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
-.status-cell {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.status-info {
+.protocol-cell {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  justify-content: center;
 }
 
-.status-info .n-tag {
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.protocol-cell .n-tag,
+.status-cell .n-tag {
   font-weight: 500;
   border: 1px solid transparent;
   transition: all 0.2s ease;
   cursor: default;
 }
 
-.status-info .n-tag:hover {
+.protocol-cell .n-tag:hover,
+.status-cell .n-tag:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 协议标签自定义样式 */
-.status-info .n-tag--info {
+/* 协议和状态标签自定义样式 */
+.protocol-cell .n-tag--info,
+.status-cell .n-tag--info {
   background: rgba(59, 130, 246, 0.1);
   color: #2563eb;
   border-color: rgba(59, 130, 246, 0.2);
 }
 
-.status-info .n-tag--warning {
+.protocol-cell .n-tag--warning,
+.status-cell .n-tag--warning {
   background: rgba(245, 158, 11, 0.1);
   color: #d97706;
   border-color: rgba(245, 158, 11, 0.2);
 }
 
-.status-info .n-tag--error {
+.protocol-cell .n-tag--error,
+.status-cell .n-tag--error {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-.status-info .n-tag--success {
+.protocol-cell .n-tag--success,
+.status-cell .n-tag--success {
   background: rgba(34, 197, 94, 0.1);
   color: #16a34a;
   border-color: rgba(34, 197, 94, 0.2);
 }
 
-.status-info .n-tag--primary {
+.protocol-cell .n-tag--primary,
+.status-cell .n-tag--primary {
   background: rgba(168, 85, 247, 0.1);
   color: #9333ea;
   border-color: rgba(168, 85, 247, 0.2);
 }
 
-.status-info .n-tag--default {
+.protocol-cell .n-tag--default,
+.status-cell .n-tag--default {
   background: rgba(107, 114, 128, 0.1);
   color: #6b7280;
   border-color: rgba(107, 114, 128, 0.2);
@@ -1410,11 +1404,6 @@ onUnmounted(() => {
 .last-active {
   color: var(--text-muted);
   font-size: 10px;
-}
-
-.actions-cell {
-  gap: 4px;
-  justify-content: center;
 }
 
 .connections-header {
@@ -1631,17 +1620,18 @@ onUnmounted(() => {
   }
 
   .table-header {
-    grid-template-columns: 100px 1fr 100px 80px 60px;
+    grid-template-columns: 70px 90px 1fr 100px 80px;
     gap: 8px;
     font-size: 11px;
   }
 
   .table-row {
-    grid-template-columns: 100px 1fr 100px 80px 60px;
+    grid-template-columns: 70px 90px 1fr 100px 80px;
     gap: 8px;
   }
 
-  .status-info .n-tag {
+  .protocol-cell .n-tag,
+  .status-cell .n-tag {
     font-size: 10px;
     padding: 1px 6px;
   }
