@@ -28,9 +28,9 @@
     </div>
 
     <div class="title-bar-right">
-      <div class="status-indicator">
-        <div class="status-dot active"></div>
-        <span>实时监控中</span>
+      <div class="status-indicator" :class="statusClass">
+        <div class="status-dot"></div>
+        <span>{{ statusText }}</span>
       </div>
 
       <n-button circle size="small" quaternary @click="openSettings">
@@ -54,6 +54,8 @@ import { SettingsOutline, MoonOutline, SunnyOutline } from '@vicons/ionicons5'
 import { computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
+import { useWebSocketStore } from '@/stores/websocketStore'
+import { WebSocketState } from '@/types/websocket'
 
 // region 路由的激活和绑定
 const router = useRouter()
@@ -84,6 +86,36 @@ const handleTabChange = (tabName: string) => {
   activeTab.value = tabName
   router.push({ name: tabName })
 }
+// endregion
+
+// region WebSocket状态
+const websocketStore = useWebSocketStore()
+
+// 状态文本映射
+const statusTextMap = {
+  [WebSocketState.DISCONNECTED]: '连接断开',
+  [WebSocketState.CONNECTING]: '正在连接...',
+  [WebSocketState.CONNECTED]: '实时监控中',
+  [WebSocketState.ERROR]: '连接错误'
+}
+
+// 状态样式映射
+const statusStyleMap = {
+  [WebSocketState.DISCONNECTED]: 'disconnected',
+  [WebSocketState.CONNECTING]: 'connecting',
+  [WebSocketState.CONNECTED]: 'connected',
+  [WebSocketState.ERROR]: 'error'
+}
+
+// 计算当前状态文本
+const statusText = computed(() => {
+  return statusTextMap[websocketStore.connectionState] || '未知状态'
+})
+
+// 计算当前状态样式类
+const statusClass = computed(() => {
+  return statusStyleMap[websocketStore.connectionState] || 'disconnected'
+})
 // endregion
 
 // region 黑暗模式
@@ -230,17 +262,60 @@ const openSettings = () => {
   font-size: 14px;
   color: var(--text-quaternary);
   padding: 6px 12px;
-  background: rgba(34, 197, 94, 0.1);
   border-radius: 20px;
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  border: 1px solid;
+  transition: all 0.3s ease;
+}
+
+/* 连接状态样式 */
+.status-indicator.connected {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+  color: rgb(34, 197, 94);
+}
+
+.status-indicator.connecting {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.2);
+  color: rgb(251, 191, 36);
+}
+
+.status-indicator.disconnected {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: rgb(239, 68, 68);
+}
+
+.status-indicator.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: rgb(239, 68, 68);
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-success);
+  transition: all 0.3s ease;
+}
+
+.status-indicator.connected .status-dot {
+  background: rgb(34, 197, 94);
   animation: pulse 2s infinite;
+}
+
+.status-indicator.connecting .status-dot {
+  background: rgb(251, 191, 36);
+  animation: pulse 1s infinite;
+}
+
+.status-indicator.disconnected .status-dot {
+  background: rgb(239, 68, 68);
+}
+
+.status-indicator.error .status-dot {
+  background: rgb(239, 68, 68);
+  animation: pulse 0.5s infinite;
 }
 
 /* 动画 */
