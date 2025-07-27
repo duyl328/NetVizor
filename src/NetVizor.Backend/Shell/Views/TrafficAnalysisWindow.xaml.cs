@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows;
-using System.Windows.Threading;
 using Common.Logger;
 
 namespace Shell.Views;
@@ -12,11 +11,11 @@ public partial class TrafficAnalysisWindow : Window
 {
     private static TrafficAnalysisWindow? _instance;
     private static bool _hasRequestedElevation = false;
-
+    
     // Win32 API for checking admin rights
     [DllImport("shell32.dll")]
     static extern bool IsUserAnAdmin();
-
+    
     public static TrafficAnalysisWindow Instance
     {
         get
@@ -29,7 +28,7 @@ public partial class TrafficAnalysisWindow : Window
             return _instance;
         }
     }
-
+    
     private TrafficAnalysisWindow()
     {
         InitializeComponent();
@@ -38,7 +37,7 @@ public partial class TrafficAnalysisWindow : Window
 
         Log.Info("TrafficAnalysisWindow 初始化");
     }
-
+    
     public static void ShowWindow()
     {
         try
@@ -76,7 +75,7 @@ public partial class TrafficAnalysisWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
-
+    
     private static bool IsRunningAsAdmin()
     {
         try
@@ -91,7 +90,7 @@ public partial class TrafficAnalysisWindow : Window
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
     }
-
+    
     private static void RequestElevation()
     {
         try
@@ -117,48 +116,12 @@ public partial class TrafficAnalysisWindow : Window
             _hasRequestedElevation = true; // Don't ask again in this session
         }
     }
-
+    
     private void TrafficAnalysisWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Log.Info("TrafficAnalysisWindow 加载完成");
-
-        // Update status based on admin rights
-        UpdateStatus();
-
-        // Initialize WebPanel if needed
-        InitializeWebPanel();
     }
-
-    private void UpdateStatus()
-    {
-        if (IsRunningAsAdmin())
-        {
-            StatusText.Text = "管理员模式 - 完整功能可用";
-            StatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green);
-        }
-        else
-        {
-            StatusText.Text = "普通模式 - 功能受限";
-            StatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Orange);
-        }
-    }
-
-    private void InitializeWebPanel()
-    {
-        try
-        {
-            // WebPanel should automatically load the Vue3 application
-            // The WebView2 control will handle the web content
-            Log.Info("WebPanel 初始化完成");
-        }
-        catch (Exception ex)
-        {
-            Log.Error4Ctx($"WebPanel 初始化失败: {ex.Message}");
-            StatusText.Text = "初始化失败";
-            StatusText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red);
-        }
-    }
-
+    
     private void TrafficAnalysisWindow_Closing(object sender, CancelEventArgs e)
     {
         // Don't actually close, just hide the window for better performance
@@ -166,41 +129,7 @@ public partial class TrafficAnalysisWindow : Window
         this.Hide();
         Log.Info("TrafficAnalysisWindow 隐藏");
     }
-
-    private void Refresh_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            // Refresh the WebPanel content
-            if (WebPanel != null)
-            {
-                // The WebPanel should handle its own refresh logic
-                Log.Info("刷新流量分析数据");
-                StatusText.Text = "正在刷新...";
-
-                // Use a timer to reset status after refresh
-                var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-                timer.Tick += (s, args) =>
-                {
-                    UpdateStatus();
-                    timer.Stop();
-                };
-                timer.Start();
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Error4Ctx($"刷新失败: {ex.Message}");
-            System.Windows.MessageBox.Show($"刷新失败: {ex.Message}", "错误",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void Close_Click(object sender, RoutedEventArgs e)
-    {
-        this.Hide();
-    }
-
+    
     // Force close method for application shutdown
     public void ForceClose()
     {

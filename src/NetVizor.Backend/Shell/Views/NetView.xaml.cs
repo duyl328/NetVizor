@@ -266,15 +266,12 @@ public partial class NetView : Window
         _showDetailedInfo = !_showDetailedInfo;
         DetailedInfoMenuItem.IsChecked = _showDetailedInfo;
         
-        // Toggle window height for detailed info
-        if (_showDetailedInfo)
-        {
-            this.Height = 200; // Expanded height for detailed info
-        }
-        else
-        {
-            this.Height = 120; // Compact height
-        }
+        // The window will automatically resize based on content
+        // No need to manually set height anymore due to SizeToContent="WidthAndHeight"
+        
+        // You can trigger a re-layout if needed
+        this.InvalidateMeasure();
+        this.UpdateLayout();
     }
 
     private void HideToTray_Click(object sender, RoutedEventArgs e)
@@ -305,17 +302,6 @@ public partial class NetView : Window
         }
     }
 
-    protected override void OnLocationChanged(EventArgs e)
-    {
-        base.OnLocationChanged(e);
-        
-        // Snap to screen if enabled
-        if (_snapToScreen && !_isPositionLocked)
-        {
-            SnapToScreen();
-        }
-    }
-
     // Handle window dragging
     private void Grid_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -325,9 +311,6 @@ public partial class NetView : Window
             try
             {
                 this.DragMove();
-                
-                // After drag move, check and snap back if outside screen bounds
-                SnapBackToScreen();
             }
             catch (InvalidOperationException)
             {
@@ -335,6 +318,45 @@ public partial class NetView : Window
                 // This can happen in edge cases, so we catch and ignore
             }
         }
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        
+        // Only check snap to screen if that option is enabled
+        if (_snapToScreen && !_isPositionLocked)
+        {
+            SnapToScreen();
+        }
+        
+        // Perform boundary check after drag is complete (with delay to avoid flicker)
+        if (!_isPositionLocked)
+        {
+            CheckBoundariesDelayed();
+        }
+    }
+
+    private System.Windows.Threading.DispatcherTimer? _boundaryCheckTimer;
+    
+    private void CheckBoundariesDelayed()
+    {
+        // Cancel previous timer if exists
+        _boundaryCheckTimer?.Stop();
+        
+        // Create new timer for delayed boundary check
+        _boundaryCheckTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(150) // Delay to avoid flicker during drag
+        };
+        
+        _boundaryCheckTimer.Tick += (s, e) =>
+        {
+            _boundaryCheckTimer.Stop();
+            SnapBackToScreen();
+        };
+        
+        _boundaryCheckTimer.Start();
     }
 
     private void SnapBackToScreen()
