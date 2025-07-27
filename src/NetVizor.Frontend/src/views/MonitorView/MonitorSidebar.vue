@@ -22,18 +22,37 @@
         </div>
       </div>
 
-      <!-- 应用列表容器 - 添加独立滚动 -->
+      <!-- 应用列表容器 - 虚拟滚动 -->
       <div class="app-list-container">
-        <div
+        <!-- 空状态显示 -->
+        <div v-if="filteredApplications.length === 0" class="empty-state">
+          <n-icon :component="DesktopOutline" size="48" class="empty-icon" />
+          <div class="empty-title">
+            {{ isFiltering && filterText ? '没有找到匹配的应用' : '暂无运行的应用' }}
+          </div>
+          <div class="empty-subtitle">
+            {{
+              isFiltering && filterText
+                ? `没有找到包含 "${filterText}" 的应用程序，请尝试其他搜索词`
+                : '系统中没有检测到正在运行的应用程序'
+            }}
+          </div>
+        </div>
+
+        <!-- 虚拟滚动列表 -->
+        <RecycleScroller
+          v-else
+          ref="recycleScrollerRef"
           class="app-list scrollbar-primary scrollbar-thin"
-          ref="appListRef"
+          :items="filteredApplications"
+          :item-size="itemHeight"
+          key-field="id"
+          v-slot="{ item: app, index }"
           tabindex="0"
           @keydown="handleKeyDown"
           @blur="handleListBlur"
         >
           <div
-            v-for="(app, index) in filteredApplications"
-            :key="app.id"
             :ref="(el) => setAppItemRef(el, index)"
             class="app-item"
             :class="{
@@ -78,7 +97,7 @@
               </div>
               <div class="app-details">
                 <span class="app-detail">
-                  线程数: 
+                  线程数:
                   <template v-if="isFiltering && filterText">
                     {{ getProcessCount(app) }}
                   </template>
@@ -103,32 +122,18 @@
               ></div>
             </div>
           </div>
-
-          <!-- 空状态 -->
-          <div v-if="filteredApplications.length === 0" class="empty-state">
-            <n-icon :component="DesktopOutline" size="48" class="empty-icon" />
-            <div class="empty-title">
-              {{ isFiltering && filterText ? '没有找到匹配的应用' : '暂无运行的应用' }}
-            </div>
-            <div class="empty-subtitle">
-              {{ 
-                isFiltering && filterText 
-                  ? `没有找到包含 "${filterText}" 的应用程序，请尝试其他搜索词` 
-                  : '系统中没有检测到正在运行的应用程序' 
-              }}
-            </div>
-          </div>
-        </div>
+        </RecycleScroller>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, defineProps, watch, onMounted, onUnmounted, nextTick, computed, defineExpose } from 'vue'
 import { NIcon, NHighlight, useThemeVars } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { DesktopOutline } from '@vicons/ionicons5'
+import { RecycleScroller } from 'vue-virtual-scroller'
 import { httpClient } from '@/utils/http.ts'
 import { ResponseModel, SubscriptionInfo } from '@/types/response'
 import { useWebSocketStore } from '@/stores/websocketStore'
@@ -139,6 +144,7 @@ import { convertFileSize } from '@/utils/fileUtil'
 import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
 import lodash from 'lodash'
 import { getGradientColor } from '@/utils/colorUtils'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 // Props
 const props = defineProps<{
@@ -183,9 +189,12 @@ const getProcessCount = (app: ApplicationType) => {
 }
 
 // Refs
-const appListRef = ref<HTMLDivElement>()
+const recycleScrollerRef = ref<InstanceType<typeof RecycleScroller>>()
 const appItemRefs = ref<(HTMLDivElement | null)[]>([])
 const focusedIndex = ref<number>(-1) // 添加聚焦索引
+
+// 虚拟滚动配置
+const itemHeight = 88 // 每个应用项的固定高度 (增加间距)
 
 // 设置应用项目的 ref
 const setAppItemRef = (el: unknown, index: number) => {
@@ -223,14 +232,23 @@ onMounted(() => {
   // 监听应用列表变化，自动选中第一个
   watch(
     filteredApplications,
-    async (newAppInfos) => {
+    async (newAppInfos, oldAppInfos) => {
       // 重置聚焦索引
       // focusedIndex.value = -1
+
+      // 虚拟滚动列表数据更新处理
+      await nextTick()
+
+      // 强制虚拟滚动器更新布局（处理数据变化）
+      if (recycleScrollerRef.value) {
+        // 通知虚拟滚动器数据已变化
+        recycleScrollerRef.value.$forceUpdate()
+      }
 
       // 如果有应用且当前没有选中的应用
       if (newAppInfos.length > 0 && !selectedApp.value) {
         await nextTick()
-        selectApp(newAppInfos[0])
+        selectApp(newAppInfos[0], true) // 自动选中时需要滚动
       }
       // 如果当前选中的应用不在列表中了，选中第一个
       else if (
@@ -239,19 +257,52 @@ onMounted(() => {
         !newAppInfos.find((app) => app.id === selectedApp.value?.id)
       ) {
         await nextTick()
-        selectApp(newAppInfos[0])
+        selectApp(newAppInfos[0], true) // 自动选中时需要滚动
       }
       // 如果没有应用了，清空选中
       else if (newAppInfos.length === 0) {
         applicationStore.setSelectedApp(null)
       }
+      // 如果选中的应用仍在列表中，但位置可能发生了变化，滚动到新位置
+      else if (selectedApp.value && newAppInfos.length > 0) {
+        const newIndex = newAppInfos.findIndex((app) => app.id === selectedApp.value?.id)
+        const oldIndex = oldAppInfos?.findIndex((app) => app.id === selectedApp.value?.id) ?? -1
+
+        // 如果位置发生了变化，或者这是过滤操作的结果，滚动到新位置
+        if (newIndex !== -1 && (newIndex !== oldIndex || newAppInfos.length !== oldAppInfos?.length)) {
+          await nextTick()
+          scrollToFocusedItem(newIndex)
+        }
+      }
     },
-    { immediate: true },
+    { immediate: true, deep: false },
+  )
+
+  // 监听过滤状态变化，确保虚拟列表正确更新
+  watch(
+    [isFiltering, filterText],
+    async () => {
+      await nextTick()
+      // 过滤状态变化时，强制更新虚拟滚动器
+      if (recycleScrollerRef.value) {
+        recycleScrollerRef.value.$forceUpdate()
+
+        // 如果有选中的应用，滚动到对应位置
+        if (selectedApp.value) {
+          const index = filteredApplications.value.findIndex((app) => app.id === selectedApp.value?.id)
+          if (index !== -1) {
+            setTimeout(() => {
+              scrollToFocusedItem(index)
+            }, 100) // 延迟一点确保虚拟滚动器已更新
+          }
+        }
+      }
+    }
   )
 
   // 自动聚焦到列表容器
   nextTick(() => {
-    appListRef.value?.focus()
+    recycleScrollerRef.value?.$el?.focus()
   })
 })
 
@@ -320,9 +371,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
     case 'Enter':
       event.preventDefault()
-      // 如果有聚焦的应用，选中它
+      // 如果有聚焦的应用，选中它（键盘操作需要滚动）
       if (focusedIndex.value >= 0 && focusedIndex.value < filteredApplications.value.length) {
-        selectApp(filteredApplications.value[focusedIndex.value])
+        selectApp(filteredApplications.value[focusedIndex.value], true)
       }
       break
 
@@ -344,20 +395,58 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
-// 滚动到聚焦的项目
+// 滚动到聚焦的项目 - 虚拟滚动版本
 const scrollToFocusedItem = (index: number) => {
   nextTick(() => {
-    const itemEl = appItemRefs.value[index]
-    if (itemEl && appListRef.value) {
-      const listRect = appListRef.value.getBoundingClientRect()
-      const itemRect = itemEl.getBoundingClientRect()
+    if (recycleScrollerRef.value && index >= 0 && index < filteredApplications.value.length) {
+      try {
+        // 使用虚拟滚动的 scrollToItem 方法
+        recycleScrollerRef.value.scrollToItem(index)
+      } catch (error) {
+        console.warn('Virtual scroller scrollToItem failed:', error)
+        // 如果虚拟滚动失败，尝试手动滚动
+        const viewport = recycleScrollerRef.value.$el?.querySelector('.vue-recycle-scroller__viewport')
+        if (viewport) {
+          const targetPosition = index * itemHeight
+          viewport.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth'
+          })
+        }
+      }
+    }
+  })
+}
 
-      // 如果项目不在可见区域内，滚动到中心位置
-      if (itemRect.top < listRect.top || itemRect.bottom > listRect.bottom) {
-        itemEl.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        })
+// 滚动到指定的应用（外部调用接口）
+const scrollToApp = (appId: string) => {
+  const index = filteredApplications.value.findIndex((app) => app.id === appId)
+  if (index !== -1) {
+    scrollToFocusedItem(index)
+    // 可选：同时设置聚焦和选中
+    focusedIndex.value = index
+    selectApp(filteredApplications.value[index])
+  }
+}
+
+// 滚动到选中的应用
+const scrollToSelectedApp = () => {
+  if (selectedApp.value) {
+    const index = filteredApplications.value.findIndex((app) => app.id === selectedApp.value?.id)
+    if (index !== -1) {
+      scrollToFocusedItem(index)
+    }
+  }
+}
+
+// 刷新虚拟滚动器（用于处理数据同步问题）
+const refreshVirtualScroller = () => {
+  nextTick(() => {
+    if (recycleScrollerRef.value) {
+      try {
+        recycleScrollerRef.value.$forceUpdate()
+      } catch (error) {
+        console.warn('Virtual scroller refresh failed:', error)
       }
     }
   })
@@ -386,8 +475,9 @@ const getFirstChar = (name: string): string => {
 }
 
 // 选择应用
-const selectApp = (app: ApplicationType) => {
+const selectApp = (app: ApplicationType, shouldScroll = false) => {
   applicationStore.setSelectedApp(app)
+
   // 选中后，如果是通过键盘选中的，保持聚焦在当前项
   // 如果是通过鼠标点击的，会在 mouseLeave 时自动清除聚焦
   const selectedIndex = filteredApplications.value.findIndex((a: ApplicationType) => a.id === app.id)
@@ -396,6 +486,13 @@ const selectApp = (app: ApplicationType) => {
   } else {
     // 通过鼠标选中的，清除聚焦
     focusedIndex.value = -1
+  }
+
+  // 只在需要滚动时才滚动（避免用户点击时的意外滚动）
+  if (shouldScroll && selectedIndex !== -1) {
+    nextTick(() => {
+      scrollToFocusedItem(selectedIndex)
+    })
   }
 }
 
@@ -409,6 +506,14 @@ const handleMouseLeave = () => {
   // 鼠标离开时清除聚焦
   focusedIndex.value = -1
 }
+
+// 暴露给父组件的方法
+defineExpose({
+  scrollToApp,
+  scrollToSelectedApp,
+  scrollToFocusedItem,
+  refreshVirtualScroller,
+})
 </script>
 
 <style scoped>
@@ -498,42 +603,52 @@ const handleMouseLeave = () => {
   flex-direction: column;
 }
 
-/* 应用列表 - 独立滚动 */
+/* 应用列表 - 虚拟滚动适配 */
 .app-list {
+  padding: 5px;
   flex: 1;
-  overflow-y: auto; /* 启用垂直滚动 */
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 5px;
-  padding-left: 4px;
-  padding-right: 8px; /* 为滚动条留出空间 */
-  margin-right: -8px; /* 抵消padding */
+  height: 100%; /* 虚拟滚动需要明确的高度 */
   outline: none; /* 移除聚焦时的默认轮廓 */
 }
 
-/* 自定义滚动条样式 */
-.app-list::-webkit-scrollbar {
+/* 虚拟滚动器内部样式适配 */
+.app-list .vue-recycle-scroller {
+  height: 100%;
+}
+
+.app-list .vue-recycle-scroller__viewport {
+  overflow-y: auto !important; /* 启用垂直滚动 */
+  overflow-x: hidden !important;
+  padding-top: 5px;
+  padding-left: 4px;
+  padding-right: 8px; /* 为滚动条留出空间 */
+}
+
+.app-list .vue-recycle-scroller__item-wrapper {
+  padding-bottom: 12px; /* 项目间间距 - 增加 */
+}
+
+/* 自定义滚动条样式 - 适配虚拟滚动 */
+.app-list .vue-recycle-scroller__viewport::-webkit-scrollbar {
   width: 6px;
 }
 
-.app-list::-webkit-scrollbar-track {
+.app-list .vue-recycle-scroller__viewport::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.app-list::-webkit-scrollbar-thumb {
+.app-list .vue-recycle-scroller__viewport::-webkit-scrollbar-thumb {
   background: var(--border-primary);
   border-radius: 3px;
   transition: background 0.2s;
 }
 
-.app-list::-webkit-scrollbar-thumb:hover {
+.app-list .vue-recycle-scroller__viewport::-webkit-scrollbar-thumb:hover {
   background: var(--text-quaternary);
 }
 
-/* Firefox 滚动条 */
-.app-list {
+/* Firefox 滚动条 - 适配虚拟滚动 */
+.app-list .vue-recycle-scroller__viewport {
   scrollbar-width: thin;
   scrollbar-color: var(--border-primary) transparent;
 }
@@ -545,6 +660,7 @@ const handleMouseLeave = () => {
   border: 1px solid var(--border-primary);
   border-radius: 12px;
   padding: 16px;
+  margin: 4px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -553,6 +669,11 @@ const handleMouseLeave = () => {
   position: relative;
   overflow: hidden;
   flex-shrink: 0; /* 防止压缩 */
+  /* 修复模糊问题 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 .app-item:hover {
@@ -568,7 +689,7 @@ const handleMouseLeave = () => {
   box-shadow:
     0 0 0 4px var(--monitor-accent-primary-alpha),
     0 8px 25px -5px rgba(59, 130, 246, 0.3);
-  transform: translateY(-1px) scale(1.01);
+  transform: translateY(-1px);
   position: relative;
   z-index: 5;
 }
@@ -941,11 +1062,11 @@ const handleMouseLeave = () => {
     border-left-color: rgba(255, 255, 255, 0.08);
   }
 
-  .app-list::-webkit-scrollbar-thumb {
+  .app-list .vue-recycle-scroller__viewport::-webkit-scrollbar-thumb {
     background: var(--border-primary);
   }
 
-  .app-list::-webkit-scrollbar-thumb:hover {
+  .app-list .vue-recycle-scroller__viewport::-webkit-scrollbar-thumb:hover {
     background: var(--text-quaternary);
   }
 }
