@@ -23,7 +23,25 @@ export enum FILE_SIZE_UNIT_ENUM {
  * 连接状态枚举
  */
 export enum ConnectionState {
+  /** 已建立连接 */
+  ESTABLISHED = 'ESTABLISHED',
+  /** 正在监听 */
+  LISTEN = 'LISTEN',
+  /** 等待关闭 */
+  TIME_WAIT = 'TIME_WAIT',
+  /** 等待远程关闭 */
+  CLOSE_WAIT = 'CLOSE_WAIT',
+  /** 正在关闭 */
+  CLOSING = 'CLOSING',
+  /** 已关闭 */
+  CLOSED = 'CLOSED',
   /** 正在尝试连接 */
+  SYN_SENT = 'SYN_SENT',
+  /** 连接请求已收到 */
+  SYN_RECEIVED = 'SYN_RECEIVED',
+  /** 最后的ACK等待 */
+  LAST_ACK = 'LAST_ACK',
+  /** 连接中 */
   Connecting = 'Connecting',
   /** 当前连接活跃（发送/接收中） */
   Connected = 'Connected',
