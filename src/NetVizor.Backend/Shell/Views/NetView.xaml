@@ -64,6 +64,11 @@
                     <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
                 </MenuItem.Icon>
             </MenuItem>
+            <MenuItem Header="设置" Click="OpenSettings_Click">
+                <MenuItem.Icon>
+                    <TextBlock Text="" FontFamily="Segoe Fluent Icons" />
+                </MenuItem.Icon>
+            </MenuItem>
             <Separator />
             <MenuItem Header="隐藏到托盘" Click="HideToTray_Click">
                 <MenuItem.Icon>

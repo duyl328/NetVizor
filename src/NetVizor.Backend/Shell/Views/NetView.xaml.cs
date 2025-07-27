@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Threading;
 using Shell.Utils;
 
 namespace Shell.Views;
@@ -14,6 +16,11 @@ public partial class NetView : Window
     private bool _isPositionLocked = false;
     private bool _snapToScreen = false;
     private bool _showDetailedInfo = false;
+
+    // Double-click detection
+    private DispatcherTimer _doubleClickTimer;
+    private bool _isDoubleClick = false;
+    private const int DoubleClickTimeMs = 500; // 500ms for double-click detection
 
     // Win32 API for click-through functionality
     [DllImport("user32.dll", SetLastError = true)]
@@ -38,6 +45,9 @@ public partial class NetView : Window
         
         // Prevent window snapping by setting ResizeMode appropriately
         this.ResizeMode = ResizeMode.NoResize;
+        
+        // Initialize double-click timer
+        InitializeDoubleClickTimer();
     }
 
     private void NetView_Loaded(object sender, RoutedEventArgs e)
@@ -154,6 +164,51 @@ public partial class NetView : Window
         _trayIconManager = new TrayIconManager(this);
     }
 
+    private void InitializeDoubleClickTimer()
+    {
+        _doubleClickTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(DoubleClickTimeMs)
+        };
+        _doubleClickTimer.Tick += DoubleClickTimer_Tick;
+    }
+
+    private void DoubleClickTimer_Tick(object sender, EventArgs e)
+    {
+        _doubleClickTimer.Stop();
+        if (!_isDoubleClick)
+        {
+            // Single click - no action needed for now
+        }
+        _isDoubleClick = false;
+    }
+
+    private void HandleDoubleClick()
+    {
+        try
+        {
+            var settings = Shell.Models.NetViewSettings.Instance;
+            switch (settings.DoubleClickAction)
+            {
+                case Shell.Models.DoubleClickAction.TrafficAnalysis:
+                    TrafficAnalysisWindow.ShowWindow();
+                    break;
+                case Shell.Models.DoubleClickAction.Settings:
+                    SettingsWindow.ShowWindow();
+                    break;
+                case Shell.Models.DoubleClickAction.None:
+                default:
+                    // 无动作
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"执行双击动作失败: {ex.Message}", "错误", 
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         // 阻止窗口关闭，而是隐藏到托盘
@@ -182,6 +237,20 @@ public partial class NetView : Window
         {
             // Log but don't prevent shutdown
             System.Diagnostics.Debug.WriteLine($"Error closing TrafficAnalysisWindow: {ex.Message}");
+        }
+        
+        // Close SettingsWindow if it exists
+        try
+        {
+            if (SettingsWindow.Instance != null)
+            {
+                SettingsWindow.Instance.ForceClose();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't prevent shutdown
+            System.Diagnostics.Debug.WriteLine($"Error closing SettingsWindow: {ex.Message}");
         }
         
         _trayIconManager?.Dispose();
@@ -302,9 +371,39 @@ public partial class NetView : Window
         }
     }
 
-    // Handle window dragging
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            SettingsWindow.ShowWindow();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误", 
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+
+    // Handle window dragging and double-click detection
     private void Grid_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        // Handle double-click detection
+        if (_doubleClickTimer.IsEnabled)
+        {
+            // This is a second click within the timeout period
+            _doubleClickTimer.Stop();
+            _isDoubleClick = true;
+            HandleDoubleClick();
+            return;
+        }
+        else
+        {
+            // Start timer for double-click detection
+            _isDoubleClick = false;
+            _doubleClickTimer.Start();
+        }
+
         // Only allow dragging if position is not locked and click-through is disabled
         if (!_isPositionLocked && !_isClickThrough)
         {
