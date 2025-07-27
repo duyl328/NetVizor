@@ -12,13 +12,13 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
 
   // 计算属性
   const activeApps = computed(() => {
-    return appInfos.value.filter((app) => !app.ExitCode)
+    return appInfos.value.filter((app) => !app.exitCode)
   })
 
   const isInspecting = computed(() => !!inspectingAppDetails.value)
 
   const inactiveApps = computed(() => {
-    return appInfos.value.filter((app) => !!app.ExitCode)
+    return appInfos.value.filter((app) => !!app.exitCode)
   })
 
   const selectedAppIndex = computed(() => {
@@ -27,11 +27,11 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
   })
 
   const totalMemoryUsage = computed(() => {
-    return appInfos.value.reduce((total, app) => total + app.UseMemory, 0)
+    return appInfos.value.reduce((total, app) => total + app.useMemory, 0)
   })
 
   const totalProcessCount = computed(() => {
-    return appInfos.value.reduce((total, app) => total + app.ProcessIds.length, 0)
+    return appInfos.value.reduce((total, app) => total + app.processIds.length, 0)
   })
 
   // 操作

@@ -4,16 +4,28 @@
     <div class="main-header" :style="{ height: headerHeight + 'px' }">
       <div class="header-content">
         <div class="header-info">
-          <h2 class="main-header-title">网络连接监控</h2>
-          <p class="main-header-subtitle">系统网络活动监控</p>
+          <h2 class="main-header-title">
+            {{ isFiltering && filterText ? '过滤结果 - 网络连接监控' : '网络连接监控' }}
+          </h2>
+          <p class="main-header-subtitle">
+            {{ 
+              isFiltering && filterText 
+                ? `正在显示包含 "${filterText}" 的连接信息` 
+                : '系统网络活动监控' 
+            }}
+          </p>
         </div>
 
         <div class="header-actions">
           <div class="search-area">
             <n-input
-              v-model:value="searchQuery"
-              placeholder="搜索连接、域名或IP..."
+              v-model:value="filterText"
+              placeholder="搜索连接、域名、IP、端口、进程名..."
               size="medium"
+              clearable
+              @keydown.enter="handleFilter"
+              @keydown.escape="handleClearFilter"
+              @clear="handleClearFilter"
             >
               <template #prefix>
                 <n-icon :component="SearchOutline" />
@@ -22,8 +34,12 @@
           </div>
 
           <div class="filter-buttons">
-            <n-button size="small" type="primary" quaternary @click="handleFilter">
-              过滤
+            <n-button 
+              size="small" 
+              :type="isFiltering ? 'primary' : 'default'"
+              @click="handleFilter"
+            >
+              {{ isFiltering ? '取消过滤' : '过滤' }}
             </n-button>
             <n-button size="small" quaternary @click="handleRefresh">
               刷新
@@ -35,8 +51,10 @@
 
     <!-- 连接列表 -->
     <connections-table1
-      :connections="filteredConnections"
+      :connections="filteredProcesses"
       :height="connectionsTableHeight"
+      :filter-text="filterText"
+      :is-filtering="isFiltering"
     />
 
     <!-- 时间轴分割线 -->
@@ -60,6 +78,7 @@ import { ResponseModel, SubscriptionInfo, SubscriptionProcessInfo } from '@/type
 import { httpClient } from '@/utils/http'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { useProcessStore } from '@/stores/processInfo'
+import { useFilterStore } from '@/stores/filterStore'
 
 import ConnectionsTable1 from '@/views/MonitorView/components/ConnectionsTable1.vue'
 
@@ -71,6 +90,9 @@ const { selectedApp } = storeToRefs(applicationStore)
 
 const processStore = useProcessStore()
 const { processInfos } = storeToRefs(processStore)
+
+const filterStore = useFilterStore()
+const { filterText, isFiltering, filteredProcesses } = storeToRefs(filterStore)
 
 
 
@@ -106,7 +128,6 @@ const timelineResizing = ref<{
 })
 
 // 内部管理的状态
-const searchQuery = ref('')
 const isTimelinePaused = ref(false)
 const expandedProcesses = ref<number[]>([])
 
@@ -115,31 +136,6 @@ const connectionsTableHeight = computed(() => {
   const totalHeight = mainViewHeight.value
   const usedHeight = headerHeight.value + timelineHeight.value + 4 // 4px为分割线高度
   return `${Math.max(200, totalHeight - usedHeight)}px`
-})
-
-// 过滤后的连接数据
-const filteredConnections = computed(() => {
-  const connections = processInfos.value || []
-
-  // 如果有搜索条件，进行过滤
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    return connections.filter(process => {
-      // 搜索进程名
-      if (process.processName.toLowerCase().includes(query)) {
-        return true
-      }
-      // 搜索连接信息
-      return process.connections.some(conn =>
-        conn.localEndpoint.address.includes(query) ||
-        conn.remoteEndpoint.address.includes(query) ||
-        conn.localEndpoint.port.toString().includes(query) ||
-        conn.remoteEndpoint.port.toString().includes(query)
-      )
-    })
-  }
-
-  return connections
 })
 // Timeline拖拽逻辑
 const startTimelineResize = (event: MouseEvent) => {
@@ -187,7 +183,18 @@ const updateMainViewHeight = () => {
 
 // 事件处理函数
 const handleFilter = () => {
-  console.log('打开过滤器')
+  if (isFiltering.value) {
+    // 当前正在过滤，点击取消过滤
+    filterStore.clearFilter()
+  } else {
+    // 当前没有过滤，点击应用过滤
+    filterStore.applyFilter()
+  }
+}
+
+// 清除过滤
+const handleClearFilter = () => {
+  filterStore.clearFilter()
 }
 
 const handleRefresh = () => {
@@ -200,7 +207,7 @@ watch(selectedApp, (newVal, oldVal) => {
   // 进行更新，先把原始数据清空
   processStore.clear()
   // 清空搜索
-  searchQuery.value = ''
+  filterStore.clearFilter()
 
   console.log(newVal.id, '==========')
 })

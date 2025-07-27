@@ -13,7 +13,13 @@
       </template>
 
       <div class="sidebar-header">
-        <h3 class="sidebar-title">所有连接</h3>
+        <h3 class="sidebar-title">
+          {{ isFiltering && filterText ? '过滤结果' : '所有连接' }}
+        </h3>
+        <div v-if="isFiltering && filterText" class="filter-indicator">
+          <span>搜索: "{{ filterText }}"</span>
+          <span class="filter-count">找到 {{ filteredApplications.length }} 个应用</span>
+        </div>
       </div>
 
       <!-- 应用列表容器 - 添加独立滚动 -->
@@ -26,7 +32,7 @@
           @blur="handleListBlur"
         >
           <div
-            v-for="(app, index) in appInfos"
+            v-for="(app, index) in filteredApplications"
             :key="app.id"
             :ref="(el) => setAppItemRef(el, index)"
             class="app-item"
@@ -57,10 +63,34 @@
 
             <!-- 应用信息 -->
             <div class="app-info">
-              <div class="app-name">{{ app.productName }}</div>
+              <div class="app-name">
+                <!-- 在过滤模式下不需要高亮，因为显示的都是匹配项 -->
+                <template v-if="isFiltering && filterText">
+                  {{ getProductName(app) }}
+                </template>
+                <template v-else>
+                  <n-highlight
+                    :text="getProductName(app)"
+                    :patterns="highlightPatterns"
+                    :highlight-style="highlightStyle"
+                  />
+                </template>
+              </div>
               <div class="app-details">
-                <span class="app-detail">线程数: {{ app.processIds.length }}</span>
-                <span class="app-detail">内存: {{ formatMemory(app.useMemory) }}</span>
+                <span class="app-detail">
+                  线程数: 
+                  <template v-if="isFiltering && filterText">
+                    {{ getProcessCount(app) }}
+                  </template>
+                  <template v-else>
+                    <n-highlight
+                      :text="getProcessCount(app)"
+                      :patterns="highlightPatterns"
+                      :highlight-style="highlightStyle"
+                    />
+                  </template>
+                </span>
+                <span class="app-detail">内存: {{ formatMemory(app.useMemory || 0) }}</span>
                 <span class="app-detail">{{ !!app.exitCode ? '已退出' : '活动' }}</span>
               </div>
             </div>
@@ -75,10 +105,18 @@
           </div>
 
           <!-- 空状态 -->
-          <div v-if="appInfos.length === 0" class="empty-state">
+          <div v-if="filteredApplications.length === 0" class="empty-state">
             <n-icon :component="DesktopOutline" size="48" class="empty-icon" />
-            <div class="empty-title">暂无运行的应用</div>
-            <div class="empty-subtitle">系统中没有检测到正在运行的应用程序</div>
+            <div class="empty-title">
+              {{ isFiltering && filterText ? '没有找到匹配的应用' : '暂无运行的应用' }}
+            </div>
+            <div class="empty-subtitle">
+              {{ 
+                isFiltering && filterText 
+                  ? `没有找到包含 "${filterText}" 的应用程序，请尝试其他搜索词` 
+                  : '系统中没有检测到正在运行的应用程序' 
+              }}
+            </div>
           </div>
         </div>
       </div>
@@ -87,14 +125,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { NIcon } from 'naive-ui'
+import { ref, defineProps, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { NIcon, NHighlight, useThemeVars } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { DesktopOutline } from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http.ts'
 import { ResponseModel, SubscriptionInfo } from '@/types/response'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { useApplicationStore } from '@/stores/application'
+import { useFilterStore } from '@/stores/filterStore'
 import { ApplicationType } from '@/types/infoModel'
 import { convertFileSize } from '@/utils/fileUtil'
 import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
@@ -109,8 +148,39 @@ const props = defineProps<{
 // Store
 const webSocketStore = useWebSocketStore()
 const applicationStore = useApplicationStore()
+const filterStore = useFilterStore()
 const { isOpen } = storeToRefs(webSocketStore)
-const { appInfos, selectedApp } = storeToRefs(applicationStore)
+const { selectedApp } = storeToRefs(applicationStore)
+const { filterText, isFiltering, filteredApplications } = storeToRefs(filterStore)
+
+// 主题变量
+const themeVars = useThemeVars()
+
+// 高亮模式
+const highlightPatterns = computed(() => {
+  if (!isFiltering.value || !filterText.value) return []
+  return [filterText.value]
+})
+
+// 高亮样式
+const highlightStyle = computed(() => ({
+  padding: '1px 2px',
+  borderRadius: themeVars.value.borderRadius,
+  display: 'inline-block',
+  color: themeVars.value.baseColor,
+  background: themeVars.value.primaryColor,
+  transition: `all .3s ${themeVars.value.cubicBezierEaseInOut}`,
+}))
+
+// 安全地获取产品名称
+const getProductName = (app: ApplicationType) => {
+  return app?.productName || ''
+}
+
+// 安全地获取进程数量
+const getProcessCount = (app: ApplicationType) => {
+  return app?.processIds?.length?.toString() || '0'
+}
 
 // Refs
 const appListRef = ref<HTMLDivElement>()
@@ -152,7 +222,7 @@ onMounted(() => {
 
   // 监听应用列表变化，自动选中第一个
   watch(
-    appInfos,
+    filteredApplications,
     async (newAppInfos) => {
       // 重置聚焦索引
       // focusedIndex.value = -1
@@ -203,7 +273,7 @@ onUnmounted(() => {
 
 // 处理键盘事件
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (appInfos.value.length === 0) return
+  if (filteredApplications.value.length === 0) return
 
   let newFocusedIndex = focusedIndex.value
 
@@ -212,18 +282,18 @@ const handleKeyDown = (event: KeyboardEvent) => {
       event.preventDefault()
       // 如果当前没有聚焦，从选中项开始
       if (focusedIndex.value === -1 && selectedApp.value) {
-        const selectedIndex = appInfos.value.findIndex(
+        const selectedIndex = filteredApplications.value.findIndex(
           (app: ApplicationType) => app.id === selectedApp.value?.id,
         )
-        newFocusedIndex = selectedIndex > 0 ? selectedIndex - 1 : appInfos.value.length - 1
+        newFocusedIndex = selectedIndex > 0 ? selectedIndex - 1 : filteredApplications.value.length - 1
       }
       // 如果没有聚焦也没有选中，从最后一个开始
       else if (focusedIndex.value === -1) {
-        newFocusedIndex = appInfos.value.length - 1
+        newFocusedIndex = filteredApplications.value.length - 1
       }
       // 正常向上移动
       else if (focusedIndex.value === 0) {
-        newFocusedIndex = appInfos.value.length - 1
+        newFocusedIndex = filteredApplications.value.length - 1
       } else {
         newFocusedIndex = focusedIndex.value - 1
       }
@@ -233,15 +303,15 @@ const handleKeyDown = (event: KeyboardEvent) => {
       event.preventDefault()
       // 如果当前没有聚焦，从选中项开始
       if (focusedIndex.value === -1 && selectedApp.value) {
-        const selectedIndex = appInfos.value.findIndex((app) => app.id === selectedApp.value?.id)
-        newFocusedIndex = selectedIndex < appInfos.value.length - 1 ? selectedIndex + 1 : 0
+        const selectedIndex = filteredApplications.value.findIndex((app) => app.id === selectedApp.value?.id)
+        newFocusedIndex = selectedIndex < filteredApplications.value.length - 1 ? selectedIndex + 1 : 0
       }
       // 如果没有聚焦也没有选中，从第一个开始
       else if (focusedIndex.value === -1) {
         newFocusedIndex = 0
       }
       // 正常向下移动
-      else if (focusedIndex.value >= appInfos.value.length - 1) {
+      else if (focusedIndex.value >= filteredApplications.value.length - 1) {
         newFocusedIndex = 0
       } else {
         newFocusedIndex = focusedIndex.value + 1
@@ -251,8 +321,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
     case 'Enter':
       event.preventDefault()
       // 如果有聚焦的应用，选中它
-      if (focusedIndex.value >= 0 && focusedIndex.value < appInfos.value.length) {
-        selectApp(appInfos.value[focusedIndex.value])
+      if (focusedIndex.value >= 0 && focusedIndex.value < filteredApplications.value.length) {
+        selectApp(filteredApplications.value[focusedIndex.value])
       }
       break
 
@@ -320,7 +390,7 @@ const selectApp = (app: ApplicationType) => {
   applicationStore.setSelectedApp(app)
   // 选中后，如果是通过键盘选中的，保持聚焦在当前项
   // 如果是通过鼠标点击的，会在 mouseLeave 时自动清除聚焦
-  const selectedIndex = appInfos.value.findIndex((a: ApplicationType) => a.id === app.id)
+  const selectedIndex = filteredApplications.value.findIndex((a: ApplicationType) => a.id === app.id)
   if (focusedIndex.value === selectedIndex) {
     // 通过键盘选中的，保持聚焦
   } else {
@@ -369,6 +439,29 @@ const handleMouseLeave = () => {
   justify-content: space-between;
   margin-bottom: 20px;
   flex-shrink: 0; /* 防止压缩 */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.filter-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  width: 100%;
+  text-align: left;
+}
+
+.filter-count {
+  color: var(--accent-primary);
+  font-weight: 600;
+  font-size: 11px;
 }
 
 .sidebar-title {
