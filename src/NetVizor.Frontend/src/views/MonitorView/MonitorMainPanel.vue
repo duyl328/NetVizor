@@ -16,11 +16,11 @@
           </p>
         </div>
 
-        <div class="header-actions">
+        <div class="header-actions" v-if="false">
           <div class="search-area">
             <n-input
               v-model:value="filterText"
-              placeholder="搜索连接、域名、IP、端口、进程名..."
+              placeholder="搜索连接、IP、端口、进程名..."
               size="medium"
               clearable
               @keydown.enter="handleFilter"
@@ -235,7 +235,7 @@
           <div class="table-cell header-cell time">时间</div>
           <div class="table-cell header-cell actions">操作</div>
         </div>
-        
+
         <RecycleScroller
           ref="virtualListRef"
           class="connections-scroller"
@@ -266,10 +266,10 @@
                 >
                   {{ formatConnectionState(item.state) }}
                 </n-tag>
-                <n-tag 
+                <n-tag
                   :type="getProtocolTagType(item.protocol)"
-                  size="tiny" 
-                  round 
+                  size="tiny"
+                  round
                   style="margin-left: 4px;"
                 >
                   {{ formatProtocol(item.protocol) }}
@@ -618,7 +618,7 @@ const formatUptime = (startTime: Date): string => {
   const days = Math.floor(diff / 86400000)
   const hours = Math.floor((diff % 86400000) / 3600000)
   const minutes = Math.floor((diff % 3600000) / 60000)
-  
+
   if (days > 0) {
     return `${days}天${hours}小时`
   } else if (hours > 0) {
@@ -698,7 +698,7 @@ const getProtocolTagType = (protocol: any) => {
 // 获取连接状态标签类型
 const getConnectionStateTagType = (state: any, isActive: boolean) => {
   if (!isActive) return 'default' as const
-  
+
   const stateStr = String(state || '')
   // 检查数字状态
   if (typeof state === 'number') {
@@ -720,7 +720,7 @@ const getConnectionStateTagType = (state: any, isActive: boolean) => {
         return 'default' as const
     }
   }
-  
+
   // 检查字符串状态
   switch (stateStr) {
     case 'ESTABLISHED':
