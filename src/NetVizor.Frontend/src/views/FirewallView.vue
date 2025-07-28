@@ -565,7 +565,7 @@ const handleSaveRule = (rule: unknown) => {
 
 .firewall-container {
   padding: 24px;
-  max-width: 1500px;
+  max-width: 2000px;
   margin: 0 auto;
   height: 100%;
   display: flex;
@@ -817,9 +817,50 @@ const handleSaveRule = (rule: unknown) => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 超超大屏幕 1801px-2000px */
+@media (min-width: 1801px) and (max-width: 2000px) {
+  .checkbox-cell { width: 60px; }
+  .name-cell { width: 250px; }
+  .status-cell { width: 100px; }
+  .direction-cell { width: 100px; }
+  .action-cell { width: 100px; }
+  .program-cell { width: 320px; flex-shrink: 1; }
+  .protocol-cell { width: 100px; }
+  .port-cell { width: 120px; }
+  .profiles-cell { width: 180px; flex-shrink: 1; }
+  .actions-cell { width: 120px; }
+}
 
-/* 基础列宽 - 针对超大屏幕（>1400px） */
-@media (min-width: 1401px) {
+/* 极大屏幕 >2000px */
+@media (min-width: 2001px) {
+  .checkbox-cell { width: 70px; }
+  .name-cell { width: 280px; }
+  .status-cell { width: 110px; }
+  .direction-cell { width: 110px; }
+  .action-cell { width: 110px; }
+  .program-cell { width: 380px; flex-shrink: 1; }
+  .protocol-cell { width: 110px; }
+  .port-cell { width: 140px; }
+  .profiles-cell { width: 200px; flex-shrink: 1; }
+  .actions-cell { width: 140px; }
+}
+
+/* 超大屏幕 1601px-1800px */
+@media (min-width: 1601px) and (max-width: 1800px) {
+  .checkbox-cell { width: 55px; }
+  .name-cell { width: 230px; }
+  .status-cell { width: 90px; }
+  .direction-cell { width: 90px; }
+  .action-cell { width: 90px; }
+  .program-cell { width: 280px; flex-shrink: 1; }
+  .protocol-cell { width: 90px; }
+  .port-cell { width: 110px; }
+  .profiles-cell { width: 160px; flex-shrink: 1; }
+  .actions-cell { width: 110px; }
+}
+
+/* 基础列宽 - 针对超大屏幕（1401px-1600px） */
+@media (min-width: 1401px) and (max-width: 1600px) {
   .checkbox-cell { width: 50px; }
   .name-cell { width: 200px; }
   .status-cell { width: 80px; }
