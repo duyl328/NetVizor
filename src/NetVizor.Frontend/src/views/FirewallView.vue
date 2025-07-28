@@ -30,7 +30,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.total }}</div>
-            <div class="stat-label">总规则数</div>
+            <div class="stat-label">禁用规则</div>
           </div>
         </div>
 
@@ -50,7 +50,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.inactive }}</div>
-            <div class="stat-label">禁用规则</div>
+            <div class="stat-label">出站规则</div>
           </div>
         </div>
 
@@ -60,7 +60,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.blocked }}</div>
-            <div class="stat-label">阻止连接</div>
+            <div class="stat-label">入站规则</div>
           </div>
         </div>
       </div>
