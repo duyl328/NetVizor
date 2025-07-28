@@ -206,7 +206,7 @@ let scrollTimer: NodeJS.Timeout | null = null
 // 工具函数
 const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout
-  return function executedFunction(...args: any[]) {
+  return function executedFunction(...args:unknown[]) {
     const later = () => {
       clearTimeout(timeout)
       func(...args)
@@ -220,7 +220,7 @@ const throttle = (func: Function, delay: number) => {
   let timeoutId: NodeJS.Timeout
   let lastExecTime = 0
 
-  return function (...args: any[]) {
+  return function (...args:unknown[]) {
     const currentTime = Date.now()
 
     if (currentTime - lastExecTime > delay) {

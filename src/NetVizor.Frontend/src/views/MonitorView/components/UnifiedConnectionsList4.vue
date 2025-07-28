@@ -383,7 +383,7 @@ const formatBytes = (bytes: number) => {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
-const formatEndpoint = (endpoint: any) => {
+const formatEndpoint = (endpoint:unknown) => {
   return `${endpoint.address}:${endpoint.port}`
 }
 
@@ -434,8 +434,8 @@ const getConnectionStateType = (state: number, isActive: boolean) => {
   return types[state as keyof typeof types] || 'default'
 }
 
-const getProcessStatus = (process: any) => {
-  const hasActiveConnections = process.connections?.some((c: any) => c.isActive)
+const getProcessStatus = (processunknown) => {
+  const hasActiveConnections = process.connections?.some((cunknown) => c.isActive)
   if (hasActiveConnections) {
     return { type: 'success', text: '活跃', show: true }
   }
@@ -444,7 +444,7 @@ const getProcessStatus = (process: any) => {
 
 // 数据处理
 const originalItems = computed(() => {
-  const result: any[] = []
+  const result:unknown[] = []
 
   if (!ap || !Array.isArray(ap) || ap.length === 0) {
     return result
@@ -486,8 +486,8 @@ const originalItems = computed(() => {
 
 // 显示数据
 const displayItems = computed(() => {
-  const result: any[] = []
-  const processGroups: { [key: number]: any[] } = {}
+  const result:unknown[] = []
+  const processGroups: { [key: number]:unknown[] } = {}
 
   originalItems.value.forEach((item) => {
     const processIndex = item.processIndex
@@ -552,7 +552,7 @@ const shouldShowSticky = computed(() => {
   return currentIndex > stickyIndex
 })
 
-const shouldHideItem = (item: any, index: number) => {
+const shouldHideItem = (item:unknown, index: number) => {
   if (!stickyItem.value || !shouldShowSticky.value) return false
   return item.key === stickyItem.value.key
 }
