@@ -573,7 +573,7 @@ const stats = computed(() => {
 
 // 数据处理 - 将 ConnectionsTable1 的数据转换为 UnifiedConnectionsList4 的格式
 const originalItems = computed(() => {
-  const result: any[] = []
+  const result:unknown[] = []
 
   if (!props.connections || !Array.isArray(props.connections) || props.connections.length === 0) {
     return result
@@ -629,8 +629,8 @@ const originalItems = computed(() => {
 
 // 显示数据
 const displayItems = computed(() => {
-  const result: any[] = []
-  const processGroups: { [key: number]: any[] } = {}
+  const result:unknown[] = []
+  const processGroups: { [key: number]:unknown[] } = {}
 
   originalItems.value.forEach((item) => {
     const processIndex = item.processIndex
@@ -701,7 +701,7 @@ const shouldShowSticky = computed(() => {
   return currentIndex > stickyIndex
 })
 
-const shouldHideItem = (item: any, index: number) => {
+const shouldHideItem = (item:unknown, index: number) => {
   if (!stickyItem.value || !shouldShowSticky.value) return false
   return item.key === stickyItem.value.key
 }
@@ -883,9 +883,9 @@ const getTimeSinceActive = (lastActive: Date): string => {
   return `${Math.floor(diff / 3600000)}小时前`
 }
 
-const getProcessStatus = (process: any) => {
+const getProcessStatus = (process:unknown) => {
   if (process.hasExited) return { type: 'error' as const, text: '已退出', show: true }
-  const hasActiveConnections = process.connections?.some((c: any) => c.isActive)
+  const hasActiveConnections = process.connections?.some((c:unknown) => c.isActive)
   if (hasActiveConnections) {
     return { type: 'success' as const, text: '活跃', show: true }
   }

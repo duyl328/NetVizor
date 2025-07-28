@@ -11,12 +11,12 @@
 import type { arrayUtilsNotEmptyCallback } from '@/types/utils'
 
 export default class ArrayUtils {
-  
+
   /**
    * 指定数组或未知元素是否为 `null` 或 `empty`
    * @param arr
    */
-  static isEmpty (arr: any[] | null): boolean {
+  static isEmpty (arr: unknown[] | null): boolean {
     return arr === null || arr.length === 0
   }
 }

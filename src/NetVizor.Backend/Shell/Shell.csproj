@@ -7,7 +7,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
         <UseWindowsForms>true</UseWindowsForms> <!-- 加上这句，才能正确启用 Forms 支持 -->
-<!--        <ApplicationManifest>app.manifest</ApplicationManifest>-->
+        <ApplicationManifest>app.manifest</ApplicationManifest>
     </PropertyGroup>
 
     <ItemGroup>

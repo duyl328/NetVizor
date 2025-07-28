@@ -14,10 +14,15 @@ import { useUuidStore } from '@/stores/uuidStore'
 import { logB } from '@/utils/logHelper/logUtils'
 import { httpConfig } from '@/config/httpConfig'
 
+// Vue Virtual Scroller
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
+import VueVirtualScroller from 'vue-virtual-scroller'
+
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(websocketPlugin)
+app.use(VueVirtualScroller)
 // 使用 主题 支持
 app.use(createNaiveUI())
 
