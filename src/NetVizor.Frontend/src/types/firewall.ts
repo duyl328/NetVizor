@@ -1,8 +1,6 @@
-/**
- * 防火墙相关类型定义
- */
+// 所有 DateTime 在前端统一采用 string
 
-// 防火墙配置文件类型
+// FirewallProfile 枚举（使用 bit flags）
 export enum FirewallProfile {
   Domain = 1,
   Private = 2,
@@ -10,20 +8,19 @@ export enum FirewallProfile {
   All = Domain | Private | Public,
 }
 
-// 防火墙规则方向
+// RuleDirection 枚举
 export enum RuleDirection {
   Inbound = 1,
   Outbound = 2,
-  None = -1,
 }
 
-// 防火墙规则动作
+// RuleAction 枚举
 export enum RuleAction {
   Allow = 1,
   Block = 0,
 }
 
-// 协议类型
+// ProtocolType 枚举
 export enum ProtocolType {
   Any = 256,
   ICMPV4 = 1,
@@ -42,10 +39,31 @@ export enum ProtocolType {
   L2TP = 115,
 }
 
+// 配置文件状态
+export interface ProfileStatus {
+  profile: FirewallProfile
+  isEnabled: boolean
+  blockAllInboundTraffic: boolean
+  notifyOnListen: boolean
+  unicastResponsesDisabled: boolean
+  defaultInboundAction: RuleAction
+  defaultOutboundAction: RuleAction
+}
+
+// 防火墙状态信息
+export interface FirewallStatus {
+  isEnabled: boolean
+  profileStatuses: Record<FirewallProfile, ProfileStatus>
+  totalRules: number
+  enabledRules: number
+  inboundRules: number
+  outboundRules: number
+  lastModified: string // ISO 格式字符串或 Date 类型
+}
+
 // 防火墙规则详细信息
 export interface FirewallRule {
   name: string
-  uniqueId?: string // 添加唯一标识符字段，用于解决重复规则显示问题
   description: string
   applicationName: string
   serviceName: string
@@ -65,6 +83,8 @@ export interface FirewallRule {
   interfaces: string[]
   creationDate?: string
   modificationDate?: string
+
+  // 高级属性
   edgeTraversalAllowed: boolean
   looseSourceMapping: boolean
   localOnlyMapping: boolean
@@ -75,32 +95,32 @@ export interface FirewallRule {
   secureFlags: boolean
 }
 
-// 创建防火墙规则的请求
+// 创建规则请求
 export interface CreateRuleRequest {
   name: string
-  description?: string
-  applicationName?: string
-  serviceName?: string
-  protocol?: ProtocolType
-  localPorts?: string
-  remotePorts?: string
-  localAddresses?: string
-  remoteAddresses?: string
-  icmpTypesAndCodes?: string
+  description: string
+  applicationName: string
+  serviceName: string
+  protocol: ProtocolType
+  localPorts: string
+  remotePorts: string
+  localAddresses: string
+  remoteAddresses: string
+  icmpTypesAndCodes: string
   direction: RuleDirection
-  enabled?: boolean
-  profiles?: FirewallProfile
-  action?: RuleAction
-  grouping?: string
-  interfaceTypes?: string
-  interfaces?: string[]
-  edgeTraversal?: boolean
-  edgeTraversalAllowed?: boolean
-  remoteMachineAuthorizationList?: string
-  remoteUserAuthorizationList?: string
+  enabled: boolean
+  profiles: FirewallProfile
+  action: RuleAction
+  grouping: string
+  interfaceTypes: string
+  interfaces: string[]
+  edgeTraversal: boolean
+  edgeTraversalAllowed: boolean
+  remoteMachineAuthorizationList: string
+  remoteUserAuthorizationList: string
 }
 
-// 更新防火墙规则的请求
+// 更新规则请求
 export interface UpdateRuleRequest {
   currentName: string
   newName?: string
@@ -119,41 +139,17 @@ export interface UpdateRuleRequest {
   edgeTraversal?: boolean
 }
 
-// 防火墙规则查询过滤器
+// 规则过滤器
 export interface RuleFilter {
-  name?: string
-  direction?: RuleDirection | string
+  namePattern?: string
+  direction?: RuleDirection
   enabled?: boolean
   profile?: FirewallProfile
-  protocol?: ProtocolType | string
-  action?: RuleAction | string
-  application?: string
+  protocol?: ProtocolType
+  action?: RuleAction
+  applicationName?: string
   grouping?: string
   port?: string
-  start?: number
-  limit?: number
-}
-
-// 防火墙状态信息
-export interface FirewallStatus {
-  isEnabled: boolean
-  profileStatuses: Record<string, ProfileStatus>
-  totalRules: number
-  enabledRules: number
-  inboundRules: number
-  outboundRules: number
-  lastModified: string
-}
-
-// 配置文件状态
-export interface ProfileStatus {
-  profile: FirewallProfile
-  isEnabled: boolean
-  blockAllInboundTraffic: boolean
-  notifyOnListen: boolean
-  unicastResponsesDisabled: boolean
-  defaultInboundAction: RuleAction
-  defaultOutboundAction: RuleAction
 }
 
 // 防火墙统计信息
@@ -161,34 +157,10 @@ export interface FirewallStatistics {
   totalRules: number
   enabledRules: number
   disabledRules: number
-  rulesByDirection: Record<string, number>
-  rulesByProtocol: Record<string, number>
-  rulesByProfile: Record<string, number>
-  rulesByAction: Record<string, number>
+  rulesByDirection: Record<RuleDirection, number>
+  rulesByProtocol: Record<ProtocolType, number>
+  rulesByProfile: Record<FirewallProfile, number>
+  rulesByAction: Record<RuleAction, number>
   topApplications: string[]
   topPorts: string[]
-}
-
-// 防火墙规则查询响应
-export interface FirewallRulesResponse {
-  rules: FirewallRule[]
-  totalCount: number
-  startIndex: number
-  limit: number
-  hasMore: boolean
-}
-
-// 前端显示用的规则接口（兼容现有组件）
-export interface DisplayRule {
-  id: string
-  name: string
-  description: string
-  enabled: boolean
-  direction: 'inbound' | 'outbound'
-  action: 'allow' | 'block'
-  program: string
-  protocol: string
-  port: string
-  profiles: string[]
-  priority?: number
 }

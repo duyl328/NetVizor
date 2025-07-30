@@ -76,16 +76,16 @@
 
                     <n-form-item path="direction" label="规则方向" required>
                       <n-radio-group v-model:value="formData.direction">
-                        <n-radio :value="1">入站 (Inbound)</n-radio>
-                        <n-radio :value="2">出站 (Outbound)</n-radio>
+                        <n-radio value="inbound">入站 (Inbound)</n-radio>
+                        <n-radio value="outbound">出站 (Outbound)</n-radio>
                       </n-radio-group>
                     </n-form-item>
                   </div>
 
                   <n-form-item path="action" label="规则动作" required>
                     <n-radio-group v-model:value="formData.action">
-                      <n-radio :value="1">允许 (Allow)</n-radio>
-                      <n-radio :value="0">阻止 (Block)</n-radio>
+                      <n-radio value="allow">允许 (Allow)</n-radio>
+                      <n-radio value="block">阻止 (Block)</n-radio>
                     </n-radio-group>
                   </n-form-item>
                 </div>
@@ -102,10 +102,10 @@
                   应用程序路径
                 </div>
                 <div class="form-grid">
-                  <n-form-item path="applicationName" label="应用程序">
+                  <n-form-item path="program" label="应用程序">
                     <n-input
-                      v-model:value="formData.applicationName"
-                      placeholder="例: C:\Program Files\Example\app.exe (留空表示所有程序)"
+                      v-model:value="formData.program"
+                      placeholder="例: C:\Program Files\Example\app.exe (留空或'任意'表示所有程序)"
                     >
                       <template #suffix>
                         <n-button text @click="browseApplication">
@@ -113,16 +113,6 @@
                         </n-button>
                       </template>
                     </n-input>
-                  </n-form-item>
-
-                  <n-form-item path="serviceName" label="系统服务">
-                    <n-select
-                      v-model:value="formData.serviceName"
-                      :options="serviceOptions"
-                      placeholder="选择系统服务 (可选)"
-                      filterable
-                      clearable
-                    />
                   </n-form-item>
                 </div>
               </div>
@@ -146,30 +136,10 @@
                     />
                   </n-form-item>
 
-                  <div class="form-row">
-                    <n-form-item path="localPorts" label="本地端口">
-                      <n-input
-                        v-model:value="formData.localPorts"
-                        placeholder="例: 80, 443, 8080-8090 (留空表示所有端口)"
-                      />
-                    </n-form-item>
-
-                    <n-form-item path="remotePorts" label="远程端口">
-                      <n-input
-                        v-model:value="formData.remotePorts"
-                        placeholder="例: 80, 443, 8080-8090 (留空表示所有端口)"
-                      />
-                    </n-form-item>
-                  </div>
-
-                  <n-form-item
-                    v-if="formData.protocol === 1 || formData.protocol === 58"
-                    path="icmpTypesAndCodes"
-                    label="ICMP 类型和代码"
-                  >
+                  <n-form-item path="port" label="端口">
                     <n-input
-                      v-model:value="formData.icmpTypesAndCodes"
-                      placeholder="例: 8:0 (留空表示所有ICMP类型)"
+                      v-model:value="formData.port"
+                      placeholder="例: 80, 443, 8080-8090 (留空或'任意'表示所有端口)"
                     />
                   </n-form-item>
                 </div>
@@ -177,36 +147,7 @@
             </div>
           </n-tab-pane>
 
-          <!-- 地址设置 -->
-          <n-tab-pane name="address" tab="地址设置">
-            <div class="tab-content">
-              <div class="form-section">
-                <div class="section-title">
-                  <n-icon :component="GlobeOutline" />
-                  IP 地址范围
-                </div>
-                <div class="form-grid">
-                  <n-form-item path="localAddresses" label="本地地址">
-                    <n-input
-                      v-model:value="formData.localAddresses"
-                      placeholder="例: 192.168.1.0/24, 10.0.0.1 (* 表示任何地址)"
-                    />
-                    <template #feedback> 支持单个IP、CIDR格式或逗号分隔的多个地址</template>
-                  </n-form-item>
-
-                  <n-form-item path="remoteAddresses" label="远程地址">
-                    <n-input
-                      v-model:value="formData.remoteAddresses"
-                      placeholder="例: 192.168.1.0/24, 10.0.0.1 (* 表示任何地址)"
-                    />
-                    <template #feedback> 支持单个IP、CIDR格式或逗号分隔的多个地址</template>
-                  </n-form-item>
-                </div>
-              </div>
-            </div>
-          </n-tab-pane>
-
-          <!-- 配置文件和接口 -->
+          <!-- 配置文件 -->
           <n-tab-pane name="profile" tab="配置文件">
             <div class="tab-content">
               <div class="form-section">
@@ -218,19 +159,19 @@
                   <n-form-item path="profiles" label="应用于配置文件" required>
                     <n-checkbox-group v-model:value="formData.profiles">
                       <n-space vertical>
-                        <n-checkbox :value="1">
+                        <n-checkbox value="域">
                           <div class="profile-option">
                             <div class="profile-name">域网络 (Domain)</div>
                             <div class="profile-desc">计算机连接到域时</div>
                           </div>
                         </n-checkbox>
-                        <n-checkbox :value="2">
+                        <n-checkbox value="专用">
                           <div class="profile-option">
                             <div class="profile-name">专用网络 (Private)</div>
                             <div class="profile-desc">家庭或工作网络</div>
                           </div>
                         </n-checkbox>
-                        <n-checkbox :value="4">
+                        <n-checkbox value="公用">
                           <div class="profile-option">
                             <div class="profile-name">公用网络 (Public)</div>
                             <div class="profile-desc">公共场所的网络</div>
@@ -238,79 +179,6 @@
                         </n-checkbox>
                       </n-space>
                     </n-checkbox-group>
-                  </n-form-item>
-
-                  <n-form-item path="interfaceTypes" label="接口类型">
-                    <n-input
-                      v-model:value="formData.interfaceTypes"
-                      placeholder="例: Wireless, Lan (留空或'All'表示所有接口)"
-                    />
-                  </n-form-item>
-
-                  <n-form-item path="interfaces" label="特定接口">
-                    <n-dynamic-tags
-                      v-model:value="formData.interfaces"
-                      placeholder="添加网络接口名称"
-                    />
-                    <template #feedback> 可以指定特定的网络接口，留空表示所有接口</template>
-                  </n-form-item>
-                </div>
-              </div>
-            </div>
-          </n-tab-pane>
-
-          <!-- 高级选项 -->
-          <n-tab-pane name="advanced" tab="高级选项">
-            <div class="tab-content">
-              <div class="form-section">
-                <div class="section-title">
-                  <n-icon :component="CogOutline" />
-                  边缘遍历设置
-                </div>
-                <div class="form-grid">
-                  <n-form-item path="edgeTraversal" label="边缘遍历">
-                    <n-checkbox v-model:checked="formData.edgeTraversal">
-                      允许边缘遍历 (适用于需要穿越NAT的应用)
-                    </n-checkbox>
-                  </n-form-item>
-
-                  <n-form-item path="edgeTraversalAllowed" label="边缘遍历策略">
-                    <n-checkbox v-model:checked="formData.edgeTraversalAllowed">
-                      允许延迟边缘遍历
-                    </n-checkbox>
-                  </n-form-item>
-                </div>
-              </div>
-
-              <div class="form-section">
-                <div class="section-title">
-                  <n-icon :component="LockClosedOutline" />
-                  授权设置
-                </div>
-                <div class="form-grid">
-                  <n-form-item path="remoteMachineAuthorizationList" label="远程计算机授权">
-                    <n-input
-                      v-model:value="formData.remoteMachineAuthorizationList"
-                      placeholder="输入安全描述符 (高级用户)"
-                      type="textarea"
-                      :rows="2"
-                    />
-                  </n-form-item>
-
-                  <n-form-item path="remoteUserAuthorizationList" label="远程用户授权">
-                    <n-input
-                      v-model:value="formData.remoteUserAuthorizationList"
-                      placeholder="输入安全描述符 (高级用户)"
-                      type="textarea"
-                      :rows="2"
-                    />
-                  </n-form-item>
-
-                  <n-form-item path="embeddedContext" label="嵌入式上下文">
-                    <n-input
-                      v-model:value="formData.embeddedContext"
-                      placeholder="可选的嵌入式上下文信息"
-                    />
                   </n-form-item>
                 </div>
               </div>
@@ -371,87 +239,17 @@ import {
   LockClosedOutline,
   FolderOpenOutline,
 } from '@vicons/ionicons5'
-import {RuleDirection} from '@/types/firewall'
-// 枚举定义 - 对应后端模型
-// enum RuleDirection {
-//   Inbound = 1,
-//   Outbound = 2,
-// }
-
-enum RuleAction {
-  Block = 0,
-  Allow = 1,
-}
-
-enum ProtocolType {
-  Any = 256,
-  ICMPV4 = 1,
-  IGMP = 2,
-  TCP = 6,
-  UDP = 17,
-  IPv6 = 41,
-  IPv6Route = 43,
-  IPv6Frag = 44,
-  GRE = 47,
-  ICMPv6 = 58,
-  IPv6NoNxt = 59,
-  IPv6Opts = 60,
-  VRRP = 112,
-  PGM = 113,
-  L2TP = 115,
-}
-
-enum FirewallProfile {
-  Domain = 1,
-  Private = 2,
-  Public = 4,
-}
-
-// 防火墙规则接口 - 对应后端 FirewallRule
-interface FirewallRule {
-  name: string
-  description: string
-  applicationName: string
-  serviceName: string
-  protocol: ProtocolType
-  localPorts: string
-  remotePorts: string
-  localAddresses: string
-  remoteAddresses: string
-  icmpTypesAndCodes: string
-  direction: RuleDirection
-  enabled: boolean
-  profiles: FirewallProfile[]
-  edgeTraversal: boolean
-  action: RuleAction
-  grouping: string
-  interfaceTypes: string
-  interfaces: string[]
-
-  // 高级属性
-  edgeTraversalAllowed: boolean
-  looseSourceMapping: boolean
-  localOnlyMapping: boolean
-  remoteMachineAuthorizationList: string
-  remoteUserAuthorizationList: string
-  embeddedContext: string
-  flags: number
-  secureFlags: boolean
-}
-
-// 创建规则请求接口 - 对应后端 CreateRuleRequest
-interface CreateRuleRequest extends Omit<FirewallRule, 'profiles'> {
-  profiles: number // 使用位标志表示多个配置文件
-}
+import { RuleDirection, RuleAction, ProtocolType, FirewallProfile } from '@/types/firewall'
+import type { DisplayRule } from '@/types/firewall'
 
 const props = defineProps<{
   modelValue: boolean
-  editRule?: FirewallRule | null
+  editRule?: DisplayRule | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  save: [rule: CreateRuleRequest]
+  save: [rule: DisplayRule]
 }>()
 
 // 响应式数据
@@ -467,38 +265,20 @@ const activeTab = ref('basic')
 const saving = ref(false)
 
 // 表单数据
-const defaultFormData: FirewallRule = {
+const defaultFormData: DisplayRule = {
+  id: '',
   name: '',
   description: '',
-  applicationName: '',
-  serviceName: '',
-  protocol: ProtocolType.Any,
-  localPorts: '',
-  remotePorts: '',
-  localAddresses: '*',
-  remoteAddresses: '*',
-  icmpTypesAndCodes: '',
-  direction: RuleDirection.Inbound,
   enabled: true,
-  profiles: [FirewallProfile.Domain, FirewallProfile.Private],
-  edgeTraversal: false,
-  action: RuleAction.Allow,
-  grouping: '',
-  interfaceTypes: 'All',
-  interfaces: [],
-
-  // 高级属性
-  edgeTraversalAllowed: false,
-  looseSourceMapping: false,
-  localOnlyMapping: false,
-  remoteMachineAuthorizationList: '',
-  remoteUserAuthorizationList: '',
-  embeddedContext: '',
-  flags: 0,
-  secureFlags: false,
+  direction: 'inbound',
+  action: 'allow',
+  program: '任意',
+  protocol: '任意',
+  port: '任意',
+  profiles: ['域', '专用'],
 }
 
-const formData = ref<FirewallRule>({ ...defaultFormData })
+const formData = ref<DisplayRule>({ ...defaultFormData })
 
 // 表单验证规则
 const formRules: FormRules = {
@@ -506,15 +286,14 @@ const formRules: FormRules = {
     { required: true, message: '请输入规则名称', trigger: 'blur' },
     { min: 1, max: 255, message: '规则名称长度应在1-255字符之间', trigger: 'blur' },
   ],
-  direction: [{ required: true, message: '请选择规则方向', trigger: 'change', type: 'number' }],
-  action: [{ required: true, message: '请选择规则动作', trigger: 'change', type: 'number' }],
-  protocol: [{ required: true, message: '请选择协议类型', trigger: 'change', type: 'number' }],
+  direction: [{ required: true, message: '请选择规则方向', trigger: 'change' }],
+  action: [{ required: true, message: '请选择规则动作', trigger: 'change' }],
   profiles: [
     {
       required: true,
       message: '请至少选择一个配置文件',
       trigger: 'change',
-      validator: (rule, value: FirewallProfile[]) => {
+      validator: (rule, value: string[]) => {
         return value && value.length > 0
       },
     },
@@ -523,29 +302,11 @@ const formRules: FormRules = {
 
 // 选项数据
 const protocolOptions = [
-  { label: '任意协议', value: ProtocolType.Any },
-  { label: 'TCP', value: ProtocolType.TCP },
-  { label: 'UDP', value: ProtocolType.UDP },
-  { label: 'ICMPv4', value: ProtocolType.ICMPV4 },
-  { label: 'ICMPv6', value: ProtocolType.ICMPv6 },
-  { label: 'IGMP', value: ProtocolType.IGMP },
-  { label: 'IPv6', value: ProtocolType.IPv6 },
-  { label: 'GRE', value: ProtocolType.GRE },
-  { label: 'VRRP', value: ProtocolType.VRRP },
-  { label: 'PGM', value: ProtocolType.PGM },
-  { label: 'L2TP', value: ProtocolType.L2TP },
-]
-
-const serviceOptions = [
-  { label: 'Windows Update (wuauserv)', value: 'wuauserv' },
-  { label: '远程桌面服务 (TermService)', value: 'TermService' },
-  { label: 'Windows Defender (WinDefend)', value: 'WinDefend' },
-  { label: '打印后台处理程序 (Spooler)', value: 'Spooler' },
-  { label: 'Windows 防火墙 (MpsSvc)', value: 'MpsSvc' },
-  { label: 'DNS 客户端 (Dnscache)', value: 'Dnscache' },
-  { label: 'DHCP 客户端 (Dhcp)', value: 'Dhcp' },
-  { label: 'Workstation (LanmanWorkstation)', value: 'LanmanWorkstation' },
-  { label: 'Server (LanmanServer)', value: 'LanmanServer' },
+  { label: '任意', value: '任意' },
+  { label: 'TCP', value: 'TCP' },
+  { label: 'UDP', value: 'UDP' },
+  { label: 'ICMP', value: 'ICMP' },
+  { label: 'ICMPv6', value: 'ICMPv6' },
 ]
 
 // 监听编辑规则变化
@@ -586,17 +347,15 @@ const handleSave = async () => {
     await formRef.value?.validate()
     saving.value = true
 
-    // 转换数据格式以匹配后端要求
-    const saveData: CreateRuleRequest = {
-      ...formData.value,
-      // 将配置文件数组转换为位标志
-      profiles: formData.value.profiles.reduce((acc, profile) => acc | profile, 0),
+    // 生成ID（如果是新规则）
+    if (!formData.value.id) {
+      formData.value.id = Date.now().toString()
     }
 
     // 模拟保存延迟
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    emit('save', saveData)
+    emit('save', { ...formData.value })
     message.success(isEdit.value ? '规则更新成功' : '规则创建成功')
     handleClose()
   } catch (errors) {

@@ -13,7 +13,7 @@ import type { HttpConfig } from '@/types/http.ts'
 // 2. 配置管理器 (config/httpConfig.ts)
 class HttpConfigManager {
   private config: HttpConfig = {
-    baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:8726',
+    baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:8268/api',
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json'

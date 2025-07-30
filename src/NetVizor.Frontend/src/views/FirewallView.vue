@@ -29,7 +29,7 @@
             <n-icon :component="ListOutline" size="24" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.total }}</div>
+            <div class="stat-number">{{ stats.disableRules }}</div>
             <div class="stat-label">禁用规则</div>
           </div>
         </div>
@@ -49,7 +49,7 @@
             <n-icon :component="PauseCircleOutline" size="24" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.inactive }}</div>
+            <div class="stat-number">{{ stats.outboundRules }}</div>
             <div class="stat-label">出站规则</div>
           </div>
         </div>
@@ -59,7 +59,7 @@
             <n-icon :component="CloseCircleOutline" size="24" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.blocked }}</div>
+            <div class="stat-number">{{ stats.inboundRules }}</div>
             <div class="stat-label">入站规则</div>
           </div>
         </div>
@@ -268,7 +268,7 @@ import {
   NSelect,
   useMessage,
 } from 'naive-ui'
-import { RecycleScroller } from 'vue-virtual-scroller'
+import { RecycleScroller, DynamicScroller } from 'vue-virtual-scroller'
 import FirewallRuleForm from '@/components/FirewallRuleForm.vue'
 import {
   AddOutline,
@@ -284,6 +284,10 @@ import {
   ArrowDownOutline,
   RefreshOutline,
 } from '@vicons/ionicons5'
+import { httpClient } from '@/utils/http'
+import type { FirewallStatus } from '@/types/firewall'
+import { ApiResponse } from '@/types/http'
+import StringUtils from '@/utils/stringUtils'
 
 const message = useMessage()
 
@@ -293,7 +297,6 @@ const currentEditRule = ref(null)
 const firewallEnabled = ref(true)
 const checkedRowKeys = ref<string[]>([])
 
-// 搜索和过滤
 const searchQuery = ref('')
 const filters = ref({
   direction: null as string | null,
@@ -345,10 +348,30 @@ const batchOptions = [
 
 // 统计数据
 const stats = ref({
-  total: 127,
-  active: 89,
-  inactive: 38,
-  blocked: 1247,
+  //禁用规则
+  disableRules: 0,
+  //启动规则
+  active: 0,
+  // 出战规则
+  outboundRules: 0,
+  // 进站规则
+  inboundRules: 0,
+})
+
+// 请求状态数据
+httpClient.get('/firewall/status').then((res: ApiResponse<FirewallStatus>) => {
+  if (!res.success) {
+    message.error(StringUtils.isBlank(res.message) ? '错误信息为空!' : res.message)
+    return
+  }
+  if (res.data === null || res.data === undefined ){
+    message.error("获取数据为空!")
+    return
+  }
+  stats.value.inboundRules = res.data!.inboundRules
+  stats.value.outboundRules = res.data!.outboundRules
+  stats.value.active = res.data!.enabledRules
+  stats.value.disableRules = res.data!.totalRules - res.data!.enabledRules
 })
 
 // 模拟规则数据
@@ -817,102 +840,320 @@ const handleSaveRule = (rule: unknown) => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 /* 超超大屏幕 1801px-2000px */
 @media (min-width: 1801px) and (max-width: 2000px) {
-  .checkbox-cell { width: 60px; }
-  .name-cell { width: 250px; }
-  .status-cell { width: 100px; }
-  .direction-cell { width: 100px; }
-  .action-cell { width: 100px; }
-  .program-cell { width: 320px; flex-shrink: 1; }
-  .protocol-cell { width: 100px; }
-  .port-cell { width: 120px; }
-  .profiles-cell { width: 180px; flex-shrink: 1; }
-  .actions-cell { width: 120px; }
+  .checkbox-cell {
+    width: 60px;
+  }
+
+  .name-cell {
+    width: 250px;
+  }
+
+  .status-cell {
+    width: 100px;
+  }
+
+  .direction-cell {
+    width: 100px;
+  }
+
+  .action-cell {
+    width: 100px;
+  }
+
+  .program-cell {
+    width: 320px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 100px;
+  }
+
+  .port-cell {
+    width: 120px;
+  }
+
+  .profiles-cell {
+    width: 180px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 120px;
+  }
 }
 
 /* 极大屏幕 >2000px */
 @media (min-width: 2001px) {
-  .checkbox-cell { width: 70px; }
-  .name-cell { width: 280px; }
-  .status-cell { width: 110px; }
-  .direction-cell { width: 110px; }
-  .action-cell { width: 110px; }
-  .program-cell { width: 380px; flex-shrink: 1; }
-  .protocol-cell { width: 110px; }
-  .port-cell { width: 140px; }
-  .profiles-cell { width: 200px; flex-shrink: 1; }
-  .actions-cell { width: 140px; }
+  .checkbox-cell {
+    width: 70px;
+  }
+
+  .name-cell {
+    width: 280px;
+  }
+
+  .status-cell {
+    width: 110px;
+  }
+
+  .direction-cell {
+    width: 110px;
+  }
+
+  .action-cell {
+    width: 110px;
+  }
+
+  .program-cell {
+    width: 380px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 110px;
+  }
+
+  .port-cell {
+    width: 140px;
+  }
+
+  .profiles-cell {
+    width: 200px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 140px;
+  }
 }
 
 /* 超大屏幕 1601px-1800px */
 @media (min-width: 1601px) and (max-width: 1800px) {
-  .checkbox-cell { width: 55px; }
-  .name-cell { width: 230px; }
-  .status-cell { width: 90px; }
-  .direction-cell { width: 90px; }
-  .action-cell { width: 90px; }
-  .program-cell { width: 280px; flex-shrink: 1; }
-  .protocol-cell { width: 90px; }
-  .port-cell { width: 110px; }
-  .profiles-cell { width: 160px; flex-shrink: 1; }
-  .actions-cell { width: 110px; }
+  .checkbox-cell {
+    width: 55px;
+  }
+
+  .name-cell {
+    width: 230px;
+  }
+
+  .status-cell {
+    width: 90px;
+  }
+
+  .direction-cell {
+    width: 90px;
+  }
+
+  .action-cell {
+    width: 90px;
+  }
+
+  .program-cell {
+    width: 280px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 90px;
+  }
+
+  .port-cell {
+    width: 110px;
+  }
+
+  .profiles-cell {
+    width: 160px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 110px;
+  }
 }
 
 /* 基础列宽 - 针对超大屏幕（1401px-1600px） */
 @media (min-width: 1401px) and (max-width: 1600px) {
-  .checkbox-cell { width: 50px; }
-  .name-cell { width: 200px; }
-  .status-cell { width: 80px; }
-  .direction-cell { width: 80px; }
-  .action-cell { width: 80px; }
-  .program-cell { width: 250px; flex-shrink: 1; }
-  .protocol-cell { width: 80px; }
-  .port-cell { width: 100px; }
-  .profiles-cell { width: 150px; flex-shrink: 1; }
-  .actions-cell { width: 100px; }
+  .checkbox-cell {
+    width: 50px;
+  }
+
+  .name-cell {
+    width: 200px;
+  }
+
+  .status-cell {
+    width: 80px;
+  }
+
+  .direction-cell {
+    width: 80px;
+  }
+
+  .action-cell {
+    width: 80px;
+  }
+
+  .program-cell {
+    width: 250px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 80px;
+  }
+
+  .port-cell {
+    width: 100px;
+  }
+
+  .profiles-cell {
+    width: 150px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 100px;
+  }
 }
 
 /* 大屏幕 1201px-1400px */
 @media (min-width: 1201px) and (max-width: 1400px) {
-  .checkbox-cell { width: 45px; }
-  .name-cell { width: 180px; }
-  .status-cell { width: 70px; }
-  .direction-cell { width: 70px; }
-  .action-cell { width: 70px; }
-  .program-cell { width: 220px; flex-shrink: 1; }
-  .protocol-cell { width: 70px; }
-  .port-cell { width: 90px; }
-  .profiles-cell { width: 130px; flex-shrink: 1; }
-  .actions-cell { width: 90px; }
+  .checkbox-cell {
+    width: 45px;
+  }
+
+  .name-cell {
+    width: 180px;
+  }
+
+  .status-cell {
+    width: 70px;
+  }
+
+  .direction-cell {
+    width: 70px;
+  }
+
+  .action-cell {
+    width: 70px;
+  }
+
+  .program-cell {
+    width: 220px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 70px;
+  }
+
+  .port-cell {
+    width: 90px;
+  }
+
+  .profiles-cell {
+    width: 130px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 90px;
+  }
 }
 
 /* 中等屏幕 1025px-1200px */
 @media (min-width: 1025px) and (max-width: 1200px) {
-  .checkbox-cell { width: 40px; }
-  .name-cell { width: 160px; }
-  .status-cell { width: 65px; }
-  .direction-cell { width: 65px; }
-  .action-cell { width: 65px; }
-  .program-cell { width: 200px; flex-shrink: 1; }
-  .protocol-cell { width: 65px; }
-  .port-cell { width: 80px; }
-  .profiles-cell { width: 120px; flex-shrink: 1; }
-  .actions-cell { width: 85px; }
+  .checkbox-cell {
+    width: 40px;
+  }
+
+  .name-cell {
+    width: 160px;
+  }
+
+  .status-cell {
+    width: 65px;
+  }
+
+  .direction-cell {
+    width: 65px;
+  }
+
+  .action-cell {
+    width: 65px;
+  }
+
+  .program-cell {
+    width: 200px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 65px;
+  }
+
+  .port-cell {
+    width: 80px;
+  }
+
+  .profiles-cell {
+    width: 120px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 85px;
+  }
 }
 
 /* 小屏幕 769px-1024px */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .checkbox-cell { width: 40px; }
-  .name-cell { width: 140px; }
-  .status-cell { width: 60px; }
-  .direction-cell { width: 60px; }
-  .action-cell { width: 60px; }
-  .program-cell { width: 180px; flex-shrink: 1; }
-  .protocol-cell { width: 60px; }
-  .port-cell { width: 80px; }
-  .profiles-cell { width: 100px; flex-shrink: 1; }
-  .actions-cell { width: 80px; }
+  .checkbox-cell {
+    width: 40px;
+  }
+
+  .name-cell {
+    width: 140px;
+  }
+
+  .status-cell {
+    width: 60px;
+  }
+
+  .direction-cell {
+    width: 60px;
+  }
+
+  .action-cell {
+    width: 60px;
+  }
+
+  .program-cell {
+    width: 180px;
+    flex-shrink: 1;
+  }
+
+  .protocol-cell {
+    width: 60px;
+  }
+
+  .port-cell {
+    width: 80px;
+  }
+
+  .profiles-cell {
+    width: 100px;
+    flex-shrink: 1;
+  }
+
+  .actions-cell {
+    width: 80px;
+  }
 }
 
 /* 虚拟滚动列表 */
@@ -1119,14 +1360,37 @@ const handleSaveRule = (rule: unknown) => {
     display: none;
   }
 
-  .checkbox-cell { width: 35px; }
-  .name-cell { width: 120px; }
-  .status-cell { width: 50px; }
-  .direction-cell { width: 50px; }
-  .action-cell { width: 50px; }
-  .protocol-cell { width: 50px; }
-  .port-cell { width: 60px; }
-  .actions-cell { width: 70px; }
+  .checkbox-cell {
+    width: 35px;
+  }
+
+  .name-cell {
+    width: 120px;
+  }
+
+  .status-cell {
+    width: 50px;
+  }
+
+  .direction-cell {
+    width: 50px;
+  }
+
+  .action-cell {
+    width: 50px;
+  }
+
+  .protocol-cell {
+    width: 50px;
+  }
+
+  .port-cell {
+    width: 60px;
+  }
+
+  .actions-cell {
+    width: 70px;
+  }
 }
 
 /* 高度不足时的优化 */

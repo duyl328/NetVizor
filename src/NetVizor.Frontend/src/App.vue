@@ -6,7 +6,7 @@ import type { subRoute, subRouteList } from '@/types/devIndex'
 import app from '@/constants/app'
 import { ref, onMounted, provide } from 'vue'
 import { NButton } from 'naive-ui'
-import { NConfigProvider, NGlobalStyle } from 'naive-ui'
+import { NConfigProvider, NGlobalStyle, NMessageProvider, NLoadingBarProvider } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
 import NetworkConnectionPanel1 from '@/components/NetworkConnectionPanel1.vue'
 import MainLayout from './layouts/MainLayout.vue'
@@ -146,7 +146,8 @@ const getLayout = (route) => {
     :theme="themeStore.theme"
   >
     <n-message-provider>
-      <n-global-style />
+      <n-loading-bar-provider>
+        <n-global-style />
 
       <!-- 可拖动的导航栏 -->
       <div
@@ -187,6 +188,7 @@ const getLayout = (route) => {
 <!--          <UnifiedConnectionsList4 />-->
 <!--        </div>-->
 <!--      </div>-->
+      </n-loading-bar-provider>
     </n-message-provider>
   </n-config-provider>
 </template>
