@@ -37,7 +37,7 @@ class ImageInfoCacheManager {
 
     return new Promise((resolve, reject) => {
       getImageInfo(src).then((res) => {
-        let info = JSON.parse(res)
+        const info = JSON.parse(res)
         this.addToCache(src, info)
         resolve()
       })
@@ -46,12 +46,12 @@ class ImageInfoCacheManager {
 
   getImageInfo(src: string): Promise<ImageInfo> {
     return new Promise((resolve, reject) => {
-      let newVar = this.cache.get(src)
+      const newVar = this.cache.get(src)
       if (newVar !== undefined && newVar !== null) {
         resolve(newVar)
       } else {
         getImageInfo(src).then((res) => {
-          let info = JSON.parse(res)
+          const info = JSON.parse(res)
           this.addToCache(src, info)
           resolve(info)
         }).catch(reject)

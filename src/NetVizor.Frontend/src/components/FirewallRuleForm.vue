@@ -371,12 +371,12 @@ import {
   LockClosedOutline,
   FolderOpenOutline,
 } from '@vicons/ionicons5'
-
+import {RuleDirection} from '@/types/firewall'
 // 枚举定义 - 对应后端模型
-enum RuleDirection {
-  Inbound = 1,
-  Outbound = 2,
-}
+// enum RuleDirection {
+//   Inbound = 1,
+//   Outbound = 2,
+// }
 
 enum RuleAction {
   Block = 0,

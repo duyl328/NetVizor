@@ -5,7 +5,7 @@ import {
   lightTheme,
 } from 'naive-ui'
 
-let isDark = ref(false) // 用于控制主题状态，可接入 pinia 或 localStorage
+const isDark = ref(false) // 用于控制主题状态，可接入 pinia 或 localStorage
 
 export function createNaiveUI() {
   return create({
