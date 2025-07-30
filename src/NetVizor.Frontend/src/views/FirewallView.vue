@@ -30,7 +30,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.total }}</div>
-            <div class="stat-label">总规则数</div>
+            <div class="stat-label">禁用规则</div>
           </div>
         </div>
 
@@ -50,27 +50,17 @@
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ stats.inactive }}</div>
-            <div class="stat-label">禁用规则</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon-wrapper info">
-            <n-icon :component="ArrowDownOutline" size="24" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ stats.inbound }}</div>
-            <div class="stat-label">入站规则</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon-wrapper info">
-            <n-icon :component="ArrowUpOutline" size="24" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ stats.outbound }}</div>
             <div class="stat-label">出站规则</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper error">
+            <n-icon :component="CloseCircleOutline" size="24" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ stats.blocked }}</div>
+            <div class="stat-label">入站规则</div>
           </div>
         </div>
       </div>
@@ -80,20 +70,6 @@
         <div class="panel-header">
           <h3 class="panel-title">防火墙规则列表</h3>
           <div class="panel-controls">
-            <!-- 批量操作按钮 -->
-            <n-dropdown
-              v-if="persistentSelectedRules.size > 0"
-              :options="batchOptions"
-              @select="handleBatchOperation"
-            >
-              <n-button size="small" type="primary">
-                批量操作 ({{ persistentSelectedRules.size }})
-                <template #icon>
-                  <n-icon :component="ChevronDownOutline" />
-                </template>
-              </n-button>
-            </n-dropdown>
-            
             <n-input
               v-model:value="searchQuery"
               placeholder="搜索规则名称..."
@@ -185,50 +161,91 @@
             <div class="header-cell actions-cell">操作</div>
           </div>
 
-          <!-- 加载状态 -->
-          <div v-if="loading && totalCount === 0" class="loading-container">
-            <n-spin size="large">
-              <div class="loading-text">正在加载防火墙规则...</div>
-            </n-spin>
-          </div>
-
           <!-- 虚拟滚动列表 -->
           <RecycleScroller
-            v-else
             class="rules-scroller"
             :items="filteredRules"
-            :item-size="70"
+            :item-size="80"
             key-field="id"
             v-slot="{ item }"
-            @scroll="handleScroll"
           >
-            <RuleItem 
-              :virtual-item="item" 
-              :get-rule="getRuleForItem"
-              :load-rules-in-range="loadRulesInRange" 
-              @check="handleRuleCheck" 
-              @edit="editRule" 
-              @delete="deleteRule" 
-              :checked="isRuleSelected(item.id)" 
-            />
+            <div class="rule-item" :class="{ selected: checkedRowKeys.includes(item.id) }">
+              <div class="rule-cell checkbox-cell">
+                <n-checkbox
+                  :checked="checkedRowKeys.includes(item.id)"
+                  @update:checked="(checked) => handleRuleCheck(item.id, checked)"
+                />
+              </div>
+
+              <div class="rule-cell name-cell">
+                <div class="rule-name">{{ item.name }}</div>
+                <div class="rule-description">{{ item.description }}</div>
+              </div>
+
+              <div class="rule-cell status-cell">
+                <n-tag :type="item.enabled ? 'success' : 'default'" size="small">
+                  {{ item.enabled ? '启用' : '禁用' }}
+                </n-tag>
+              </div>
+
+              <div class="rule-cell direction-cell">
+                <div class="direction-content">
+                  <n-icon
+                    :component="item.direction === 'inbound' ? ArrowDownOutline : ArrowUpOutline"
+                    size="16"
+                  />
+                  <span>{{ item.direction === 'inbound' ? '入站' : '出站' }}</span>
+                </div>
+              </div>
+
+              <div class="rule-cell action-cell">
+                <n-tag :type="item.action === 'allow' ? 'success' : 'error'" size="small">
+                  {{ item.action === 'allow' ? '允许' : '阻止' }}
+                </n-tag>
+              </div>
+
+              <div class="rule-cell program-cell">
+                <div class="program-text" :title="item.program">{{ item.program }}</div>
+              </div>
+
+              <div class="rule-cell protocol-cell">
+                <span>{{ item.protocol }}</span>
+              </div>
+
+              <div class="rule-cell port-cell">
+                <span>{{ item.port }}</span>
+              </div>
+
+              <div class="rule-cell profiles-cell">
+                <div class="profiles-container">
+                  <n-tag
+                    v-for="profile in item.profiles"
+                    :key="profile"
+                    type="info"
+                    size="small"
+                    class="profile-tag"
+                  >
+                    {{ profile }}
+                  </n-tag>
+                </div>
+              </div>
+
+              <div class="rule-cell actions-cell">
+                <div class="action-buttons">
+                  <n-button size="small" quaternary @click="editRule(item)">
+                    <template #icon>
+                      <n-icon :component="CreateOutline" size="14" />
+                    </template>
+                  </n-button>
+                  <n-button size="small" quaternary type="error" @click="deleteRule(item.id)">
+                    <template #icon>
+                      <n-icon :component="TrashOutline" size="14" />
+                    </template>
+                  </n-button>
+                </div>
+              </div>
+            </div>
           </RecycleScroller>
-
-          <!-- 底部状态 -->
-          <div v-if="totalCount > 0" class="list-footer">
-            <span>共 {{ totalCount }} 条规则</span>
-          </div>
-
-          <!-- 空状态 -->
-          <div v-if="!loading && totalCount === 0" class="empty-state">
-            <n-icon :component="ListOutline" size="48" />
-            <div class="empty-text">暂无防火墙规则</div>
-            <n-button type="primary" @click="openRuleForm()">
-              <template #icon>
-                <n-icon :component="AddOutline" />
-              </template>
-              创建第一个规则
-            </n-button>
-          </div>
         </div>
       </div>
     </div>
@@ -239,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, h } from 'vue'
 import {
   NButton,
   NIcon,
@@ -250,11 +267,9 @@ import {
   NCheckbox,
   NSelect,
   useMessage,
-  NSpin,
 } from 'naive-ui'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import FirewallRuleForm from '@/components/FirewallRuleForm.vue'
-import RuleItem from '@/components/RuleItem.vue'
 import {
   AddOutline,
   SearchOutline,
@@ -269,27 +284,14 @@ import {
   ArrowDownOutline,
   RefreshOutline,
 } from '@vicons/ionicons5'
-import { firewallApi } from '@/api/firewall'
-import type { DisplayRule, RuleFilter, FirewallStatistics } from '@/types/firewall'
 
 const message = useMessage()
 
 // 界面状态
 const showRuleForm = ref(false)
-const currentEditRule = ref<DisplayRule | null>(null)
+const currentEditRule = ref(null)
 const firewallEnabled = ref(true)
 const checkedRowKeys = ref<string[]>([])
-const persistentSelectedRules = ref<Set<string>>(new Set()) // 持久化选中的规则ID
-const loading = ref(false)
-const totalCount = ref(0)
-
-// 虚拟滚动项类型
-interface VirtualItem {
-  id: string
-  index: number
-  rule?: DisplayRule
-  loading?: boolean
-}
 
 // 搜索和过滤
 const searchQuery = ref('')
@@ -299,20 +301,6 @@ const filters = ref({
   enabled: null as boolean | null,
   protocol: null as string | null,
 })
-
-// 分页状态
-const pagination = ref({
-  start: 0,
-  limit: 50,
-  totalCount: 0,
-  hasMore: false
-})
-
-// 数据状态 
-const rules = ref<DisplayRule[]>([])
-const virtualItems = ref<VirtualItem[]>([]) // 虚拟滚动项
-const loadedRules = ref<Map<number, DisplayRule>>(new Map()) // 缓存已加载的规则
-const loadingRanges = ref<Set<string>>(new Set()) // 正在加载的范围，防止重复请求
 
 // 过滤选项
 const directionOptions = [
@@ -357,329 +345,179 @@ const batchOptions = [
 
 // 统计数据
 const stats = ref({
-  total: 0,
-  active: 0,
-  inactive: 0,
-  inbound: 0,
-  outbound: 0,
+  total: 127,
+  active: 89,
+  inactive: 38,
+  blocked: 1247,
 })
 
-// API方法
-/**
- * 获取防火墙规则总数
- */
-const getTotalCount = async () => {
-  try {
-    // 构建筛选条件（不包含分页参数）
-    const filter: RuleFilter = {}
-
-    // 搜索条件
-    if (searchQuery.value.trim()) {
-      filter.name = searchQuery.value.trim()
-    }
-
-    // 筛选条件
-    if (filters.value.direction) {
-      filter.direction = filters.value.direction
-    }
-    if (filters.value.action) {
-      filter.action = filters.value.action
-    }
-    if (filters.value.enabled !== null) {
-      filter.enabled = filters.value.enabled
-    }
-    if (filters.value.protocol) {
-      filter.protocol = filters.value.protocol
-    }
-
-    // 只获取第一页来得到总数
-    filter.start = 0
-    filter.limit = 1
-
-    const response = await firewallApi.getRules(filter)
-    totalCount.value = response.totalCount
-    
-    // 创建虚拟项
-    createVirtualItems()
-    
-  } catch (error) {
-    console.error('获取防火墙规则总数失败:', error)
-    message.error('获取防火墙规则总数失败')
-  }
-}
-
-/**
- * 创建虚拟滚动项
- */
-const createVirtualItems = () => {
-  virtualItems.value = Array.from({ length: totalCount.value }, (_, index) => ({
-    id: `rule-${index}`,
-    index: index
-  }))
-  loadedRules.value.clear()
-  
-  // 根据持久化选中状态重新构建当前页面的选中状态
-  // 注意：这里不直接清空 checkedRowKeys，而是在实际渲染时动态检查
-  // 延迟执行以确保规则已加载
-  nextTick(() => {
-    updateCurrentPageSelection()
-  })
-}
-
-/**
- * 按需加载指定索引范围的规则
- */
-const loadRulesInRange = async (startIndex: number, endIndex: number) => {
-  // 创建范围标识符，防止重复请求
-  const rangeKey = `${startIndex}-${endIndex}`
-  if (loadingRanges.value.has(rangeKey)) {
-    return // 已在加载中，直接返回
-  }
-
-  const needToLoad: number[] = []
-  
-  // 找出需要加载的索引
-  for (let i = startIndex; i <= endIndex; i++) {
-    if (!loadedRules.value.has(i)) {
-      needToLoad.push(i)
-    }
-  }
-
-  if (needToLoad.length === 0) return
-
-  // 标记为加载中
-  loadingRanges.value.add(rangeKey)
-
-  try {
-    // 优化：将连续的索引合并为一个请求
-    const continuousRanges = getContinuousRanges(needToLoad)
-    
-    const requests = continuousRanges.map(async (range) => {
-      // 构建筛选条件
-      const filter: RuleFilter = {
-        start: range.start,
-        limit: range.end - range.start + 1
-      }
-
-      // 应用搜索和筛选条件
-      if (searchQuery.value.trim()) {
-        filter.name = searchQuery.value.trim()
-      }
-      if (filters.value.direction) {
-        filter.direction = filters.value.direction
-      }
-      if (filters.value.action) {
-        filter.action = filters.value.action
-      }
-      if (filters.value.enabled !== null) {
-        filter.enabled = filters.value.enabled
-      }
-      if (filters.value.protocol) {
-        filter.protocol = filters.value.protocol
-      }
-
-      const response = await firewallApi.getRules(filter)
-      const displayRules = response.rules.map(rule => firewallApi.convertToDisplayRule(rule))
-
-      // 缓存规则数据
-      displayRules.forEach((rule, index) => {
-        const actualIndex = range.start + index
-        loadedRules.value.set(actualIndex, rule)
-      })
-    })
-
-    // 等待所有请求完成
-    await Promise.all(requests)
-
-  } catch (error) {
-    console.error('加载防火墙规则失败:', error)
-    // 只有非取消的错误才显示给用户
-    if (error.name !== 'AbortError' && !error.message?.includes('Cancel')) {
-      message.error('加载防火墙规则失败')
-    }
-  } finally {
-    // 移除加载标记
-    loadingRanges.value.delete(rangeKey)
-  }
-}
-
-/**
- * 将离散的索引数组合并为连续范围
- */
-const getContinuousRanges = (indices: number[]) => {
-  if (indices.length === 0) return []
-  
-  indices.sort((a, b) => a - b)
-  const ranges: { start: number; end: number }[] = []
-  let currentStart = indices[0]
-  let currentEnd = indices[0]
-  
-  for (let i = 1; i < indices.length; i++) {
-    if (indices[i] === currentEnd + 1) {
-      // 连续的索引
-      currentEnd = indices[i]
-    } else {
-      // 不连续，保存当前范围
-      ranges.push({ start: currentStart, end: currentEnd })
-      currentStart = indices[i]
-      currentEnd = indices[i]
-    }
-  }
-  
-  // 添加最后一个范围
-  ranges.push({ start: currentStart, end: currentEnd })
-  
-  return ranges
-}
-
-/**
- * 初始加载第一屏数据（仅在初始化时调用）
- */
-const loadInitialData = async () => {
-  // 只加载第一屏的数据，大约20条
-  const initialBatchSize = 20
-  if (totalCount.value > 0) {
-    await loadRulesInRange(0, Math.min(initialBatchSize - 1, totalCount.value - 1))
-  }
-}
-
-/**
- * 获取指定索引的规则数据
- */
-const getRuleByIndex = (index: number): DisplayRule | null => {
-  return loadedRules.value.get(index) || null
-}
-
-/**
- * 加载统计信息
- */
-const loadStatistics = async () => {
-  try {
-    const statistics = await firewallApi.getStatistics()
-    stats.value = {
-      total: statistics.totalRules,
-      active: statistics.enabledRules,
-      inactive: statistics.disabledRules,
-      inbound: statistics.rulesByDirection?.['1'] || 0, // Inbound = 1
-      outbound: statistics.rulesByDirection?.['2'] || 0 // Outbound = 2
-    }
-  } catch (error) {
-    console.error('加载统计信息失败:', error)
-  }
-}
-
-/**
- * 刷新数据
- */
-const refreshData = async () => {
-  loading.value = true
-  try {
-    // 清空缓存和加载标记
-    loadedRules.value.clear()
-    loadingRanges.value.clear()
-    
-    await getTotalCount()
-    await loadStatistics()
-    
-    // 初始加载第一屏数据
-    await loadInitialData()
-  } finally {
-    loading.value = false
-  }
-}
+// 模拟规则数据
+const mockRules = ref([
+  {
+    id: '1',
+    name: 'Windows 远程桌面',
+    description: '允许远程桌面连接',
+    enabled: true,
+    direction: 'inbound',
+    action: 'allow',
+    program: '系统服务',
+    protocol: 'TCP',
+    port: '3389',
+    profiles: ['域', '专用'],
+    priority: 100,
+  },
+  {
+    id: '2',
+    name: 'Microsoft Edge',
+    description: '允许浏览器访问网络',
+    enabled: true,
+    direction: 'outbound',
+    action: 'allow',
+    program: 'C:\\Program Files\\Microsoft\\Edge\\msedge.exe',
+    protocol: '任意',
+    port: '任意',
+    profiles: ['域', '专用', '公用'],
+    priority: 200,
+  },
+  {
+    id: '3',
+    name: '阻止 Telnet',
+    description: '安全策略：阻止 Telnet 连接',
+    enabled: true,
+    direction: 'inbound',
+    action: 'block',
+    program: '任意',
+    protocol: 'TCP',
+    port: '23',
+    profiles: ['域', '专用', '公用'],
+    priority: 300,
+  },
+  {
+    id: '4',
+    name: '文件和打印机共享',
+    description: '允许局域网内文件共享',
+    enabled: false,
+    direction: 'inbound',
+    action: 'allow',
+    program: '系统服务',
+    protocol: 'TCP',
+    port: '445, 139',
+    profiles: ['专用'],
+    priority: 400,
+  },
+  {
+    id: '5',
+    name: 'HTTP 服务器',
+    description: '允许 Web 服务器接收请求',
+    enabled: true,
+    direction: 'inbound',
+    action: 'allow',
+    program: '任意',
+    protocol: 'TCP',
+    port: '80, 443',
+    profiles: ['域', '专用', '公用'],
+    priority: 500,
+  },
+  // 添加更多模拟数据以测试虚拟滚动
+  ...Array.from({ length: 50 }, (_, i) => ({
+    id: `${i + 6}`,
+    name: `规则 ${i + 6}`,
+    description: `这是第 ${i + 6} 个测试规则`,
+    enabled: Math.random() > 0.5,
+    direction: Math.random() > 0.5 ? 'inbound' : 'outbound',
+    action: Math.random() > 0.5 ? 'allow' : 'block',
+    program: `程序 ${i + 6}`,
+    protocol: ['TCP', 'UDP', '任意'][Math.floor(Math.random() * 3)],
+    port: Math.floor(Math.random() * 65535).toString(),
+    profiles: ['域', '专用', '公用'].slice(0, Math.floor(Math.random() * 3) + 1),
+    priority: (i + 6) * 100,
+  })),
+])
 
 // 计算属性
 const filteredRules = computed(() => {
-  return virtualItems.value
+  let rules = mockRules.value
+
+  // 搜索过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    rules = rules.filter(
+      (rule) =>
+        rule.name.toLowerCase().includes(query) || rule.description.toLowerCase().includes(query),
+    )
+  }
+
+  // 方向过滤
+  if (filters.value.direction) {
+    rules = rules.filter((rule) => rule.direction === filters.value.direction)
+  }
+
+  // 操作过滤
+  if (filters.value.action) {
+    rules = rules.filter((rule) => rule.action === filters.value.action)
+  }
+
+  // 状态过滤
+  if (filters.value.enabled !== null) {
+    rules = rules.filter((rule) => rule.enabled === filters.value.enabled)
+  }
+
+  // 协议过滤
+  if (filters.value.protocol) {
+    rules = rules.filter((rule) => rule.protocol === filters.value.protocol)
+  }
+
+  return rules
 })
 
 // 全选相关计算属性
 const allSelected = computed({
   get: () => {
-    return totalCount.value > 0 && persistentSelectedRules.value.size === totalCount.value
+    return (
+      filteredRules.value.length > 0 && checkedRowKeys.value.length === filteredRules.value.length
+    )
   },
   set: (value: boolean) => {
     if (value) {
-      // 全选：需要加载所有规则才能获取所有规则名称
-      // 这里简化处理，实际应用中可能需要更复杂的逻辑
-      message.warning('全选功能需要先加载所有规则数据')
+      checkedRowKeys.value = filteredRules.value.map((rule) => rule.id)
     } else {
-      // 取消全选
-      persistentSelectedRules.value.clear()
       checkedRowKeys.value = []
     }
   },
 })
 
 const indeterminate = computed(() => {
-  return persistentSelectedRules.value.size > 0 && persistentSelectedRules.value.size < totalCount.value
+  return checkedRowKeys.value.length > 0 && checkedRowKeys.value.length < filteredRules.value.length
 })
 
 // 方法
-/**
- * 获取虚拟项的实际规则数据
- */
-const getItemRule = async (item: VirtualItem): Promise<DisplayRule | null> => {
-  const cachedRule = getRuleByIndex(item.index)
-  if (cachedRule) {
-    return cachedRule
+const openRuleForm = (rule: unknown = null) => {
+  currentEditRule.value = rule
+  showRuleForm.value = true
+}
+
+const editRule = (rule: unknown) => {
+  currentEditRule.value = { ...rule }
+  showRuleForm.value = true
+}
+
+const deleteRule = (id: string) => {
+  const index = mockRules.value.findIndex((rule) => rule.id === id)
+  if (index !== -1) {
+    mockRules.value.splice(index, 1)
+    // 从选中项中移除
+    checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id)
+    message.success('规则删除成功')
   }
-
-  // 预加载周围的数据（批量加载提高效率）
-  const batchSize = 20
-  const startIndex = Math.max(0, item.index - batchSize / 2)
-  const endIndex = Math.min(totalCount.value - 1, item.index + batchSize / 2)
-  
-  await loadRulesInRange(startIndex, endIndex)
-  
-  return getRuleByIndex(item.index)
 }
 
-// 检查规则是否被选中（基于规则名称）
-const isRuleSelected = (itemId: string): boolean => {
-  const itemIndex = parseInt(itemId.replace('rule-', ''))
-  const rule = getRuleByIndex(itemIndex)
-  return rule ? persistentSelectedRules.value.has(rule.name) : false
-}
-
-// 同步更新 checkedRowKeys 以反映当前筛选结果中选中的项
-const updateCurrentPageSelection = () => {
-  const currentPageSelected: string[] = []
-  
-  // 遍历当前虚拟项，检查是否在持久化选中列表中
-  virtualItems.value.forEach((item) => {
-    if (isRuleSelected(item.id)) {
-      currentPageSelected.push(item.id)
-    }
-  })
-  
-  checkedRowKeys.value = currentPageSelected
-}
-const getRuleForItem = (index: number): DisplayRule | null => {
-  return getRuleByIndex(index)
-}
-
-const handleRuleCheck = (itemId: string, checked: boolean) => {
-  // 从虚拟项ID获取对应的规则
-  const itemIndex = parseInt(itemId.replace('rule-', ''))
-  const rule = getRuleByIndex(itemIndex)
-  
-  if (!rule) return
-  
-  const ruleId = rule.name // 使用规则名称作为唯一ID
-  
+const handleRuleCheck = (id: string, checked: boolean) => {
   if (checked) {
-    // 添加到持久化选中集合
-    persistentSelectedRules.value.add(ruleId)
-    // 添加到当前页面选中列表（如果不存在）
-    if (!checkedRowKeys.value.includes(itemId)) {
-      checkedRowKeys.value.push(itemId)
+    if (!checkedRowKeys.value.includes(id)) {
+      checkedRowKeys.value.push(id)
     }
   } else {
-    // 从持久化选中集合移除
-    persistentSelectedRules.value.delete(ruleId)
-    // 从当前页面选中列表移除
-    checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== itemId)
+    checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id)
   }
 }
 
@@ -687,128 +525,33 @@ const handleSelectAll = (checked: boolean) => {
   allSelected.value = checked
 }
 
-const clearFilters = async () => {
+const clearFilters = () => {
   filters.value = {
     direction: null,
     action: null,
     enabled: null,
     protocol: null,
   }
-  searchQuery.value = ''
-  await refreshData()
 }
 
-// 处理规则编辑
-const editRule = (rule: DisplayRule) => {
-  currentEditRule.value = { ...rule }
-  showRuleForm.value = true
-}
-
-const openRuleForm = (rule: DisplayRule | null = null) => {
-  currentEditRule.value = rule
-  showRuleForm.value = true
-}
-
-const handleSaveRule = async (rule: DisplayRule) => {
-  try {
-    if (currentEditRule.value?.name) {
-      // 编辑现有规则
-      const updateRequest = firewallApi.convertToCreateRequest(rule)
-      await firewallApi.updateRule({
-        currentName: currentEditRule.value.name,
-        newName: rule.name !== currentEditRule.value.name ? rule.name : undefined,
-        description: rule.description,
-        enabled: rule.enabled,
-        action: rule.action === 'allow' ? 1 : 0,
-        // 其他需要的字段...
-      })
+const handleSaveRule = (rule: unknown) => {
+  if (rule.id) {
+    // 编辑现有规则
+    const index = mockRules.value.findIndex((r) => r.id === rule.id)
+    if (index !== -1) {
+      mockRules.value[index] = rule
       message.success('规则更新成功')
-    } else {
-      // 添加新规则
-      const createRequest = firewallApi.convertToCreateRequest(rule)
-      await firewallApi.createRule(createRequest)
-      message.success('规则创建成功')
     }
-
-    // 重新加载数据
-    await refreshData()
-
-    // 重置状态
-    currentEditRule.value = null
-  } catch (error) {
-    console.error('保存规则失败:', error)
-    message.error('保存规则失败')
-  }
-}
-
-// 批量操作
-const handleBatchOperation = async (operation: string) => {
-  if (persistentSelectedRules.value.size === 0) {
-    message.warning('请先选择要操作的规则')
-    return
+  } else {
+    // 添加新规则
+    rule.id = Date.now().toString()
+    mockRules.value.unshift(rule)
+    message.success('规则创建成功')
   }
 
-  try {
-    const ruleNames = Array.from(persistentSelectedRules.value)
-    switch (operation) {
-      case 'enable':
-        await firewallApi.batchUpdateRules(ruleNames, 'enable')
-        message.success('批量启用成功')
-        break
-      case 'disable':
-        await firewallApi.batchUpdateRules(ruleNames, 'disable')
-        message.success('批量禁用成功')
-        break
-      case 'delete':
-        await firewallApi.batchUpdateRules(ruleNames, 'delete')
-        message.success('批量删除成功')
-        break
-    }
-
-    // 清空选中状态
-    persistentSelectedRules.value.clear()
-    checkedRowKeys.value = []
-    await refreshData()
-  } catch (error) {
-    console.error('批量操作失败:', error)
-    message.error('批量操作失败')
-  }
+  // 重置状态
+  currentEditRule.value = null
 }
-
-const deleteRule = async (ruleName: string) => {
-  try {
-    await firewallApi.deleteRule(ruleName)
-    // 从持久化选中状态和当前页面选中状态中移除
-    persistentSelectedRules.value.delete(ruleName)
-    checkedRowKeys.value = checkedRowKeys.value.filter(key => {
-      const itemIndex = parseInt(key.replace('rule-', ''))
-      const rule = getRuleByIndex(itemIndex)
-      return rule?.name !== ruleName
-    })
-    message.success('规则删除成功')
-
-    // 重新获取总数并刷新
-    await refreshData()
-  } catch (error) {
-    console.error('删除规则失败:', error)
-    message.error('删除规则失败')
-  }
-}
-
-// 虚拟滚动相关 - 处理可见区域变化
-const handleScroll = () => {
-  // RecycleScroller 会自动处理可见区域，我们只需要在项目渲染时按需加载
-}
-
-// 监听筛选条件变化
-watch([searchQuery, filters], async () => {
-  await refreshData()
-}, { deep: true })
-
-// 组件挂载时加载数据
-onMounted(async () => {
-  await refreshData()
-})
 </script>
 
 <style scoped>
@@ -949,11 +692,6 @@ onMounted(async () => {
 .stat-icon-wrapper.error {
   background: rgba(239, 68, 68, 0.1);
   color: var(--accent-error);
-}
-
-.stat-icon-wrapper.info {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--accent-info);
 }
 
 .stat-content {
@@ -1464,73 +1202,5 @@ onMounted(async () => {
 
 :deep(.vue-recycle-scroller__item-wrapper) {
   overflow: visible;
-}
-
-/* 列表底部状态 */
-.list-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  background: var(--bg-tertiary);
-  border-top: 1px solid var(--border-secondary);
-  font-size: 13px;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-/* 加载状态样式 */
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.loading-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.load-more-indicator {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border-secondary);
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.no-more-data {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  background: var(--bg-tertiary);
-  border-top: 1px solid var(--border-secondary);
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* 空状态样式 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 300px;
-  gap: 16px;
-  color: var(--text-muted);
-}
-
-.empty-text {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-secondary);
 }
 </style>

@@ -45,6 +45,7 @@ export enum ProtocolType {
 // 防火墙规则详细信息
 export interface FirewallRule {
   name: string
+  uniqueId?: string // 添加唯一标识符字段，用于解决重复规则显示问题
   description: string
   applicationName: string
   serviceName: string

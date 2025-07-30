@@ -94,7 +94,7 @@ class FirewallApiService {
       direction = rule.direction === RuleDirection.Inbound ? 'inbound' : 'outbound'
     }
     return {
-      id: rule.name, // 使用规则名称作为ID
+      id: rule.uniqueId || rule.name, // 优先使用后端提供的uniqueId，降级为name
       name: rule.name,
       description: rule.description,
       enabled: rule.enabled,
