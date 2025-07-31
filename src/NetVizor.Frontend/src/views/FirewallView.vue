@@ -297,6 +297,7 @@ const currentEditRule = ref(null)
 const firewallEnabled = ref(true)
 const checkedRowKeys = ref<string[]>([])
 
+// 搜索与过滤
 const searchQuery = ref('')
 const filters = ref({
   direction: null as string | null,
@@ -358,14 +359,14 @@ const stats = ref({
   inboundRules: 0,
 })
 
-// 请求状态数据
+// 请求统计数据
 httpClient.get('/firewall/status').then((res: ApiResponse<FirewallStatus>) => {
   if (!res.success) {
     message.error(StringUtils.isBlank(res.message) ? '错误信息为空!' : res.message)
     return
   }
-  if (res.data === null || res.data === undefined ){
-    message.error("获取数据为空!")
+  if (res.data === null || res.data === undefined) {
+    message.error('获取数据为空!')
     return
   }
   stats.value.inboundRules = res.data!.inboundRules
@@ -456,6 +457,7 @@ const mockRules = ref([
     priority: (i + 6) * 100,
   })),
 ])
+
 
 // 计算属性
 const filteredRules = computed(() => {
