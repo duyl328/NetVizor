@@ -145,6 +145,7 @@
           <div class="list-header">
             <div class="header-cell checkbox-cell">
               <n-checkbox
+                style="padding: 3px"
                 v-model:checked="allSelected"
                 :indeterminate="indeterminate"
                 @update:checked="handleSelectAll"
@@ -168,7 +169,7 @@
           <div v-else-if="firewallRule.length === 0" class="no-data">
             <span>暂无数据</span>
           </div>
-          <div v-else class="data-info">
+          <div v-if="false" class="data-info">
             <span>总共 {{ totalCount }} 条数据（已加载 {{ loadedRanges.size * pageSize }} 条）</span>
           </div>
 
@@ -452,12 +453,12 @@ function isItemSelected(item: any): boolean {
   if (isPlaceholder(item)) {
     return false
   }
-  
+
   // 确保item存在且有有效的id
   if (!item || !item.id || typeof item.id !== 'string') {
     return false
   }
-  
+
   // 只有真实数据项且在选中列表中才返回true
   return checkedRowKeys.value.includes(item.id)
 }
@@ -827,7 +828,7 @@ const handleRuleCheck = (id: string, checked: boolean) => {
   if (!id || typeof id !== 'string') {
     return
   }
-  
+
   if (checked) {
     if (!checkedRowKeys.value.includes(id)) {
       checkedRowKeys.value.push(id)
