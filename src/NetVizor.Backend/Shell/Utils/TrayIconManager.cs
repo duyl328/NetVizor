@@ -1,9 +1,12 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Shell.UserControls;
+using Shell.Views;
 
 namespace Shell.Utils;
 
@@ -11,7 +14,7 @@ public class TrayIconManager : IDisposable
 {
     private NotifyIcon _notifyIcon;
     private Window _mainWindow;
-    private TrayMenuWindow _trayMenu;
+    private ContextMenu _contextMenu;
     private DispatcherTimer _clickTimer;
     private bool _isDoubleClick = false;
 
@@ -74,6 +77,7 @@ public class TrayIconManager : IDisposable
         _mainWindow = mainWindow;
         InitializeTrayIcon();
         InitializeClickTimer();
+        InitializeContextMenu();
     }
 
     private void InitializeTrayIcon()
@@ -98,6 +102,119 @@ public class TrayIconManager : IDisposable
         _clickTimer.Tick += OnClickTimerTick;
     }
 
+    private void InitializeContextMenu()
+    {
+        _contextMenu = new ContextMenu();
+
+        // 添加失去焦点时关闭事件
+        _contextMenu.Closed += (s, e) =>
+        {
+            /* 菜单关闭 */
+        };
+        _contextMenu.LostFocus += (s, e) => _contextMenu.IsOpen = false;
+
+        // 展示主窗口（可勾选）
+        var showMainWindowItem = new MenuItem
+        {
+            Header = "展示主窗口",
+            IsCheckable = true,
+            Icon = new TextBlock { Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons") }
+        };
+        showMainWindowItem.Click += (s, e) =>
+        {
+            ToggleMainWindow();
+            _contextMenu.IsOpen = false;
+        };
+        _contextMenu.Items.Add(showMainWindowItem);
+
+        // 分隔线
+        _contextMenu.Items.Add(new Separator());
+
+        // 重置主窗口位置
+        var resetPositionItem = new MenuItem
+        {
+            Header = "重置主窗口位置",
+            Icon = new TextBlock { Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons") }
+        };
+        resetPositionItem.Click += (s, e) =>
+        {
+            ResetNetViewPosition();
+            _contextMenu.IsOpen = false;
+        };
+        _contextMenu.Items.Add(resetPositionItem);
+
+        // 切换监控网络
+        var networkSelectionItem = new MenuItem
+        {
+            Header = "切换监控网络",
+            Icon = new TextBlock { Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons") }
+        };
+        _contextMenu.Items.Add(networkSelectionItem);
+
+        // 显示详细信息
+        var detailedInfoItem = new MenuItem
+        {
+            Header = "显示详细信息",
+            IsCheckable = true,
+            Icon = new TextBlock { Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons") }
+        };
+        detailedInfoItem.Click += (s, e) =>
+        {
+            ToggleDetailedInfo();
+            _contextMenu.IsOpen = false;
+        };
+        _contextMenu.Items.Add(detailedInfoItem);
+
+        // 分隔线
+        _contextMenu.Items.Add(new Separator());
+
+        // 流量统计与分析
+        var trafficAnalysisItem = new MenuItem
+        {
+            Header = "流量统计与分析",
+            Icon = new TextBlock { Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons") }
+        };
+        trafficAnalysisItem.Click += (s, e) =>
+        {
+            OpenTrafficAnalysis();
+            _contextMenu.IsOpen = false;
+        };
+        _contextMenu.Items.Add(trafficAnalysisItem);
+
+        // 设置
+        var settingsItem = new MenuItem
+        {
+            Header = "设置",
+            Icon = new TextBlock { Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons") }
+        };
+        settingsItem.Click += (s, e) =>
+        {
+            OpenSettings();
+            _contextMenu.IsOpen = false;
+        };
+        _contextMenu.Items.Add(settingsItem);
+
+        // 分隔线
+        _contextMenu.Items.Add(new Separator());
+
+        // 退出程序
+        var exitItem = new MenuItem
+        {
+            Header = "退出程序",
+            Icon = new TextBlock
+            {
+                Text = "", FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons"),
+                Foreground = new SolidColorBrush(Colors.Red)
+            }
+        };
+        exitItem.Click += (s, e) =>
+        {
+            ExitApplication();
+            _contextMenu.IsOpen = false;
+        };
+        _contextMenu.Items.Add(exitItem);
+    }
+
     private Icon LoadIcon()
     {
         try
@@ -114,15 +231,7 @@ public class TrayIconManager : IDisposable
     {
         if (e.Button == MouseButtons.Right)
         {
-            try
-            {
-                ShowContextMenu();
-            }
-            catch (Exception exception)
-            {
-                Console.WriteLine(exception);
-                throw;
-            }
+            ShowContextMenu();
         }
         else if (e.Button == MouseButtons.Left)
         {
@@ -150,6 +259,74 @@ public class TrayIconManager : IDisposable
         }
     }
 
+    private void ShowContextMenu()
+    {
+        // 更新菜单状态
+        UpdateContextMenuStates();
+
+        // 直接设置菜单位置为鼠标位置，不使用临时窗口
+        _contextMenu.PlacementTarget = null;
+        _contextMenu.Placement = PlacementMode.MousePoint;
+        _contextMenu.StaysOpen = false;
+
+        // 使用 PreviewMouseDown 事件来处理点击外部关闭
+        _contextMenu.PreviewMouseDown += OnContextMenuPreviewMouseDown;
+
+        // 当菜单关闭时，清理事件
+        RoutedEventHandler closedHandler = null;
+        closedHandler = (s, e) =>
+        {
+            _contextMenu.PreviewMouseDown -= OnContextMenuPreviewMouseDown;
+            _contextMenu.Closed -= closedHandler;
+        };
+        _contextMenu.Closed += closedHandler;
+
+        _contextMenu.IsOpen = true;
+    }
+
+    private void OnContextMenuPreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // 如果点击的是菜单项，让事件继续处理
+        // 这个方法主要是为了确保菜单行为正常
+    }
+
+    private void UpdateContextMenuStates()
+    {
+        if (_mainWindow is Shell.Views.NetView netView)
+        {
+            // 获取各个菜单项并更新状态
+            foreach (var item in _contextMenu.Items.OfType<MenuItem>())
+            {
+                switch (item.Header.ToString())
+                {
+                    case "展示主窗口":
+                        item.IsChecked = netView.IsVisible;
+                        break;
+                    case "显示详细信息":
+                        item.IsChecked = GetNetViewMenuItemState(netView, "DetailedInfoMenuItem");
+                        break;
+                }
+            }
+        }
+    }
+
+    private bool GetNetViewMenuItemState(Shell.Views.NetView netView, string menuItemName)
+    {
+        var contextMenu = netView.ContextMenu;
+        if (contextMenu?.Items != null)
+        {
+            foreach (var item in contextMenu.Items)
+            {
+                if (item is MenuItem menuItem && menuItem.Name == menuItemName)
+                {
+                    return menuItem.IsChecked;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private void ShowMainWindow()
     {
         if (_mainWindow != null)
@@ -161,151 +338,19 @@ public class TrayIconManager : IDisposable
         }
     }
 
-    private void ShowContextMenu()
-    {
-        Console.WriteLine("=== TrayIconManager ShowContextMenu ===");
-
-        if (_trayMenu == null)
-        {
-            _trayMenu = new TrayMenuWindow();
-            _trayMenu.OnShowMainWindow += () => ShowMainWindow();
-            _trayMenu.OnExitApplication += () => System.Windows.Application.Current.Shutdown();
-            _trayMenu.OnHideToTray += () => _mainWindow?.Hide();
-            
-            // Connect new NetView-specific functionality
-            _trayMenu.OnShowNetMonitor += () => ShowNetMonitor();
-            _trayMenu.OnResetWindowPosition += () => ResetNetViewPosition();
-            _trayMenu.OnToggleClickThrough += () => ToggleNetViewClickThrough();
-            _trayMenu.OnToggleTopmost += () => ToggleNetViewTopmost();
-            
-            Console.WriteLine("创建新的TrayMenuWindow");
-        }
-
-        // Update menu states before showing
-        UpdateTrayMenuStates();
-
-        // 使用Win32 API获取鼠标位置
-        if (GetCursorPos(out POINT mousePos))
-        {
-            Console.WriteLine($"Win32 API获取鼠标物理位置: X={mousePos.X}, Y={mousePos.Y}");
-
-            // 获取鼠标所在显示器的工作区域和DPI信息
-            var (workArea, dpiScaleX, dpiScaleY) = GetMouseMonitorInfoWithDpi(mousePos);
-            Console.WriteLine(
-                $"显示器工作区域: Left={workArea.Left}, Top={workArea.Top}, Right={workArea.Right}, Bottom={workArea.Bottom}");
-            Console.WriteLine($"DPI缩放比例: ScaleX={dpiScaleX:F2}, ScaleY={dpiScaleY:F2}");
-
-            // 将物理坐标转换为WPF逻辑坐标
-            var logicalMouseX = mousePos.X / dpiScaleX;
-            var logicalMouseY = mousePos.Y / dpiScaleY;
-
-            // 将工作区域也转换为逻辑坐标
-            var logicalWorkArea = new RECT
-            {
-                Left = (int)(workArea.Left / dpiScaleX),
-                Top = (int)(workArea.Top / dpiScaleY),
-                Right = (int)(workArea.Right / dpiScaleX),
-                Bottom = (int)(workArea.Bottom / dpiScaleY)
-            };
-
-            Console.WriteLine($"逻辑鼠标位置: X={logicalMouseX:F1}, Y={logicalMouseY:F1}");
-            Console.WriteLine(
-                $"逻辑工作区域: Left={logicalWorkArea.Left}, Top={logicalWorkArea.Top}, Right={logicalWorkArea.Right}, Bottom={logicalWorkArea.Bottom}");
-
-            _trayMenu.ShowAtWithWorkArea((int)logicalMouseX, (int)logicalMouseY, logicalWorkArea);
-        }
-        else
-        {
-            Console.WriteLine("获取鼠标位置失败，使用默认位置");
-            // 如果获取鼠标位置失败，使用托盘图标的估计位置
-            var workArea = SystemParameters.WorkArea;
-            var defaultX = (int)workArea.Right - 50;
-            var defaultY = (int)workArea.Bottom - 50;
-            Console.WriteLine($"使用默认位置: X={defaultX}, Y={defaultY}");
-            _trayMenu.ShowAt(defaultX, defaultY);
-        }
-
-        Console.WriteLine("=== ShowContextMenu End ===\n");
-    }
-
-    private (RECT workArea, double dpiScaleX, double dpiScaleY) GetMouseMonitorInfoWithDpi(POINT mousePos)
-    {
-        // 获取鼠标所在的显示器
-        IntPtr hMonitor = MonitorFromPoint(mousePos, MONITOR_DEFAULTTONEAREST);
-
-        // 获取显示器信息
-        MONITORINFO monitorInfo = new MONITORINFO();
-        monitorInfo.cbSize = (uint)Marshal.SizeOf(monitorInfo);
-
-        RECT workArea;
-        double dpiScaleX = 1.0;
-        double dpiScaleY = 1.0;
-
-        if (GetMonitorInfo(hMonitor, ref monitorInfo))
-        {
-            workArea = monitorInfo.rcWork;
-
-            // 获取该显示器的DPI
-            try
-            {
-                if (GetDpiForMonitor(hMonitor, DpiType.Effective, out uint dpiX, out uint dpiY) == 0)
-                {
-                    dpiScaleX = dpiX / 96.0; // 96 DPI是标准DPI
-                    dpiScaleY = dpiY / 96.0;
-                    Console.WriteLine($"显示器DPI: X={dpiX}, Y={dpiY}");
-                }
-                else
-                {
-                    // 如果GetDpiForMonitor失败，尝试使用系统DPI
-                    var systemDpi = GetDpiForSystem();
-                    dpiScaleX = dpiScaleY = systemDpi / 96.0;
-                    Console.WriteLine($"使用系统DPI: {systemDpi}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"获取DPI失败: {ex.Message}，使用默认缩放");
-                // 作为后备方案，使用WPF的DPI信息
-                var source = PresentationSource.FromVisual(System.Windows.Application.Current.MainWindow);
-                if (source?.CompositionTarget != null)
-                {
-                    var matrix = source.CompositionTarget.TransformFromDevice;
-                    dpiScaleX = 1.0 / matrix.M11;
-                    dpiScaleY = 1.0 / matrix.M22;
-                }
-            }
-        }
-        else
-        {
-            // 如果获取失败，返回主显示器的工作区域
-            var wpfWorkArea = SystemParameters.WorkArea;
-            workArea = new RECT
-            {
-                Left = (int)wpfWorkArea.Left,
-                Top = (int)wpfWorkArea.Top,
-                Right = (int)wpfWorkArea.Right,
-                Bottom = (int)wpfWorkArea.Bottom
-            };
-
-            // 使用WPF的DPI信息作为后备
-            var source = PresentationSource.FromVisual(System.Windows.Application.Current.MainWindow);
-            if (source?.CompositionTarget != null)
-            {
-                var matrix = source.CompositionTarget.TransformFromDevice;
-                dpiScaleX = 1.0 / matrix.M11;
-                dpiScaleY = 1.0 / matrix.M22;
-            }
-        }
-
-        return (workArea, dpiScaleX, dpiScaleY);
-    }
-
     private void ShowNetMonitor()
     {
         if (_mainWindow != null)
         {
-            _mainWindow.Show();
-            _mainWindow.Activate();
+            if (_mainWindow.IsVisible)
+            {
+                _mainWindow.Hide();
+            }
+            else
+            {
+                _mainWindow.Show();
+                _mainWindow.Activate();
+            }
         }
     }
 
@@ -313,29 +358,24 @@ public class TrayIconManager : IDisposable
     {
         if (_mainWindow is Shell.Views.NetView netView)
         {
-            // Call the public method to reset position
             var workArea = SystemParameters.WorkArea;
             netView.Left = workArea.Right - netView.Width - 20;
             netView.Top = workArea.Top + 20;
         }
     }
 
-    private void ToggleNetViewClickThrough()
+    private void ToggleDetailedInfo()
     {
         if (_mainWindow is Shell.Views.NetView netView)
         {
-            // Access the NetView's private method through a public interface
-            // For now, let's access the property directly if possible
             var contextMenu = netView.ContextMenu;
             if (contextMenu?.Items != null)
             {
                 foreach (var item in contextMenu.Items)
                 {
-                    if (item is System.Windows.Controls.MenuItem menuItem && 
-                        menuItem.Name == "ClickThroughMenuItem")
+                    if (item is MenuItem menuItem && menuItem.Name == "DetailedInfoMenuItem")
                     {
-                        menuItem.IsChecked = !menuItem.IsChecked;
-                        var routedEventArgs = new System.Windows.RoutedEventArgs(System.Windows.Controls.MenuItem.ClickEvent);
+                        var routedEventArgs = new RoutedEventArgs(MenuItem.ClickEvent);
                         menuItem.RaiseEvent(routedEventArgs);
                         break;
                     }
@@ -344,62 +384,67 @@ public class TrayIconManager : IDisposable
         }
     }
 
-    private void ToggleNetViewTopmost()
+    private void OpenTrafficAnalysis()
     {
-        if (_mainWindow is Shell.Views.NetView netView)
+        try
         {
-            netView.Topmost = !netView.Topmost;
-            
-            // Update the context menu item
-            var contextMenu = netView.ContextMenu;
-            if (contextMenu?.Items != null)
+            TrafficAnalysisWindow.ShowWindow();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"无法打开流量分析窗口: {ex.Message}", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenSettings()
+    {
+        try
+        {
+            SettingsWindow.ShowWindow();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ToggleMainWindow()
+    {
+        if (_mainWindow != null)
+        {
+            if (_mainWindow.IsVisible)
             {
-                foreach (var item in contextMenu.Items)
-                {
-                    if (item is System.Windows.Controls.MenuItem menuItem && 
-                        menuItem.Name == "TopmostMenuItem")
-                    {
-                        menuItem.IsChecked = netView.Topmost;
-                        break;
-                    }
-                }
+                _mainWindow.Hide();
+            }
+            else
+            {
+                _mainWindow.Show();
+                _mainWindow.WindowState = WindowState.Normal;
+                _mainWindow.Activate();
+                _mainWindow.Focus();
             }
         }
     }
 
-    private void UpdateTrayMenuStates()
+    private void ExitApplication()
     {
-        if (_mainWindow is Shell.Views.NetView netView && _trayMenu != null)
+        var result = System.Windows.MessageBox.Show("确定要退出程序吗？", "确认退出",
+            MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (result == MessageBoxResult.Yes)
         {
-            // Get current state from NetView
-            bool isVisible = netView.IsVisible;
-            bool isTopmost = netView.Topmost;
-            
-            // Get click-through state from context menu
-            bool isClickThrough = false;
-            var contextMenu = netView.ContextMenu;
-            if (contextMenu?.Items != null)
+            if (_mainWindow is Shell.Views.NetView netView)
             {
-                foreach (var item in contextMenu.Items)
-                {
-                    if (item is System.Windows.Controls.MenuItem menuItem && 
-                        menuItem.Name == "ClickThroughMenuItem")
-                    {
-                        isClickThrough = menuItem.IsChecked;
-                        break;
-                    }
-                }
+                netView.ForceClose();
             }
-            
-            // Update tray menu with current states
-            _trayMenu.UpdateMenuStates(isVisible, isClickThrough, isTopmost, false);
         }
     }
 
     public void Dispose()
     {
         _notifyIcon?.Dispose();
-        _trayMenu?.Close();
+        _contextMenu = null;
         _clickTimer?.Stop();
     }
 }
