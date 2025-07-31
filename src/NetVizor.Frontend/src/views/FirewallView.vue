@@ -417,6 +417,11 @@ const loadedPages = new Set<number>()
 const firewallRule = ref<(FirewallRuleShow | null)[]>([])
 const loadedRanges = new Set<string>() // 例如："100-149"
 
+// 当前已加载的有效数据（非null非占位符）
+const currentLoadedRules = computed(() => {
+  return firewallRule.value.filter(rule => rule !== null) as FirewallRuleShow[]
+})
+
 // 为RecycleScroller准备的数据，每个项目都有唯一的id
 const recyclerItems = computed(() => {
   return firewallRule.value.map((item, index) => {
@@ -772,29 +777,58 @@ resetAndLoadFirst()
 
 // 监听搜索和过滤条件变化，重新加载数据
 watch([searchQuery, filters], () => {
+  // 搜索条件变化时清理选中状态，避免状态不一致
+  checkedRowKeys.value = []
   resetAndLoadFirst()
 }, { deep: true })
 
 // 全选相关计算属性
 const allSelected = computed({
   get: () => {
-    const validRules = firewallRule.value.filter(rule => rule !== null)
-    return validRules.length > 0 && checkedRowKeys.value.length === validRules.length
+    const currentValidRules = currentLoadedRules.value
+    if (currentValidRules.length === 0) {
+      return false
+    }
+    
+    // 检查当前已加载数据中有多少被选中
+    const selectedInCurrentData = currentValidRules.filter(rule => 
+      checkedRowKeys.value.includes(rule.id)
+    )
+    
+    return selectedInCurrentData.length === currentValidRules.length
   },
   set: (value: boolean) => {
     if (value) {
-      checkedRowKeys.value = firewallRule.value
-        .filter(rule => rule !== null)
-        .map((rule) => rule!.id)
+      // 选中当前已加载的所有有效数据
+      const currentValidRules = currentLoadedRules.value
+      const currentIds = currentValidRules.map(rule => rule.id)
+      
+      // 合并现有选中和当前页选中（去重）
+      const mergedIds = [...new Set([...checkedRowKeys.value, ...currentIds])]
+      checkedRowKeys.value = mergedIds
     } else {
-      checkedRowKeys.value = []
+      // 取消选中当前已加载的数据
+      const currentValidRules = currentLoadedRules.value
+      const currentIds = new Set(currentValidRules.map(rule => rule.id))
+      
+      // 只保留不在当前页的选中项
+      checkedRowKeys.value = checkedRowKeys.value.filter(id => !currentIds.has(id))
     }
   },
 })
 
 const indeterminate = computed(() => {
-  const validRules = firewallRule.value.filter(rule => rule !== null)
-  return checkedRowKeys.value.length > 0 && checkedRowKeys.value.length < validRules.length
+  const currentValidRules = currentLoadedRules.value
+  if (currentValidRules.length === 0) {
+    return false
+  }
+  
+  // 检查当前已加载数据中有多少被选中
+  const selectedInCurrentData = currentValidRules.filter(rule => 
+    checkedRowKeys.value.includes(rule.id)
+  )
+  
+  return selectedInCurrentData.length > 0 && selectedInCurrentData.length < currentValidRules.length
 })
 
 // 方法
