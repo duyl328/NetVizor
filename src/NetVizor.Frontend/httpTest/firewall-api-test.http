@@ -47,3 +47,74 @@ GET http://localhost:8268/api/firewall/rules
 # 4 = Public (公共)
 # 7 = All (所有，即1+2+4)
 
+### ✅ 新增防火墙规则
+POST http://localhost:你的端口/api/firewall/rules
+Content-Type: application/json
+
+{
+  "name": "MyRule",
+  "description": "Allow my application",
+  "applicationName": "C:\\Program Files\\MyApp\\app.exe",
+  "localAddresses": "*",
+  "remoteAddresses": "*",
+  "protocol": "TCP",                // 可选值: "TCP", "UDP", "ICMPv4", "ICMPv6"
+  "icmpTypesAndCodes": "",         // 仅当 protocol 为 ICMP 时使用
+  "localPorts": "8080",            // 可为 "80", "80,443", "*" 等
+  "remotePorts": "*",
+  "direction": "Inbound",          // 可选值: "Inbound", "Outbound"
+  "enabled": true,
+  "profiles": "Domain,Private,Public",  // 可组合，逗号分隔
+  "action": "Allow",               // 可选值: "Allow", "Block"
+  "grouping": "MyAppGroup",
+  "interfaceTypes": "All",         // 可选: "All", "Wireless", "LAN", etc.
+  "edgeTraversal": false
+}
+
+### 响应示例：
+# {
+#   "success": true,
+#   "message": "防火墙规则创建成功",
+#   "data": null
+# }
+
+---
+
+### ✏️ 编辑防火墙规则
+PUT http://localhost:你的端口/api/firewall/rules
+Content-Type: application/json
+
+{
+  "currentName": "MyRule",
+  "newName": "MyRuleUpdated",
+  "description": "Updated rule",
+  "enabled": true,
+  "applicationName": "C:\\Program Files\\MyApp\\new_app.exe",
+  "protocol": "UDP",
+  "localPorts": "9999",
+  "remotePorts": "*",
+  "localAddresses": "*",
+  "remoteAddresses": "*",
+  "profiles": "Private,Public",
+  "action": "Block",
+  "grouping": "NewGroup",
+  "edgeTraversal": false
+}
+
+### 响应示例：
+# {
+#   "success": true,
+#   "message": "防火墙规则更新成功",
+#   "data": null
+# }
+
+---
+
+### ❌ 删除防火墙规则
+DELETE http://localhost:你的端口/api/firewall/rules?name=MyRuleUpdated
+
+### 响应示例：
+# {
+#   "success": true,
+#   "message": "防火墙规则删除成功",
+#   "data": null
+# }

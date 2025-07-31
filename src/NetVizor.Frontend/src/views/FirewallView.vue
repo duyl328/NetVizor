@@ -170,7 +170,9 @@
             <span>暂无数据</span>
           </div>
           <div v-if="false" class="data-info">
-            <span>总共 {{ totalCount }} 条数据（已加载 {{ loadedRanges.size * pageSize }} 条）</span>
+            <span
+              >总共 {{ totalCount }} 条数据（已加载 {{ loadedRanges.size * pageSize }} 条）</span
+            >
           </div>
 
           <!-- 虚拟滚动列表 -->
@@ -181,7 +183,7 @@
             :item-size="80"
             :buffer="200"
             key-field="id"
-            style="height: 500px;"
+            style="height: 500px"
             @scroll="onScroll"
             @resize="onResize"
             @visible="onVisibleRangeUpdate"
@@ -189,88 +191,92 @@
           >
             <div :key="item.id" class="scroller-item-wrapper">
               <!-- 占位符项 -->
-              <div v-if="item.isPlaceholder" class="rule-item loading-placeholder">
+              <div
+                v-if="item.isPlaceholder"
+                class="rule-item loading-placeholder"
+                :class="{ 'deleted-item': item.isDeleted }"
+              >
                 <div class="loading-content">
-                  <span>加载中...</span>
+                  <span>{{ item.isDeleted ? '规则已删除' : '加载中...' }}</span>
                 </div>
               </div>
 
               <!-- 已加载的数据项 -->
               <div v-else class="rule-item" :class="{ selected: isItemSelected(item) }">
-              <div class="rule-cell checkbox-cell">
-                <n-checkbox
-                  :checked="isItemSelected(item)"
-                  @update:checked="(checked) => handleRuleCheck(item.id, checked)"
-                />
-              </div>
-
-              <div class="rule-cell name-cell">
-                <div class="rule-name">{{ item.name }}</div>
-                <div class="rule-description">{{ item.description }}</div>
-              </div>
-
-              <div class="rule-cell status-cell">
-                <n-tag :type="item.enabled ? 'success' : 'default'" size="small">
-                  {{ item.enabled ? '启用' : '禁用' }}
-                </n-tag>
-              </div>
-
-              <div class="rule-cell direction-cell">
-                <div class="direction-content">
-                  <n-icon
-                    :component="item.direction === 'inbound' ? ArrowDownOutline : ArrowUpOutline"
-                    size="16"
+                <div class="rule-cell checkbox-cell">
+                  <n-checkbox
+                    :checked="isItemSelected(item)"
+                    @update:checked="(checked) => handleRuleCheck(item.id, checked)"
                   />
-                  <span>{{ item.direction === 'inbound' ? '入站' : '出站' }}</span>
                 </div>
-              </div>
 
-              <div class="rule-cell action-cell">
-                <n-tag :type="item.action === 'allow' ? 'success' : 'error'" size="small">
-                  {{ item.action === 'allow' ? '允许' : '阻止' }}
-                </n-tag>
-              </div>
+                <div class="rule-cell name-cell">
+                  <div class="rule-name">{{ item.name }}</div>
+                  <div class="rule-description">{{ item.description }}</div>
+                </div>
 
-              <div class="rule-cell program-cell">
-                <div class="program-text" :title="item.program">{{ item.program }}</div>
-              </div>
-
-              <div class="rule-cell protocol-cell">
-                <span>{{ item.protocol }}</span>
-              </div>
-
-              <div class="rule-cell port-cell">
-                <span>{{ item.port }}</span>
-              </div>
-
-              <div class="rule-cell profiles-cell">
-                <div class="profiles-container">
-                  <n-tag
-                    v-for="profile in item.profiles"
-                    :key="profile"
-                    type="info"
-                    size="small"
-                    class="profile-tag"
-                  >
-                    {{ profile }}
+                <div class="rule-cell status-cell">
+                  <n-tag :type="item.enabled ? 'success' : 'default'" size="small">
+                    {{ item.enabled ? '启用' : '禁用' }}
                   </n-tag>
                 </div>
-              </div>
 
-              <div class="rule-cell actions-cell">
-                <div class="action-buttons">
-                  <n-button size="small" quaternary @click="editRule(item)">
-                    <template #icon>
-                      <n-icon :component="CreateOutline" size="14" />
-                    </template>
-                  </n-button>
-                  <n-button size="small" quaternary type="error" @click="deleteRule(item.id)">
-                    <template #icon>
-                      <n-icon :component="TrashOutline" size="14" />
-                    </template>
-                  </n-button>
+                <div class="rule-cell direction-cell">
+                  <div class="direction-content">
+                    <n-icon
+                      :component="item.direction === 'inbound' ? ArrowDownOutline : ArrowUpOutline"
+                      size="16"
+                    />
+                    <span>{{ item.direction === 'inbound' ? '入站' : '出站' }}</span>
+                  </div>
                 </div>
-              </div>
+
+                <div class="rule-cell action-cell">
+                  <n-tag :type="item.action === 'allow' ? 'success' : 'error'" size="small">
+                    {{ item.action === 'allow' ? '允许' : '阻止' }}
+                  </n-tag>
+                </div>
+
+                <div class="rule-cell program-cell">
+                  <div class="program-text" :title="item.program">{{ item.program }}</div>
+                </div>
+
+                <div class="rule-cell protocol-cell">
+                  <span>{{ item.protocol }}</span>
+                </div>
+
+                <div class="rule-cell port-cell">
+                  <span>{{ item.port }}</span>
+                </div>
+
+                <div class="rule-cell profiles-cell">
+                  <div class="profiles-container">
+                    <n-tag
+                      v-for="profile in item.profiles"
+                      :key="profile"
+                      type="info"
+                      size="small"
+                      class="profile-tag"
+                    >
+                      {{ profile }}
+                    </n-tag>
+                  </div>
+                </div>
+
+                <div class="rule-cell actions-cell">
+                  <div class="action-buttons">
+                    <n-button size="small" quaternary @click="editRule(item)">
+                      <template #icon>
+                        <n-icon :component="CreateOutline" size="14" />
+                      </template>
+                    </n-button>
+                    <n-button size="small" quaternary type="error" @click="deleteRule(item.id)">
+                      <template #icon>
+                        <n-icon :component="TrashOutline" size="14" />
+                      </template>
+                    </n-button>
+                  </div>
+                </div>
               </div>
             </div>
           </RecycleScroller>
@@ -279,7 +285,12 @@
     </div>
 
     <!-- 防火墙规则表单 -->
-    <FirewallRuleForm v-model="showRuleForm" :edit-rule="currentEditRule" @save="handleSaveRule" />
+    <FirewallRuleForm
+      ref="ruleFormRef"
+      v-model="showRuleForm"
+      :edit-rule="currentEditRule"
+      @save="handleSaveRule"
+    />
   </div>
 </template>
 
@@ -295,6 +306,7 @@ import {
   NCheckbox,
   NSelect,
   useMessage,
+  useDialog,
 } from 'naive-ui'
 import { RecycleScroller, DynamicScroller } from 'vue-virtual-scroller'
 import FirewallRuleForm from '@/components/FirewallRuleForm.vue'
@@ -313,20 +325,31 @@ import {
   RefreshOutline,
 } from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http'
-import type { FirewallStatus, FirewallRule, RuleDirection, RuleAction, ProtocolType } from '@/types/firewall'
+import type {
+  FirewallStatus,
+  FirewallRule,
+  RuleDirection,
+  RuleAction,
+  ProtocolType,
+} from '@/types/firewall'
 import { ApiResponse } from '@/types/http'
 import StringUtils from '@/utils/stringUtils'
 import {
   FirewallRuleResponse,
   FirewallRuleShow,
   FirewallRulesParam,
+  CreateFirewallRuleRequest,
+  UpdateFirewallRuleRequest,
 } from '@/types/firewallFrond'
 
 const message = useMessage()
+const dialog = useDialog()
 
 // 界面状态
 const showRuleForm = ref(false)
 const currentEditRule = ref(null)
+const ruleFormRef = ref() // 表单组件引用
+const originalRuleName = ref<string>('') // 用于跟踪编辑时的原始规则名称
 const firewallEnabled = ref(true)
 const checkedRowKeys = ref<string[]>([])
 
@@ -416,10 +439,11 @@ const loadedPages = new Set<number>()
 // 防火墙规则列表 - 预分配所有位置，包含null占位符
 const firewallRule = ref<(FirewallRuleShow | null)[]>([])
 const loadedRanges = new Set<string>() // 例如："100-149"
+const deletedIndices = new Set<number>() // 跟踪已删除项目的索引
 
 // 当前已加载的有效数据（非null非占位符）
 const currentLoadedRules = computed(() => {
-  return firewallRule.value.filter(rule => rule !== null) as FirewallRuleShow[]
+  return firewallRule.value.filter((rule) => rule !== null) as FirewallRuleShow[]
 })
 
 // 为RecycleScroller准备的数据，每个项目都有唯一的id
@@ -441,19 +465,20 @@ const recyclerItems = computed(() => {
         port: '',
         profiles: [] as string[],
         isPlaceholder: true as const,
-        index: index
+        isDeleted: deletedIndices.has(index), // 标记是否为删除的项目
+        index: index,
       }
     }
   })
 })
 
 // 类型守卫函数
-function isPlaceholder(item: any): item is { isPlaceholder: true } {
+function isPlaceholder(item: unknown): item is { isPlaceholder: true } {
   return item && item.isPlaceholder === true
 }
 
 // 智能选中状态检查，避免虚拟滚动的选中状态闪烁
-function isItemSelected(item: any): boolean {
+function isItemSelected(item: unknown): boolean {
   // 如果是占位符，永远不选中
   if (isPlaceholder(item)) {
     return false
@@ -492,14 +517,90 @@ function convertFirewallRuleToShow(rule: FirewallRule): FirewallRuleShow {
   }
 }
 
+// 将前端表单数据转换为API创建请求格式
+function convertToCreateRequest(formRule: FirewallRuleShow): CreateFirewallRuleRequest {
+  return {
+    name: formRule.name,
+    description: formRule.description || '',
+    applicationName: formRule.program === '任意' ? '' : formRule.program,
+    localAddresses: '*',
+    remoteAddresses: '*',
+    protocol: formRule.protocol === '任意' ? 'TCP' : formRule.protocol,
+    icmpTypesAndCodes: '',
+    localPorts: formRule.port === '任意' ? '*' : formRule.port,
+    remotePorts: '*',
+    direction: formRule.direction === 'inbound' ? 'Inbound' : 'Outbound',
+    enabled: formRule.enabled,
+    profiles: formRule.profiles
+      .map((p) => {
+        switch (p) {
+          case '域':
+            return 'Domain'
+          case '专用':
+            return 'Private'
+          case '公用':
+            return 'Public'
+          default:
+            return p
+        }
+      })
+      .join(','),
+    action: formRule.action === 'allow' ? 'Allow' : 'Block',
+    grouping: '',
+    interfaceTypes: 'All',
+    edgeTraversal: false,
+  }
+}
+
+// 将前端表单数据转换为API更新请求格式
+function convertToUpdateRequest(
+  formRule: FirewallRuleShow,
+  originalName: string,
+): UpdateFirewallRuleRequest {
+  return {
+    currentName: originalName,
+    newName: formRule.name !== originalName ? formRule.name : undefined,
+    description: formRule.description || '',
+    enabled: formRule.enabled,
+    applicationName: formRule.program === '任意' ? '' : formRule.program,
+    protocol: formRule.protocol === '任意' ? 'TCP' : formRule.protocol,
+    localPorts: formRule.port === '任意' ? '*' : formRule.port,
+    remotePorts: '*',
+    localAddresses: '*',
+    remoteAddresses: '*',
+    profiles: formRule.profiles
+      .map((p) => {
+        switch (p) {
+          case '域':
+            return 'Domain'
+          case '专用':
+            return 'Private'
+          case '公用':
+            return 'Public'
+          default:
+            return p
+        }
+      })
+      .join(','),
+    action: formRule.action === 'allow' ? 'Allow' : 'Block',
+    grouping: '',
+    edgeTraversal: false,
+  }
+}
+
 // 协议名称转换
 function getProtocolName(protocol: ProtocolType): string {
   switch (protocol) {
-    case 6: return 'TCP'
-    case 17: return 'UDP'
-    case 1: return 'ICMPV4'
-    case 256: return '任意'
-    default: return String(protocol)
+    case 6:
+      return 'TCP'
+    case 17:
+      return 'UDP'
+    case 1:
+      return 'ICMPV4'
+    case 256:
+      return '任意'
+    default:
+      return String(protocol)
   }
 }
 
@@ -562,11 +663,16 @@ function buildQueryParams(baseParams: Partial<FirewallRulesParam> = {}): Firewal
 // 协议值转换
 function getProtocolValue(protocol: string): number {
   switch (protocol) {
-    case 'TCP': return 6
-    case 'UDP': return 17
-    case 'ICMPV4': return 1
-    case '任意': return 256
-    default: return 256
+    case 'TCP':
+      return 6
+    case 'UDP':
+      return 17
+    case 'ICMPV4':
+      return 1
+    case '任意':
+      return 256
+    default:
+      return 256
   }
 }
 
@@ -579,11 +685,11 @@ async function loadRange(startIndex: number, limit = pageSize) {
 
   const rangeKey = `${startIndex}-${startIndex + limit - 1}`
   if (loadedRanges.has(rangeKey)) {
-    console.log('范围已加载，跳过:', rangeKey)
+    //console.log('范围已加载，跳过:', rangeKey)
     return
   }
 
-  console.log('开始加载数据范围:', rangeKey)
+  //console.log('开始加载数据范围:', rangeKey)
 
   try {
     loading.value = true
@@ -592,14 +698,14 @@ async function loadRange(startIndex: number, limit = pageSize) {
       limit: limit,
     })
 
-    console.log('请求参数:', params)
+    //console.log('请求参数:', params)
     const res = await getFirewallRules(params)
     if (!res) {
       console.log('请求返回空结果')
       return
     }
 
-    console.log('收到数据:', res.rules.length, '条，总数:', res.totalCount)
+    //console.log('收到数据:', res.rules.length, '条，总数:', res.totalCount)
 
     // 确保数组已预分配
     if (firewallRule.value.length === 0 && res.totalCount > 0) {
@@ -613,12 +719,12 @@ async function loadRange(startIndex: number, limit = pageSize) {
       const index = startIndex + i
       if (index < firewallRule.value.length) {
         firewallRule.value[index] = convertFirewallRuleToShow(res.rules[i])
-        console.log(`填充数据到位置 ${index}:`, firewallRule.value[index]?.name)
+        //console.log(`填充数据到位置 ${index}:`, firewallRule.value[index]?.name)
       }
     }
 
     loadedRanges.add(rangeKey)
-    console.log('范围加载完成:', rangeKey, '已加载范围数:', loadedRanges.size)
+    //console.log('范围加载完成:', rangeKey, '已加载范围数:', loadedRanges.size)
   } catch (error) {
     console.error('加载数据失败:', error)
     message.error('数据加载失败')
@@ -634,6 +740,7 @@ async function resetAndLoadFirst() {
     initialLoading.value = true
     firewallRule.value = []
     loadedRanges.clear()
+    deletedIndices.clear() // 清理删除标记
 
     // 先获取总数
     const params = buildQueryParams({
@@ -673,7 +780,7 @@ async function resetAndLoadFirst() {
 /**
  * 滚动事件处理 - 检测是否需要加载更多数据
  */
-function onVisibleRangeUpdate(event?: any) {
+function onVisibleRangeUpdate(event?: unknown) {
   console.log('可见范围更新触发:', event)
 
   // 检查事件参数格式
@@ -727,7 +834,7 @@ function onVisibleRangeUpdate(event?: any) {
  * 普通滚动事件处理
  */
 function onScroll(event: Event) {
-  console.log('滚动事件触发')
+  // console.log('滚动事件触发')
 
   // 尝试基于滚动位置估算可见范围
   const target = event.target as HTMLElement
@@ -735,30 +842,30 @@ function onScroll(event: Event) {
     const { scrollTop, scrollHeight, clientHeight } = target
     const scrollPercentage = (scrollTop + clientHeight) / scrollHeight
 
-    console.log('滚动位置信息:', {
-      scrollTop,
-      scrollHeight,
-      clientHeight,
-      scrollPercentage: Math.round(scrollPercentage * 100) + '%'
-    })
+    // console.log('滚动位置信息:', {
+    //   scrollTop,
+    //   scrollHeight,
+    //   clientHeight,
+    //   scrollPercentage: Math.round(scrollPercentage * 100) + '%'
+    // })
 
     // 估算当前可见的项目范围
     const itemHeight = 80 // item-size
     const visibleStartIndex = Math.floor(scrollTop / itemHeight)
     const visibleEndIndex = Math.ceil((scrollTop + clientHeight) / itemHeight)
 
-    console.log('估算的可见范围:', { visibleStartIndex, visibleEndIndex })
+    // console.log('估算的可见范围:', { visibleStartIndex, visibleEndIndex })
 
     // 计算需要加载的数据段
     const alignedStart = Math.floor(visibleStartIndex / pageSize) * pageSize
     const alignedEnd = Math.ceil((visibleEndIndex + 1) / pageSize) * pageSize
 
-    console.log('基于滚动位置的加载范围:', alignedStart, alignedEnd)
+    // console.log('基于滚动位置的加载范围:', alignedStart, alignedEnd)
 
     // 加载可见范围内的数据段
     for (let i = alignedStart; i < alignedEnd; i += pageSize) {
       if (i < totalCount.value) {
-        console.log('滚动位置触发加载范围:', i, 'to', i + pageSize - 1)
+        // console.log('滚动位置触发加载范围:', i, 'to', i + pageSize - 1)
         loadRange(i, pageSize)
       }
     }
@@ -776,11 +883,15 @@ function onResize() {
 resetAndLoadFirst()
 
 // 监听搜索和过滤条件变化，重新加载数据
-watch([searchQuery, filters], () => {
-  // 搜索条件变化时清理选中状态，避免状态不一致
-  checkedRowKeys.value = []
-  resetAndLoadFirst()
-}, { deep: true })
+watch(
+  [searchQuery, filters],
+  () => {
+    // 搜索条件变化时清理选中状态，避免状态不一致
+    checkedRowKeys.value = []
+    resetAndLoadFirst()
+  },
+  { deep: true },
+)
 
 // 全选相关计算属性
 const allSelected = computed({
@@ -789,30 +900,30 @@ const allSelected = computed({
     if (currentValidRules.length === 0) {
       return false
     }
-    
+
     // 检查当前已加载数据中有多少被选中
-    const selectedInCurrentData = currentValidRules.filter(rule => 
-      checkedRowKeys.value.includes(rule.id)
+    const selectedInCurrentData = currentValidRules.filter((rule) =>
+      checkedRowKeys.value.includes(rule.id),
     )
-    
+
     return selectedInCurrentData.length === currentValidRules.length
   },
   set: (value: boolean) => {
     if (value) {
       // 选中当前已加载的所有有效数据
       const currentValidRules = currentLoadedRules.value
-      const currentIds = currentValidRules.map(rule => rule.id)
-      
+      const currentIds = currentValidRules.map((rule) => rule.id)
+
       // 合并现有选中和当前页选中（去重）
       const mergedIds = [...new Set([...checkedRowKeys.value, ...currentIds])]
       checkedRowKeys.value = mergedIds
     } else {
       // 取消选中当前已加载的数据
       const currentValidRules = currentLoadedRules.value
-      const currentIds = new Set(currentValidRules.map(rule => rule.id))
-      
+      const currentIds = new Set(currentValidRules.map((rule) => rule.id))
+
       // 只保留不在当前页的选中项
-      checkedRowKeys.value = checkedRowKeys.value.filter(id => !currentIds.has(id))
+      checkedRowKeys.value = checkedRowKeys.value.filter((id) => !currentIds.has(id))
     }
   },
 })
@@ -822,12 +933,12 @@ const indeterminate = computed(() => {
   if (currentValidRules.length === 0) {
     return false
   }
-  
+
   // 检查当前已加载数据中有多少被选中
-  const selectedInCurrentData = currentValidRules.filter(rule => 
-    checkedRowKeys.value.includes(rule.id)
+  const selectedInCurrentData = currentValidRules.filter((rule) =>
+    checkedRowKeys.value.includes(rule.id),
   )
-  
+
   return selectedInCurrentData.length > 0 && selectedInCurrentData.length < currentValidRules.length
 })
 
@@ -838,23 +949,57 @@ const openRuleForm = (rule: unknown = null) => {
 }
 
 const editRule = (rule: unknown) => {
-  currentEditRule.value = { ...rule }
+  const ruleToEdit = rule as FirewallRuleShow
+  currentEditRule.value = { ...ruleToEdit }
+  originalRuleName.value = ruleToEdit.name // 记录原始名称用于API调用
   showRuleForm.value = true
 }
 
 const deleteRule = async (id: string) => {
-  // TODO: 实现删除规则API调用
-  console.log('删除规则:', id)
-
-  // 从本地数据中移除（临时方案，应该调用API）
-  const index = firewallRule.value.findIndex((rule) => rule?.id === id)
-  if (index !== -1) {
-    firewallRule.value[index] = null // 设为null而不是删除，保持索引不变
-    totalCount.value = Math.max(0, totalCount.value - 1)
-    // 从选中项中移除
-    checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id)
-    message.success('规则删除成功')
+  // 从本地数据中找到对应的规则
+  const ruleToDelete = firewallRule.value.find((rule) => rule?.id === id)
+  if (!ruleToDelete) {
+    message.error('找不到要删除的规则')
+    return
   }
+
+  // 显示确认对话框
+  dialog.warning({
+    title: '确认删除',
+    content: `您确定要删除防火墙规则"${ruleToDelete.name}"吗？此操作不可撤销。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        console.log('删除规则:', ruleToDelete.name)
+
+        // 调用删除API
+        const res: ApiResponse<null> = await httpClient.delete(
+          `/firewall/rules?name=${encodeURIComponent(ruleToDelete.name)}`,
+        )
+
+        if (!res.success) {
+          const errorMsg = StringUtils.isBlank(res.message) ? '删除规则失败！' : res.message
+          message.error(errorMsg)
+          return
+        }
+
+        // 从本地数据中移除
+        const index = firewallRule.value.findIndex((rule) => rule?.id === id)
+        if (index !== -1) {
+          firewallRule.value[index] = null // 设为null而不是删除，保持索引不变
+          deletedIndices.add(index) // 标记这个索引为已删除
+          totalCount.value = Math.max(0, totalCount.value - 1)
+          // 从选中项中移除
+          checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id)
+          message.success('规则删除成功')
+        }
+      } catch (error) {
+        console.error('删除规则失败:', error)
+        message.error('删除规则时发生错误')
+      }
+    },
+  })
 }
 
 const handleRuleCheck = (id: string, checked: boolean) => {
@@ -886,24 +1031,60 @@ const clearFilters = () => {
 }
 
 const handleSaveRule = async (rule: unknown) => {
-  // TODO: 实现保存规则API调用
-  console.log('保存规则:', rule)
+  try {
+    const formRule = rule as FirewallRuleShow
+    console.log('保存规则:', formRule)
 
-  if (rule.id) {
-    // 编辑现有规则
-    const index = firewallRule.value.findIndex((r) => r?.id === rule.id)
-    if (index !== -1) {
-      firewallRule.value[index] = rule as FirewallRuleShow
-      message.success('规则更新成功')
+    if (formRule.id && originalRuleName.value) {
+      // 编辑现有规则
+      console.log('更新规则:', originalRuleName.value, '→', formRule.name)
+
+      const updateRequest = convertToUpdateRequest(formRule, originalRuleName.value)
+      const res: ApiResponse<null> = await httpClient.put('/firewall/rules', updateRequest)
+
+      if (!res.success) {
+        const errorMsg = StringUtils.isBlank(res.message) ? '更新规则失败！' : res.message
+        // 调用表单组件的错误处理方法，不关闭弹窗
+        ruleFormRef.value?.handleSaveError(errorMsg)
+        return
+      }
+
+      // 更新本地数据
+      const index = firewallRule.value.findIndex((r) => r?.id === formRule.id)
+      if (index !== -1) {
+        firewallRule.value[index] = formRule
+      }
+
+      // 调用表单组件的成功处理方法，关闭弹窗
+      ruleFormRef.value?.handleSaveSuccess()
+    } else {
+      // 创建新规则
+      console.log('创建新规则:', formRule.name)
+
+      const createRequest = convertToCreateRequest(formRule)
+      const res: ApiResponse<null> = await httpClient.post('/firewall/rules', createRequest)
+
+      if (!res.success) {
+        const errorMsg = StringUtils.isBlank(res.message) ? '创建规则失败！' : res.message
+        // 调用表单组件的错误处理方法，不关闭弹窗
+        ruleFormRef.value?.handleSaveError(errorMsg)
+        return
+      }
+
+      // 调用表单组件的成功处理方法，关闭弹窗
+      ruleFormRef.value?.handleSaveSuccess()
+      // 重新加载数据以获取新的总数和数据
+      resetAndLoadFirst()
     }
-  } else {
-    // 添加新规则 - 这里需要重新加载数据，因为数组大小固定
-    message.success('规则创建成功，正在刷新数据...')
-    resetAndLoadFirst() // 重新加载以获取新的总数和数据
-  }
 
-  // 重置状态
-  currentEditRule.value = null
+    // 重置状态
+    currentEditRule.value = null
+    originalRuleName.value = ''
+  } catch (error) {
+    console.error('保存规则失败:', error)
+    // 调用表单组件的错误处理方法，不关闭弹窗
+    ruleFormRef.value?.handleSaveError('保存规则时发生错误')
+  }
 }
 </script>
 
@@ -1790,7 +1971,9 @@ const handleSaveRule = async (rule: unknown) => {
 }
 
 /* 调试信息样式 */
-.loading-info, .no-data, .data-info {
+.loading-info,
+.no-data,
+.data-info {
   padding: 20px;
   text-align: center;
   color: var(--text-secondary);
@@ -1812,6 +1995,16 @@ const handleSaveRule = async (rule: unknown) => {
   justify-content: center;
   background: var(--bg-tertiary);
   opacity: 0.6;
+}
+
+.loading-placeholder.deleted-item {
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid var(--accent-error);
+}
+
+.loading-placeholder.deleted-item .loading-content {
+  color: var(--accent-error);
+  font-weight: 500;
 }
 
 .loading-content {

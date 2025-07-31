@@ -240,16 +240,16 @@ import {
   FolderOpenOutline,
 } from '@vicons/ionicons5'
 import { RuleDirection, RuleAction, ProtocolType, FirewallProfile } from '@/types/firewall'
-import type { DisplayRule } from '@/types/firewall'
+import type { FirewallRuleShow } from '@/types/firewallFrond'
 
 const props = defineProps<{
   modelValue: boolean
-  editRule?: DisplayRule | null
+  editRule?: FirewallRuleShow | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  save: [rule: DisplayRule]
+  save: [rule: FirewallRuleShow]
 }>()
 
 // 响应式数据
@@ -265,7 +265,7 @@ const activeTab = ref('basic')
 const saving = ref(false)
 
 // 表单数据
-const defaultFormData: DisplayRule = {
+const defaultFormData: FirewallRuleShow = {
   id: '',
   name: '',
   description: '',
@@ -278,7 +278,7 @@ const defaultFormData: DisplayRule = {
   profiles: ['域', '专用'],
 }
 
-const formData = ref<DisplayRule>({ ...defaultFormData })
+const formData = ref<FirewallRuleShow>({ ...defaultFormData })
 
 // 表单验证规则
 const formRules: FormRules = {
@@ -349,15 +349,14 @@ const handleSave = async () => {
 
     // 生成ID（如果是新规则）
     if (!formData.value.id) {
-      formData.value.id = Date.now().toString()
+      formData.value.id = crypto.randomUUID()
     }
 
-    // 模拟保存延迟
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
+    // 触发保存事件，父组件处理实际的API调用
     emit('save', { ...formData.value })
-    message.success(isEdit.value ? '规则更新成功' : '规则创建成功')
-    handleClose()
+    
+    // 注意：这里不再自动关闭弹窗和显示成功消息
+    // 成功/失败的处理将由父组件通过调用 handleSaveSuccess/handleSaveError 来控制
   } catch (errors) {
     message.error('请检查表单中的错误')
     console.log(errors)
@@ -365,6 +364,24 @@ const handleSave = async () => {
     saving.value = false
   }
 }
+
+// 父组件调用此方法表示保存成功
+const handleSaveSuccess = () => {
+  message.success(isEdit.value ? '规则更新成功' : '规则创建成功')
+  handleClose()
+}
+
+// 父组件调用此方法表示保存失败
+const handleSaveError = (errorMessage: string) => {
+  message.error(errorMessage)
+  // 不关闭弹窗，让用户可以重新尝试
+}
+
+// 暴露方法给父组件
+defineExpose({
+  handleSaveSuccess,
+  handleSaveError
+})
 
 const browseApplication = () => {
   // 这里可以集成文件选择器或调用 Electron API

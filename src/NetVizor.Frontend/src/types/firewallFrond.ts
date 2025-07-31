@@ -45,3 +45,45 @@ export interface FirewallRulesParam {
   port?: number
   search?: string
 }
+
+/**
+ * 创建防火墙规则请求
+ */
+export interface CreateFirewallRuleRequest {
+  name: string
+  description?: string
+  applicationName?: string
+  localAddresses?: string
+  remoteAddresses?: string
+  protocol?: string
+  icmpTypesAndCodes?: string
+  localPorts?: string
+  remotePorts?: string
+  direction: string
+  enabled: boolean
+  profiles: string
+  action: string
+  grouping?: string
+  interfaceTypes?: string
+  edgeTraversal?: boolean
+}
+
+/**
+ * 更新防火墙规则请求
+ */
+export interface UpdateFirewallRuleRequest {
+  currentName: string
+  newName?: string
+  description?: string
+  enabled?: boolean
+  applicationName?: string
+  protocol?: string
+  localPorts?: string
+  remotePorts?: string
+  localAddresses?: string
+  remoteAddresses?: string
+  profiles?: string
+  action?: string
+  grouping?: string
+  edgeTraversal?: boolean
+}
