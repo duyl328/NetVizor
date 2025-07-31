@@ -161,13 +161,32 @@
             <div class="header-cell actions-cell">操作</div>
           </div>
 
+          <!-- 数据调试信息 -->
+          <div v-if="initialLoading" class="loading-info">
+            <span>正在加载数据...</span>
+          </div>
+          <div v-else-if="firewallRule.length === 0" class="no-data">
+            <span>暂无数据</span>
+          </div>
+          <div v-else class="data-info">
+            <span>已加载 {{ firewallRule.length }} / {{ totalCount }} 条数据</span>
+            <n-button v-if="hasMore" size="small" @click="loadMoreData" :loading="loading" style="margin-left: 10px;">
+              加载更多
+            </n-button>
+            <span v-else style="margin-left: 10px; color: #999;">已加载全部数据</span>
+          </div>
+
           <!-- 虚拟滚动列表 -->
           <RecycleScroller
+            v-if="!initialLoading && firewallRule.length > 0"
             class="rules-scroller"
-            :items="validFirewallRules"
+            :items="firewallRule"
             :item-size="80"
-            :key-field="'id'"
-            @update="onVisibleRangeUpdate"
+            key-field="id"
+            style="height: 500px;"
+            @scroll="onScroll"
+            @resize="onResize"
+            @visible="onVisibleRangeUpdate"
             v-slot="{ item }"
           >
             <div class="rule-item" :class="{ selected: checkedRowKeys.includes(item.id) }">
@@ -386,18 +405,22 @@ const totalCount = ref(0)
 const pageSize = 50
 // 已加载的页索引（防止重复加载）
 const loadedPages = new Set<number>()
-// 防火墙规则列表
-const firewallRule = ref<(FirewallRuleShow | null)[]>([])
+// 防火墙规则列表 - 只存储已加载的数据
+const firewallRule = ref<FirewallRuleShow[]>([])
 const loadedRanges = new Set<string>() // 例如："100-149"
 
-// 过滤掉 null 值的计算属性
+// 过滤掉 null 值的计算属性（现在不需要了，直接使用firewallRule）
 const validFirewallRules = computed(() => {
-  return firewallRule.value.filter((rule): rule is FirewallRuleShow => rule !== null)
+  return firewallRule.value
 })
 
 // 数据加载状态
 const loading = ref(false)
 const initialLoading = ref(true)
+
+// 当前页和是否还有更多数据
+const currentPage = ref(0)
+const hasMore = ref(true)
 
 // 数据转换函数
 function convertFirewallRuleToShow(rule: FirewallRule): FirewallRuleShow {
@@ -493,40 +516,44 @@ function getProtocolValue(protocol: string): number {
   }
 }
 
-// 分段加载数据
-async function loadRange(startIndex: number, limit = pageSize) {
-  if (loading.value) return
-  
-  const rangeKey = `${startIndex}-${startIndex + limit - 1}`
-  if (loadedRanges.has(rangeKey)) return
+// 加载更多数据
+async function loadMoreData() {
+  if (loading.value || !hasMore.value) {
+    console.log('跳过加载 - loading:', loading.value, 'hasMore:', hasMore.value)
+    return
+  }
+
+  console.log('开始加载更多数据，当前页:', currentPage.value)
 
   try {
     loading.value = true
     const params = buildQueryParams({
-      start: startIndex,
-      limit: limit,
+      start: currentPage.value * pageSize,
+      limit: pageSize,
     })
-    
+
+    console.log('请求参数:', params)
     const res = await getFirewallRules(params)
-    if (!res) return
+    if (!res) {
+      console.log('请求返回空结果')
+      return
+    }
+
+    console.log('收到数据:', res.rules.length, '条，总数:', res.totalCount)
 
     // 更新总数
     totalCount.value = res.totalCount
-    
-    // 确保数组足够大
-    if (firewallRule.value.length < res.totalCount) {
-      firewallRule.value = Array(res.totalCount).fill(null)
-    }
 
-    // 填充数据
-    for (let i = 0; i < res.rules.length; i++) {
-      const index = startIndex + i
-      if (index < firewallRule.value.length) {
-        firewallRule.value[index] = convertFirewallRuleToShow(res.rules[i])
-      }
-    }
+    // 添加新数据到现有数组
+    const newRules = res.rules.map(rule => convertFirewallRuleToShow(rule))
+    firewallRule.value.push(...newRules)
+    console.log('当前已加载数据条数:', firewallRule.value.length)
 
-    loadedRanges.add(rangeKey)
+    // 更新分页状态
+    currentPage.value++
+    hasMore.value = firewallRule.value.length < res.totalCount
+
+    console.log('更新状态 - 当前页:', currentPage.value, '还有更多:', hasMore.value)
   } catch (error) {
     console.error('加载数据失败:', error)
     message.error('数据加载失败')
@@ -538,27 +565,22 @@ async function loadRange(startIndex: number, limit = pageSize) {
 // 重置并加载首页数据
 async function resetAndLoadFirst() {
   try {
+    console.log('开始重置并加载首页数据')
     initialLoading.value = true
-    loadedRanges.clear()
     firewallRule.value = []
-    
-    const params = buildQueryParams({
-      start: 0,
-      limit: pageSize,
+    currentPage.value = 0
+    hasMore.value = true
+
+    await loadMoreData()
+    console.log('首页数据详情:', firewallRule.value.slice(0, 3)) // 显示前3条数据的详情
+    console.log('数据结构检查:', {
+      totalCount: totalCount.value,
+      firewallRuleLength: firewallRule.value.length,
+      firstItem: firewallRule.value[0],
+      hasValidIds: firewallRule.value.every(item => item && item.id)
     })
-    
-    const res = await getFirewallRules(params)
-    if (!res) return
 
-    totalCount.value = res.totalCount
-    firewallRule.value = Array(res.totalCount).fill(null)
-
-    // 填充首页数据
-    for (let i = 0; i < res.rules.length; i++) {
-      firewallRule.value[i] = convertFirewallRuleToShow(res.rules[i])
-    }
-
-    loadedRanges.add(`0-${pageSize - 1}`)
+    console.log('首页加载完成，总条数:', totalCount.value, '当前数组长度:', firewallRule.value.length)
   } catch (error) {
     console.error('加载首页数据失败:', error)
     message.error('数据加载失败')
@@ -568,20 +590,93 @@ async function resetAndLoadFirst() {
 }
 
 /**
- * 滚动事件
- * @param startIndex
- * @param endIndex
+ * 滚动事件处理 - 检测是否需要加载更多数据
  */
-function onVisibleRangeUpdate({ startIndex, endIndex }) {
-  console.log('可见范围:', startIndex, endIndex)
-  const alignedStart = Math.floor(startIndex / pageSize) * pageSize
-  const alignedEnd = Math.ceil((endIndex + 1) / pageSize) * pageSize
+function onVisibleRangeUpdate(event?: any) {
+  console.log('可见范围更新触发:', event)
+  
+  // 检查事件参数格式
+  if (!event) {
+    console.log('事件参数为空，跳过处理')
+    return
+  }
+  
+  // 尝试不同的事件参数格式
+  let startIndex = 0
+  let endIndex = 0
+  
+  if (event.startIndex !== undefined && event.endIndex !== undefined) {
+    // 标准格式
+    startIndex = event.startIndex
+    endIndex = event.endIndex
+  } else if (event.start !== undefined && event.end !== undefined) {
+    // 另一种可能的格式
+    startIndex = event.start
+    endIndex = event.end
+  } else if (typeof event === 'object' && event.length) {
+    // 如果是数组格式
+    startIndex = event[0] || 0
+    endIndex = event[1] || firewallRule.value.length - 1
+  } else {
+    console.log('无法解析事件参数格式，使用滚动位置检测')
+    return
+  }
+  
+  console.log('解析的可见范围:', { startIndex, endIndex })
+  
+  // 检查是否接近列表末尾，如果是则加载更多数据
+  const threshold = 10 // 距离末尾10项时开始加载
+  const nearEnd = endIndex >= firewallRule.value.length - threshold
+  
+  console.log('检查是否需要加载更多:', {
+    endIndex,
+    currentLength: firewallRule.value.length,
+    nearEnd,
+    hasMore: hasMore.value,
+    loading: loading.value
+  })
+  
+  if (nearEnd && hasMore.value && !loading.value) {
+    console.log('可见范围触发加载更多数据')
+    loadMoreData()
+  }
+}
 
-  for (let i = alignedStart; i < alignedEnd; i += pageSize) {
-    if (i < totalCount.value) {
-      loadRange(i, pageSize)
+/**
+ * 普通滚动事件处理
+ */
+/**
+ * 普通滚动事件处理
+ */
+function onScroll(event: Event) {
+  console.log('滚动事件触发')
+  
+  // 尝试手动检测滚动位置
+  const target = event.target as HTMLElement
+  if (target) {
+    const { scrollTop, scrollHeight, clientHeight } = target
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight
+    
+    console.log('滚动位置信息:', {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+      scrollPercentage: Math.round(scrollPercentage * 100) + '%'
+    })
+    
+    // 如果滚动到80%以上，尝试加载更多
+    if (scrollPercentage > 0.8 && hasMore.value && !loading.value) {
+      console.log('滚动位置触发加载更多数据')
+      loadMoreData()
     }
   }
+}
+
+/**
+ * 调整大小事件处理
+ */
+function onResize() {
+  console.log('RecycleScroller调整大小')
 }
 
 // 初始化数据
@@ -626,11 +721,12 @@ const editRule = (rule: unknown) => {
 const deleteRule = async (id: string) => {
   // TODO: 实现删除规则API调用
   console.log('删除规则:', id)
-  
+
   // 从本地数据中移除（临时方案，应该调用API）
-  const index = firewallRule.value.findIndex((rule) => rule?.id === id)
+  const index = firewallRule.value.findIndex((rule) => rule.id === id)
   if (index !== -1) {
     firewallRule.value.splice(index, 1)
+    totalCount.value = Math.max(0, totalCount.value - 1)
     // 从选中项中移除
     checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id)
     message.success('规则删除成功')
@@ -663,10 +759,10 @@ const clearFilters = () => {
 const handleSaveRule = async (rule: unknown) => {
   // TODO: 实现保存规则API调用
   console.log('保存规则:', rule)
-  
+
   if (rule.id) {
     // 编辑现有规则
-    const index = firewallRule.value.findIndex((r) => r?.id === rule.id)
+    const index = firewallRule.value.findIndex((r) => r.id === rule.id)
     if (index !== -1) {
       firewallRule.value[index] = rule as FirewallRuleShow
       message.success('规则更新成功')
@@ -1566,6 +1662,39 @@ const handleSaveRule = async (rule: unknown) => {
 }
 
 :deep(.n-checkbox) {
+  font-size: 14px;
+}
+
+/* 调试信息样式 */
+.loading-info, .no-data, .data-info {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.data-info {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  font-weight: 500;
+}
+
+/* 加载占位符样式 */
+.loading-placeholder {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  opacity: 0.6;
+}
+
+.loading-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
