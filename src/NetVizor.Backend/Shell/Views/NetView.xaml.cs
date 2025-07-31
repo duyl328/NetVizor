@@ -35,6 +35,7 @@ public partial class NetView : Window
 
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TRANSPARENT = 0x00000020;
+    private const int WS_EX_TOOLWINDOW = 0x00000080;
     private const int SPI_SETDRAGFULLWINDOWS = 0x0025;
 
     public NetView()
@@ -42,10 +43,10 @@ public partial class NetView : Window
         InitializeComponent();
         InitializeTrayIcon();
         this.Loaded += NetView_Loaded;
-        
+
         // Prevent window snapping by setting ResizeMode appropriately
         this.ResizeMode = ResizeMode.NoResize;
-        
+
         // Initialize double-click timer
         InitializeDoubleClickTimer();
     }
@@ -57,10 +58,13 @@ public partial class NetView : Window
         {
             ResetToDefaultPosition();
         }
-        
+
+        // 设置窗口为工具窗口，隐藏在Alt+Tab中
+        HideFromAltTab();
+
         // Disable automatic window arrangement features
         DisableWindowSnapping();
-        
+
         // Populate network interfaces in context menu
         PopulateNetworkMenu();
     }
@@ -75,12 +79,12 @@ public partial class NetView : Window
             {
                 // Clear existing items
                 NetworkSelectionMenuItem.Items.Clear();
-                
+
                 // Add network interfaces from ViewModel
                 foreach (var netInterface in viewModel.NetworkInterfaces)
                 {
                     var menuItem = new System.Windows.Controls.MenuItem();
-                    
+
                     // Create header with status indicator
                     var headerText = netInterface.Name;
                     if (netInterface.IsConnected)
@@ -91,29 +95,32 @@ public partial class NetView : Window
                     {
                         headerText += " [未连接]";
                     }
-                    
+
                     menuItem.Header = headerText;
                     menuItem.IsCheckable = true;
                     menuItem.IsChecked = netInterface == viewModel.SelectedInterface;
                     menuItem.Tag = netInterface;
-                    
+
                     // Set different styles for connected/disconnected
                     if (netInterface.IsConnected)
                     {
-                        menuItem.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green);
+                        menuItem.Foreground =
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Green);
                     }
                     else
                     {
-                        menuItem.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
+                        menuItem.Foreground =
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
                     }
-                    
-                    menuItem.Click += (s, e) => {
-                        if (s is System.Windows.Controls.MenuItem clickedItem && 
+
+                    menuItem.Click += (s, e) =>
+                    {
+                        if (s is System.Windows.Controls.MenuItem clickedItem &&
                             clickedItem.Tag is Shell.ViewModel.NetworkInterfaceItem selectedInterface)
                         {
                             // Update selection in ViewModel
                             viewModel.SelectedInterface = selectedInterface;
-                            
+
                             // Update check states
                             foreach (System.Windows.Controls.MenuItem item in NetworkSelectionMenuItem.Items)
                             {
@@ -121,7 +128,7 @@ public partial class NetView : Window
                             }
                         }
                     };
-                    
+
                     NetworkSelectionMenuItem.Items.Add(menuItem);
                 }
             }
@@ -159,6 +166,17 @@ public partial class NetView : Window
         }
     }
 
+    private void HideFromAltTab()
+    {
+        // 设置窗口为工具窗口，这样它就不会出现在Alt+Tab中
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != IntPtr.Zero)
+        {
+            var extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TOOLWINDOW);
+        }
+    }
+
     private void InitializeTrayIcon()
     {
         _trayIconManager = new TrayIconManager(this);
@@ -180,6 +198,7 @@ public partial class NetView : Window
         {
             // Single click - no action needed for now
         }
+
         _isDoubleClick = false;
     }
 
@@ -204,7 +223,7 @@ public partial class NetView : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"执行双击动作失败: {ex.Message}", "错误", 
+            System.Windows.MessageBox.Show($"执行双击动作失败: {ex.Message}", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -238,7 +257,7 @@ public partial class NetView : Window
             // Log but don't prevent shutdown
             System.Diagnostics.Debug.WriteLine($"Error closing TrafficAnalysisWindow: {ex.Message}");
         }
-        
+
         // Close SettingsWindow if it exists
         try
         {
@@ -252,7 +271,7 @@ public partial class NetView : Window
             // Log but don't prevent shutdown
             System.Diagnostics.Debug.WriteLine($"Error closing SettingsWindow: {ex.Message}");
         }
-        
+
         _trayIconManager?.Dispose();
         System.Windows.Application.Current.Shutdown();
     }
@@ -274,7 +293,7 @@ public partial class NetView : Window
     {
         _isPositionLocked = !_isPositionLocked;
         LockPositionMenuItem.IsChecked = _isPositionLocked;
-        
+
         // Don't change ResizeMode to maintain consistent window behavior
         // The dragging logic will check _isPositionLocked instead
     }
@@ -313,7 +332,7 @@ public partial class NetView : Window
     {
         _snapToScreen = !_snapToScreen;
         SnapToScreenMenuItem.IsChecked = _snapToScreen;
-        
+
         if (_snapToScreen)
         {
             SnapToScreen();
@@ -325,7 +344,7 @@ public partial class NetView : Window
         var workArea = SystemParameters.WorkArea;
         var left = Math.Max(workArea.Left, Math.Min(this.Left, workArea.Right - this.Width));
         var top = Math.Max(workArea.Top, Math.Min(this.Top, workArea.Bottom - this.Height));
-        
+
         this.Left = left;
         this.Top = top;
     }
@@ -334,10 +353,10 @@ public partial class NetView : Window
     {
         _showDetailedInfo = !_showDetailedInfo;
         DetailedInfoMenuItem.IsChecked = _showDetailedInfo;
-        
+
         // The window will automatically resize based on content
         // No need to manually set height anymore due to SizeToContent="WidthAndHeight"
-        
+
         // You can trigger a re-layout if needed
         this.InvalidateMeasure();
         this.UpdateLayout();
@@ -350,7 +369,7 @@ public partial class NetView : Window
 
     private void ExitApplication_Click(object sender, RoutedEventArgs e)
     {
-        var result = System.Windows.MessageBox.Show("确定要退出程序吗？", "确认退出", 
+        var result = System.Windows.MessageBox.Show("确定要退出程序吗？", "确认退出",
             MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result == MessageBoxResult.Yes)
         {
@@ -366,7 +385,7 @@ public partial class NetView : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"无法打开流量分析窗口: {ex.Message}", "错误", 
+            System.Windows.MessageBox.Show($"无法打开流量分析窗口: {ex.Message}", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -379,7 +398,7 @@ public partial class NetView : Window
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误", 
+            System.Windows.MessageBox.Show($"无法打开设置窗口: {ex.Message}", "错误",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -422,13 +441,13 @@ public partial class NetView : Window
     protected override void OnLocationChanged(EventArgs e)
     {
         base.OnLocationChanged(e);
-        
+
         // Only check snap to screen if that option is enabled
         if (_snapToScreen && !_isPositionLocked)
         {
             SnapToScreen();
         }
-        
+
         // Perform boundary check after drag is complete (with delay to avoid flicker)
         if (!_isPositionLocked)
         {
@@ -437,24 +456,24 @@ public partial class NetView : Window
     }
 
     private System.Windows.Threading.DispatcherTimer? _boundaryCheckTimer;
-    
+
     private void CheckBoundariesDelayed()
     {
         // Cancel previous timer if exists
         _boundaryCheckTimer?.Stop();
-        
+
         // Create new timer for delayed boundary check
         _boundaryCheckTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(150) // Delay to avoid flicker during drag
         };
-        
+
         _boundaryCheckTimer.Tick += (s, e) =>
         {
             _boundaryCheckTimer.Stop();
             SnapBackToScreen();
         };
-        
+
         _boundaryCheckTimer.Start();
     }
 
@@ -463,18 +482,18 @@ public partial class NetView : Window
         var workArea = SystemParameters.WorkArea;
         var originalLeft = this.Left;
         var originalTop = this.Top;
-        
+
         // Calculate bounds with some tolerance (allow partial off-screen)
         var tolerance = 20; // Allow 20 pixels to be off-screen
         var minLeft = workArea.Left - (this.Width - tolerance);
         var maxLeft = workArea.Right - tolerance;
         var minTop = workArea.Top - (this.Height - tolerance);
         var maxTop = workArea.Bottom - tolerance;
-        
+
         // Adjust position if outside bounds
         var newLeft = Math.Max(minLeft, Math.Min(this.Left, maxLeft));
         var newTop = Math.Max(minTop, Math.Min(this.Top, maxTop));
-        
+
         // Only animate if position actually changed
         if (Math.Abs(newLeft - originalLeft) > 1 || Math.Abs(newTop - originalTop) > 1)
         {
@@ -485,19 +504,19 @@ public partial class NetView : Window
     private void AnimateToPosition(double targetLeft, double targetTop)
     {
         var duration = TimeSpan.FromMilliseconds(200);
-        
+
         var leftAnimation = new System.Windows.Media.Animation.DoubleAnimation(
             this.Left, targetLeft, duration)
         {
             EasingFunction = new System.Windows.Media.Animation.QuadraticEase()
         };
-        
+
         var topAnimation = new System.Windows.Media.Animation.DoubleAnimation(
             this.Top, targetTop, duration)
         {
             EasingFunction = new System.Windows.Media.Animation.QuadraticEase()
         };
-        
+
         this.BeginAnimation(Window.LeftProperty, leftAnimation);
         this.BeginAnimation(Window.TopProperty, topAnimation);
     }
