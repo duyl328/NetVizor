@@ -604,13 +604,38 @@ function getProtocolName(protocol: ProtocolType): string {
   }
 }
 
-function parseProfiles(profiles: number) {
-  const result = []
+function parseProfiles(profiles: number | string): string[] {
+  const result: string[] = []
+
+  // 如果是字符串，先转换为小写并去除多余空格
+  if (typeof profiles === 'string') {
+    const normalized = profiles.trim().toLowerCase()
+
+    if (normalized === 'all') {
+      return ['域', '专用', '公用']
+    }
+
+    const parts = normalized
+      .split(',')
+      .map(p => p.trim()) // 去除每个字段两边的空格
+
+    for (const part of parts) {
+      if (part === 'domain') result.push('域')
+      else if (part === 'private') result.push('专用')
+      else if (part === 'public') result.push('公用')
+    }
+
+    return result
+  }
+
+  // 数字类型按位判断
   if (profiles & 1) result.push('域')
   if (profiles & 2) result.push('专用')
   if (profiles & 4) result.push('公用')
+
   return result
 }
+
 
 /**
  * 获取防火墙信息
@@ -688,7 +713,6 @@ async function loadRange(startIndex: number, limit = pageSize) {
     //console.log('范围已加载，跳过:', rangeKey)
     return
   }
-
   //console.log('开始加载数据范围:', rangeKey)
 
   try {

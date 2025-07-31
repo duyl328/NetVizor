@@ -10,7 +10,10 @@ public static class JsonHelper
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
-        Converters = { new IpAddressConverter() }
+        Converters =
+        {
+            new IpAddressConverter(), new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false)
+        },
     };
 
     public static string ToJson<T>(T value) =>
