@@ -80,7 +80,7 @@ public static class SysInfoUtils
             }
             catch (ArgumentException)
             {
-                Log.Information($"进程 {pid} 不存在");
+                // Log.Information($"进程 {pid} 不存在");
                 return null; // 返回 null 而不是抛异常
             }
 

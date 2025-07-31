@@ -17,6 +17,7 @@ public class TrayIconManager : IDisposable
     private ContextMenu _contextMenu;
     private DispatcherTimer _clickTimer;
     private bool _isDoubleClick = false;
+    private DispatcherTimer _menuCloseTimer;
 
     // Win32 API 用于获取鼠标位置和显示器信息
     [DllImport("user32.dll")]
@@ -264,30 +265,93 @@ public class TrayIconManager : IDisposable
         // 更新菜单状态
         UpdateContextMenuStates();
 
-        // 直接设置菜单位置为鼠标位置，不使用临时窗口
+        // 简单设置菜单位置
         _contextMenu.PlacementTarget = null;
         _contextMenu.Placement = PlacementMode.MousePoint;
-        _contextMenu.StaysOpen = false;
-
-        // 使用 PreviewMouseDown 事件来处理点击外部关闭
-        _contextMenu.PreviewMouseDown += OnContextMenuPreviewMouseDown;
-
-        // 当菜单关闭时，清理事件
-        RoutedEventHandler closedHandler = null;
-        closedHandler = (s, e) =>
-        {
-            _contextMenu.PreviewMouseDown -= OnContextMenuPreviewMouseDown;
-            _contextMenu.Closed -= closedHandler;
-        };
-        _contextMenu.Closed += closedHandler;
+        _contextMenu.StaysOpen = true; // 保持打开，我们手动控制关闭
 
         _contextMenu.IsOpen = true;
+
+        // 启动定时器来检测点击外部
+        StartMenuCloseTimer();
     }
 
-    private void OnContextMenuPreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void StartMenuCloseTimer()
     {
-        // 如果点击的是菜单项，让事件继续处理
-        // 这个方法主要是为了确保菜单行为正常
+        if (_menuCloseTimer != null)
+        {
+            _menuCloseTimer.Stop();
+        }
+
+        _menuCloseTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(100) // 每100ms检查一次
+        };
+
+        _menuCloseTimer.Tick += (s, e) =>
+        {
+            if (!_contextMenu.IsOpen)
+            {
+                _menuCloseTimer.Stop();
+                return;
+            }
+
+            // 检查ESC键是否被按下
+            if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Escape))
+            {
+                _contextMenu.IsOpen = false;
+                _menuCloseTimer.Stop();
+                return;
+            }
+
+            // 检查是否有鼠标按键按下
+            if (System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed ||
+                System.Windows.Input.Mouse.RightButton == System.Windows.Input.MouseButtonState.Pressed)
+            {
+                // 如果鼠标不在菜单区域内且有按键按下，则关闭菜单
+                if (!IsMouseOverContextMenu())
+                {
+                    _contextMenu.IsOpen = false;
+                    _menuCloseTimer.Stop();
+                }
+            }
+        };
+
+        _menuCloseTimer.Start();
+    }
+
+    private bool IsMouseOverContextMenu()
+    {
+        try
+        {
+            if (!_contextMenu.IsOpen) return false;
+
+            // 获取屏幕上的鼠标位置
+            GetCursorPos(out POINT screenPoint);
+            var screenPosition = new System.Windows.Point(screenPoint.X, screenPoint.Y);
+
+            // 获取菜单的屏幕位置和大小
+            var contextMenuElement = _contextMenu as FrameworkElement;
+            if (contextMenuElement == null) return false;
+
+            var source = PresentationSource.FromVisual(contextMenuElement);
+            if (source == null) return false;
+
+            // 获取菜单的屏幕边界
+            var menuTopLeft = contextMenuElement.PointToScreen(new System.Windows.Point(0, 0));
+            var menuBottomRight =
+                contextMenuElement.PointToScreen(new System.Windows.Point(contextMenuElement.ActualWidth,
+                    contextMenuElement.ActualHeight));
+
+            var menuBounds = new Rect(menuTopLeft, menuBottomRight);
+
+            return menuBounds.Contains(screenPosition);
+        }
+        catch
+        {
+            // 如果检测失败，假设鼠标不在菜单上，这样会更安全
+            return false;
+        }
     }
 
     private void UpdateContextMenuStates()
@@ -446,5 +510,6 @@ public class TrayIconManager : IDisposable
         _notifyIcon?.Dispose();
         _contextMenu = null;
         _clickTimer?.Stop();
+        _menuCloseTimer?.Stop();
     }
 }

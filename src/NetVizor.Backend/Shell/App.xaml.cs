@@ -473,6 +473,7 @@ public partial class App : System.Windows.Application
         {
             try
             {
+                Console.WriteLine(context.RequestBody);
                 if (string.IsNullOrEmpty(context.RequestBody))
                 {
                     context.Response.StatusCode = 400;
