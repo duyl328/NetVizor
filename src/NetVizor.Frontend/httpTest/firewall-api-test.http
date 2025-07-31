@@ -1,0 +1,49 @@
+### 获取所有规则
+GET http://localhost:8268/api/firewall/rules
+
+###
+
+### 搜索 Chrome 相关规则
+GET http://localhost:8268/api/firewall/rules?search=Chrome&limit=10
+
+###
+
+### 搜索出站规则中包含 Chrome 的
+GET http://localhost:8268/api/firewall/rules?search=Chrome&direction=Outbound&limit=10
+
+###
+
+### 按端口搜索
+GET http://localhost:8268/api/firewall/rules?search=80&limit=10
+
+###
+
+### 获取已启用的 TCP 规则
+GET http://localhost:8268/api/firewall/rules?enabled=true&protocol=TCP&limit=10
+
+
+### 测试
+GET http://localhost:8268/api/firewall/rules
+
+### 参数说明
+
+# Direction (方向):
+# 1 = Inbound (入站)
+# 2 = Outbound (出站)
+
+# Protocol (协议):
+# 1 = ICMPV4
+# 6 = TCP  
+# 17 = UDP
+# 256 = Any
+
+# Action (动作):
+# 0 = Block (阻止)
+# 1 = Allow (允许)
+
+# Profiles (配置文件):
+# 1 = Domain (域)
+# 2 = Private (私有)
+# 4 = Public (公共)
+# 7 = All (所有，即1+2+4)
+

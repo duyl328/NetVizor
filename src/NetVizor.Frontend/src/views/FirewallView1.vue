@@ -164,7 +164,7 @@
           <!-- 虚拟滚动列表 -->
           <RecycleScroller
             class="rules-scroller"
-            :items="validFirewallRules"
+            :items="firewallRule"
             :item-size="80"
             :key-field="'id'"
             @update="onVisibleRangeUpdate"
@@ -257,7 +257,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, watch } from 'vue'
+import { ref, computed, h } from 'vue'
 import {
   NButton,
   NIcon,
@@ -286,12 +286,13 @@ import {
   RefreshOutline,
 } from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http'
-import type { FirewallStatus, FirewallRule, RuleDirection, RuleAction, ProtocolType } from '@/types/firewall'
+import type { FirewallStatus, FirewallRule } from '@/types/firewall'
 import { ApiResponse } from '@/types/http'
 import StringUtils from '@/utils/stringUtils'
 import {
   FirewallRuleResponse,
   FirewallRuleShow,
+  FirewallRulesPara,
   FirewallRulesParam,
 } from '@/types/firewallFrond'
 
@@ -381,49 +382,166 @@ httpClient.get('/firewall/status').then((res: ApiResponse<FirewallStatus>) => {
   stats.value.disableRules = res.data!.totalRules - res.data!.enabledRules
 })
 
+// 模拟规则数据
+const mockRules = ref([
+  {
+    id: '1',
+    name: 'Windows 远程桌面',
+    description: '允许远程桌面连接',
+    enabled: true,
+    direction: 'inbound',
+    action: 'allow',
+    program: '系统服务',
+    protocol: 'TCP',
+    port: '3389',
+    profiles: ['域', '专用'],
+    priority: 100,
+  },
+  {
+    id: '2',
+    name: 'Microsoft Edge',
+    description: '允许浏览器访问网络',
+    enabled: true,
+    direction: 'outbound',
+    action: 'allow',
+    program: 'C:\\Program Files\\Microsoft\\Edge\\msedge.exe',
+    protocol: '任意',
+    port: '任意',
+    profiles: ['域', '专用', '公用'],
+    priority: 200,
+  },
+  {
+    id: '3',
+    name: '阻止 Telnet',
+    description: '安全策略：阻止 Telnet 连接',
+    enabled: true,
+    direction: 'inbound',
+    action: 'block',
+    program: '任意',
+    protocol: 'TCP',
+    port: '23',
+    profiles: ['域', '专用', '公用'],
+    priority: 300,
+  },
+  {
+    id: '4',
+    name: '文件和打印机共享',
+    description: '允许局域网内文件共享',
+    enabled: false,
+    direction: 'inbound',
+    action: 'allow',
+    program: '系统服务',
+    protocol: 'TCP',
+    port: '445, 139',
+    profiles: ['专用'],
+    priority: 400,
+  },
+  {
+    id: '5',
+    name: 'HTTP 服务器',
+    description: '允许 Web 服务器接收请求',
+    enabled: true,
+    direction: 'inbound',
+    action: 'allow',
+    program: '任意',
+    protocol: 'TCP',
+    port: '80, 443',
+    profiles: ['域', '专用', '公用'],
+    priority: 500,
+  },
+  // 添加更多模拟数据以测试虚拟滚动
+  ...Array.from({ length: 50 }, (_, i) => ({
+    id: `${i + 6}`,
+    name: `规则 ${i + 6}`,
+    description: `这是第 ${i + 6} 个测试规则`,
+    enabled: Math.random() > 0.5,
+    direction: Math.random() > 0.5 ? 'inbound' : 'outbound',
+    action: Math.random() > 0.5 ? 'allow' : 'block',
+    program: `程序 ${i + 6}`,
+    protocol: ['TCP', 'UDP', '任意'][Math.floor(Math.random() * 3)],
+    port: Math.floor(Math.random() * 65535).toString(),
+    profiles: ['域', '专用', '公用'].slice(0, Math.floor(Math.random() * 3) + 1),
+    priority: (i + 6) * 100,
+  })),
+])
+
 // 当前筛选条件下的总数量（从接口获取）
 const totalCount = ref(0)
-const pageSize = 50
+const pageSize = 100
 // 已加载的页索引（防止重复加载）
 const loadedPages = new Set<number>()
 // 防火墙规则列表
 const firewallRule = ref<(FirewallRuleShow | null)[]>([])
 const loadedRanges = new Set<string>() // 例如："100-149"
 
-// 过滤掉 null 值的计算属性
-const validFirewallRules = computed(() => {
-  return firewallRule.value.filter((rule): rule is FirewallRuleShow => rule !== null)
-})
+async function loadRange(startIndex: number, limit = pageSize) {
+  const rangeKey = `${startIndex}-${startIndex + limit - 1}`
+  if (loadedRanges.has(rangeKey)) return
 
-// 数据加载状态
-const loading = ref(false)
-const initialLoading = ref(true)
+  const res: FirewallRuleResponse | null = await getFirewallRules({
+    start: 0,
+    limit: pageSize,
+    search: searchQuery.value,
+    direction: filters.value.direction,
+    enabled: filters.value.enable,
+    protocol: filters.value.protocol,
+    action: filters.value.action,
+  })
 
-// 数据转换函数
-function convertFirewallRuleToShow(rule: FirewallRule): FirewallRuleShow {
-  return {
-    id: crypto.randomUUID(), // 生成唯一ID
-    name: rule.name,
-    description: rule.description || '',
-    enabled: rule.enabled,
-    direction: rule.direction === 1 ? 'inbound' : 'outbound',
-    action: rule.action === 1 ? 'allow' : 'block',
-    program: StringUtils.isBlank(rule.serviceName) ? rule.applicationName : rule.serviceName,
-    protocol: getProtocolName(rule.protocol),
-    port: rule.localPorts || '任意',
-    profiles: parseProfiles(rule.profiles),
+  if (res.rules && res.rules.length > 0) {
+    for (let i = 0; i < res.rules.length; i++) {
+      firewallRule.value[startIndex + i] = res.rules[i]
+    }
   }
+
+  if (res.totalCount !== undefined) {
+    totalCount.value = res.totalCount
+  }
+
+  loadedRanges.add(rangeKey)
 }
 
-// 协议名称转换
-function getProtocolName(protocol: ProtocolType): string {
-  switch (protocol) {
-    case 6: return 'TCP'
-    case 17: return 'UDP'
-    case 1: return 'ICMPV4'
-    case 256: return '任意'
-    default: return String(protocol)
+resetAndLoadFirst()
+
+async function resetAndLoadFirst() {
+  loadedRanges.clear()
+  const arg = {
+    start: 0,
+    limit: pageSize,
+    search: searchQuery.value,
+    direction: filters.value.direction,
+    enabled: filters.value.enable,
+    protocol: filters.value.protocol,
+    action: filters.value.action,
   }
+  const res: FirewallRuleResponse | null = await getFirewallRules(arg)
+  if (res === null || res === undefined) {
+    console.log('数据为空！')
+    return
+  }
+  totalCount.value = res.totalCount
+  firewallRule.value = Array(res.totalCount).fill(null)
+
+  for (let i = 0; i < res.rules.length; i++) {
+    const firewallRule1 = res.rules[i]
+
+    firewallRule.value[i] = {
+      id: crypto.randomUUID(),
+      name: firewallRule1.name,
+      description: firewallRule1.description,
+      enabled: firewallRule1.enabled,
+      direction: firewallRule1.direction,
+      action: firewallRule1.action,
+      program: StringUtils.isBlank(firewallRule1.serviceName)
+        ? firewallRule1.applicationName
+        : firewallRule1.serviceName,
+      protocol: firewallRule1.protocol,
+      port: firewallRule1.localPorts,
+      profiles: parseProfiles(firewallRule1.profiles),
+    }
+  }
+
+  loadedRanges.add(`0-${pageSize - 1}`)
 }
 
 function parseProfiles(profiles: number) {
@@ -438,169 +556,65 @@ function parseProfiles(profiles: number) {
  * 获取防火墙信息
  * @param arg
  */
-async function getFirewallRules(arg: FirewallRulesParam): Promise<FirewallRuleResponse | null> {
+async function getFirewallRules(arg: FirewallRulesParam): FirewallRuleResponse | null {
   // 请求规则数据
   const firewall: ApiResponse<FirewallRuleResponse> = await httpClient.get('/firewall/rules', arg)
   if (!firewall.success) {
     const errorMsg = StringUtils.isBlank(firewall.message)
-      ? '数据请求出错，错误信息为空!'
-      : firewall.message
+      ? firewall.message
+      : '数据请求出错，错误信息为空!'
     message.error(errorMsg)
     return null
   }
   return firewall.data
 }
 
-// 构建查询参数
-function buildQueryParams(baseParams: Partial<FirewallRulesParam> = {}): FirewallRulesParam {
-  const params: FirewallRulesParam = {
-    ...baseParams,
+// 计算属性
+const filteredRules = computed(() => {
+  let rules = mockRules.value
+
+  // 搜索过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    rules = rules.filter(
+      (rule) =>
+        rule.name.toLowerCase().includes(query) || rule.description.toLowerCase().includes(query),
+    )
   }
 
-  // 添加搜索关键词
-  if (searchQuery.value.trim()) {
-    params.search = searchQuery.value.trim()
-  }
-
-  // 添加过滤条件
+  // 方向过滤
   if (filters.value.direction) {
-    params.direction = filters.value.direction
+    rules = rules.filter((rule) => rule.direction === filters.value.direction)
   }
 
-  if (filters.value.enabled !== null) {
-    params.enabled = filters.value.enabled
-  }
-
+  // 操作过滤
   if (filters.value.action) {
-    params.action = filters.value.action === 'allow' ? 1 : 0
+    rules = rules.filter((rule) => rule.action === filters.value.action)
   }
 
+  // 状态过滤
+  if (filters.value.enabled !== null) {
+    rules = rules.filter((rule) => rule.enabled === filters.value.enabled)
+  }
+
+  // 协议过滤
   if (filters.value.protocol) {
-    params.protocol = getProtocolValue(filters.value.protocol)
+    rules = rules.filter((rule) => rule.protocol === filters.value.protocol)
   }
 
-  return params
-}
-
-// 协议值转换
-function getProtocolValue(protocol: string): number {
-  switch (protocol) {
-    case 'TCP': return 6
-    case 'UDP': return 17
-    case 'ICMPV4': return 1
-    case '任意': return 256
-    default: return 256
-  }
-}
-
-// 分段加载数据
-async function loadRange(startIndex: number, limit = pageSize) {
-  if (loading.value) return
-  
-  const rangeKey = `${startIndex}-${startIndex + limit - 1}`
-  if (loadedRanges.has(rangeKey)) return
-
-  try {
-    loading.value = true
-    const params = buildQueryParams({
-      start: startIndex,
-      limit: limit,
-    })
-    
-    const res = await getFirewallRules(params)
-    if (!res) return
-
-    // 更新总数
-    totalCount.value = res.totalCount
-    
-    // 确保数组足够大
-    if (firewallRule.value.length < res.totalCount) {
-      firewallRule.value = Array(res.totalCount).fill(null)
-    }
-
-    // 填充数据
-    for (let i = 0; i < res.rules.length; i++) {
-      const index = startIndex + i
-      if (index < firewallRule.value.length) {
-        firewallRule.value[index] = convertFirewallRuleToShow(res.rules[i])
-      }
-    }
-
-    loadedRanges.add(rangeKey)
-  } catch (error) {
-    console.error('加载数据失败:', error)
-    message.error('数据加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 重置并加载首页数据
-async function resetAndLoadFirst() {
-  try {
-    initialLoading.value = true
-    loadedRanges.clear()
-    firewallRule.value = []
-    
-    const params = buildQueryParams({
-      start: 0,
-      limit: pageSize,
-    })
-    
-    const res = await getFirewallRules(params)
-    if (!res) return
-
-    totalCount.value = res.totalCount
-    firewallRule.value = Array(res.totalCount).fill(null)
-
-    // 填充首页数据
-    for (let i = 0; i < res.rules.length; i++) {
-      firewallRule.value[i] = convertFirewallRuleToShow(res.rules[i])
-    }
-
-    loadedRanges.add(`0-${pageSize - 1}`)
-  } catch (error) {
-    console.error('加载首页数据失败:', error)
-    message.error('数据加载失败')
-  } finally {
-    initialLoading.value = false
-  }
-}
-
-/**
- * 滚动事件
- * @param startIndex
- * @param endIndex
- */
-function onVisibleRangeUpdate({ startIndex, endIndex }) {
-  console.log('可见范围:', startIndex, endIndex)
-  const alignedStart = Math.floor(startIndex / pageSize) * pageSize
-  const alignedEnd = Math.ceil((endIndex + 1) / pageSize) * pageSize
-
-  for (let i = alignedStart; i < alignedEnd; i += pageSize) {
-    if (i < totalCount.value) {
-      loadRange(i, pageSize)
-    }
-  }
-}
-
-// 初始化数据
-resetAndLoadFirst()
-
-// 监听搜索和过滤条件变化，重新加载数据
-watch([searchQuery, filters], () => {
-  resetAndLoadFirst()
-}, { deep: true })
+  return rules
+})
 
 // 全选相关计算属性
 const allSelected = computed({
   get: () => {
-    const validRules = validFirewallRules.value
-    return validRules.length > 0 && checkedRowKeys.value.length === validRules.length
+    return (
+      filteredRules.value.length > 0 && checkedRowKeys.value.length === filteredRules.value.length
+    )
   },
   set: (value: boolean) => {
     if (value) {
-      checkedRowKeys.value = validFirewallRules.value.map((rule) => rule.id)
+      checkedRowKeys.value = filteredRules.value.map((rule) => rule.id)
     } else {
       checkedRowKeys.value = []
     }
@@ -608,9 +622,23 @@ const allSelected = computed({
 })
 
 const indeterminate = computed(() => {
-  const validRules = validFirewallRules.value
-  return checkedRowKeys.value.length > 0 && checkedRowKeys.value.length < validRules.length
+  return checkedRowKeys.value.length > 0 && checkedRowKeys.value.length < filteredRules.value.length
 })
+
+/**
+ * 滚动事件
+ * @param startIndex
+ * @param endIndex
+ */
+function onVisibleRangeUpdate({ startIndex, endIndex }) {
+  console.log(startIndex, endIndex)
+  const alignedStart = Math.floor(startIndex / pageSize) * pageSize
+  const alignedEnd = Math.ceil((endIndex + 1) / pageSize) * pageSize
+
+  for (let i = alignedStart; i < alignedEnd; i += pageSize) {
+    loadRange(i, pageSize)
+  }
+}
 
 // 方法
 const openRuleForm = (rule: unknown = null) => {
@@ -623,14 +651,10 @@ const editRule = (rule: unknown) => {
   showRuleForm.value = true
 }
 
-const deleteRule = async (id: string) => {
-  // TODO: 实现删除规则API调用
-  console.log('删除规则:', id)
-  
-  // 从本地数据中移除（临时方案，应该调用API）
-  const index = firewallRule.value.findIndex((rule) => rule?.id === id)
+const deleteRule = (id: string) => {
+  const index = mockRules.value.findIndex((rule) => rule.id === id)
   if (index !== -1) {
-    firewallRule.value.splice(index, 1)
+    mockRules.value.splice(index, 1)
     // 从选中项中移除
     checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id)
     message.success('规则删除成功')
@@ -660,25 +684,18 @@ const clearFilters = () => {
   }
 }
 
-const handleSaveRule = async (rule: unknown) => {
-  // TODO: 实现保存规则API调用
-  console.log('保存规则:', rule)
-  
+const handleSaveRule = (rule: unknown) => {
   if (rule.id) {
     // 编辑现有规则
-    const index = firewallRule.value.findIndex((r) => r?.id === rule.id)
+    const index = mockRules.value.findIndex((r) => r.id === rule.id)
     if (index !== -1) {
-      firewallRule.value[index] = rule as FirewallRuleShow
+      mockRules.value[index] = rule
       message.success('规则更新成功')
     }
   } else {
     // 添加新规则
-    const newRule = {
-      ...rule,
-      id: crypto.randomUUID()
-    } as FirewallRuleShow
-    firewallRule.value.unshift(newRule)
-    totalCount.value += 1
+    rule.id = Date.now().toString()
+    mockRules.value.unshift(rule)
     message.success('规则创建成功')
   }
 
