@@ -19,10 +19,10 @@ declare module 'vue' {
     NHighlight: typeof import('naive-ui')['NHighlight']
     NInput: typeof import('naive-ui')['NInput']
     NMessageProvider: typeof import('naive-ui')['NMessageProvider']
-    NTag: typeof import('naive-ui')['NTag']
-    NVirtualList: typeof import('naive-ui')['NVirtualList']
+    NTooltip: typeof import('naive-ui')['NTooltip']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    RuleItem: typeof import('./src/components/RuleItem.vue')['default']
     TitleBar: typeof import('./src/components/TitleBar.vue')['default']
   }
 }
