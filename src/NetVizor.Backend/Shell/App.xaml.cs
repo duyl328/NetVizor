@@ -409,37 +409,44 @@ public partial class App : System.Windows.Application
             try
             {
                 var firewallApi = new WindowsFirewallApi();
-                
+
                 // 获取查询参数
                 var queryParams = context.QueryParams;
                 var startIndex = !string.IsNullOrEmpty(queryParams["start"]) ? int.Parse(queryParams["start"]) : 0;
                 var limit = !string.IsNullOrEmpty(queryParams["limit"]) ? int.Parse(queryParams["limit"]) : 50;
-                
+
                 // 构建筛选条件
                 var filter = new RuleFilter();
                 if (!string.IsNullOrEmpty(queryParams["name"])) filter.NamePattern = queryParams["name"];
-                if (!string.IsNullOrEmpty(queryParams["direction"]) && Enum.TryParse<RuleDirection>(queryParams["direction"], true, out var direction))
+                if (!string.IsNullOrEmpty(queryParams["direction"]) &&
+                    Enum.TryParse<RuleDirection>(queryParams["direction"], true, out var direction))
                     filter.Direction = direction;
-                if (!string.IsNullOrEmpty(queryParams["enabled"]) && bool.TryParse(queryParams["enabled"], out var enabled))
+                if (!string.IsNullOrEmpty(queryParams["enabled"]) &&
+                    bool.TryParse(queryParams["enabled"], out var enabled))
                     filter.Enabled = enabled;
-                if (!string.IsNullOrEmpty(queryParams["protocol"]) && Enum.TryParse<ProtocolType>(queryParams["protocol"], true, out var protocol))
+                if (!string.IsNullOrEmpty(queryParams["protocol"]) &&
+                    Enum.TryParse<ProtocolType>(queryParams["protocol"], true, out var protocol))
                     filter.Protocol = protocol;
-                if (!string.IsNullOrEmpty(queryParams["action"]) && Enum.TryParse<RuleAction>(queryParams["action"], true, out var action))
+                if (!string.IsNullOrEmpty(queryParams["action"]) &&
+                    Enum.TryParse<RuleAction>(queryParams["action"], true, out var action))
                     filter.Action = action;
-                if (!string.IsNullOrEmpty(queryParams["application"])) filter.ApplicationName = queryParams["application"];
+                if (!string.IsNullOrEmpty(queryParams["application"]))
+                    filter.ApplicationName = queryParams["application"];
                 if (!string.IsNullOrEmpty(queryParams["port"])) filter.Port = queryParams["port"];
+                // 添加关键字搜索支持
+                if (!string.IsNullOrEmpty(queryParams["search"])) filter.SearchKeyword = queryParams["search"];
 
                 // 获取筛选后的规则
                 var allRules = firewallApi.GetRulesByFilter(filter);
                 var totalCount = allRules.Count;
-                
+
                 // 分页
                 var pagedRules = allRules.Skip(startIndex).Take(limit).ToList();
 
                 await context.Response.WriteJsonAsync(new ResponseModel<object>
                 {
                     Success = true,
-                    Data = new 
+                    Data = new
                     {
                         rules = pagedRules,
                         totalCount = totalCount,

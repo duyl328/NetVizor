@@ -183,6 +183,11 @@ public class RuleFilter
     public string? ApplicationName { get; set; }
     public string? Grouping { get; set; }
     public string? Port { get; set; }
+
+    /// <summary>
+    /// 关键字搜索，会在规则名称、描述、应用程序名称、端口等字段中搜索
+    /// </summary>
+    public string? SearchKeyword { get; set; }
 }
 
 /// <summary>
@@ -200,4 +205,3 @@ public class FirewallStatistics
     public List<string> TopApplications { get; set; } = new();
     public List<string> TopPorts { get; set; } = new();
 }
-
