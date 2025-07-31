@@ -178,6 +178,7 @@
             class="rules-scroller"
             :items="recyclerItems"
             :item-size="80"
+            :buffer="200"
             key-field="id"
             style="height: 500px;"
             @scroll="onScroll"
@@ -185,18 +186,19 @@
             @visible="onVisibleRangeUpdate"
             v-slot="{ item }"
           >
-            <!-- 占位符项 -->
-            <div v-if="item.isPlaceholder" class="rule-item loading-placeholder">
-              <div class="loading-content">
-                <span>加载中...</span>
+            <div :key="item.id" class="scroller-item-wrapper">
+              <!-- 占位符项 -->
+              <div v-if="item.isPlaceholder" class="rule-item loading-placeholder">
+                <div class="loading-content">
+                  <span>加载中...</span>
+                </div>
               </div>
-            </div>
 
-            <!-- 已加载的数据项 -->
-            <div v-else class="rule-item" :class="{ selected: checkedRowKeys.includes(item.id) }">
+              <!-- 已加载的数据项 -->
+              <div v-else class="rule-item" :class="{ selected: isItemSelected(item) }">
               <div class="rule-cell checkbox-cell">
                 <n-checkbox
-                  :checked="checkedRowKeys.includes(item.id)"
+                  :checked="isItemSelected(item)"
                   @update:checked="(checked) => handleRuleCheck(item.id, checked)"
                 />
               </div>
@@ -267,6 +269,7 @@
                     </template>
                   </n-button>
                 </div>
+              </div>
               </div>
             </div>
           </RecycleScroller>
@@ -441,6 +444,22 @@ const recyclerItems = computed(() => {
 // 类型守卫函数
 function isPlaceholder(item: any): item is { isPlaceholder: true } {
   return item && item.isPlaceholder === true
+}
+
+// 智能选中状态检查，避免虚拟滚动的选中状态闪烁
+function isItemSelected(item: any): boolean {
+  // 如果是占位符，永远不选中
+  if (isPlaceholder(item)) {
+    return false
+  }
+  
+  // 确保item存在且有有效的id
+  if (!item || !item.id || typeof item.id !== 'string') {
+    return false
+  }
+  
+  // 只有真实数据项且在选中列表中才返回true
+  return checkedRowKeys.value.includes(item.id)
 }
 
 // 当前页和是否还有更多数据
@@ -804,6 +823,11 @@ const deleteRule = async (id: string) => {
 }
 
 const handleRuleCheck = (id: string, checked: boolean) => {
+  // 防止处理无效的id
+  if (!id || typeof id !== 'string') {
+    return
+  }
+  
   if (checked) {
     if (!checkedRowKeys.value.includes(id)) {
       checkedRowKeys.value.push(id)
@@ -1770,5 +1794,11 @@ const handleSaveRule = async (rule: unknown) => {
 
 :deep(.vue-recycle-scroller__item-wrapper) {
   overflow: visible;
+}
+
+/* 自定义滚动项包装器 */
+.scroller-item-wrapper {
+  width: 100%;
+  height: 100%;
 }
 </style>
