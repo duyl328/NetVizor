@@ -16,6 +16,7 @@
       <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.1-dev-02317" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.0.1-dev-00953" />
       <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="System.Management" Version="10.0.0-preview.6.25358.103"/>
     </ItemGroup>
 
 </Project>

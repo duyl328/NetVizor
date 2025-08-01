@@ -323,7 +323,7 @@ public sealed class GlobalNetworkMonitor
             },
             (key, existing) =>
             {
-                // ✅ 修复：防止流量统计出现负数
+                // 防止流量统计出现负数
                 if (isLocal)
                 {
                     // 如果新值小于现有值，可能是计数器重置，累加当前值
