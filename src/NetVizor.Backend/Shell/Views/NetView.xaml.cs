@@ -41,6 +41,7 @@ public partial class NetView : Window
     public NetView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
         InitializeTrayIcon();
         this.Loaded += NetView_Loaded;
 
@@ -49,6 +50,12 @@ public partial class NetView : Window
 
         // Initialize double-click timer
         InitializeDoubleClickTimer();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        // 重置位置
+        ResetToDefaultPosition();
     }
 
     private void NetView_Loaded(object sender, RoutedEventArgs e)
@@ -285,7 +292,7 @@ public partial class NetView : Window
     private void ResetToDefaultPosition()
     {
         var workArea = SystemParameters.WorkArea;
-        this.Left = workArea.Right - this.Width - 20;
+        this.Left = workArea.Right - this.Width - 50;
         this.Top = workArea.Top + 20;
     }
 
