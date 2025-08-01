@@ -118,3 +118,28 @@ DELETE http://localhost:你的端口/api/firewall/rules?name=MyRuleUpdated
 #   "message": "防火墙规则删除成功",
 #   "data": null
 # }
+
+
+### 启用所有配置文件的防火墙
+POST http://localhost:5000/api/firewall/switch?enabled=true&profile=all
+Content-Type: application/json
+
+### 禁用公用网络的防火墙
+POST http://localhost:5000/api/firewall/switch?enabled=false&profile=public
+Content-Type: application/json
+
+### 启用专用网络的防火墙（忽略大小写）
+POST http://localhost:5000/api/firewall/switch?enabled=1&profile=Private
+Content-Type: application/json
+
+### 禁用域网络的防火墙（测试大小写兼容）
+POST http://localhost:5000/api/firewall/switch?enabled=0&profile=DOMAIN
+Content-Type: application/json
+
+### 缺少 enabled 参数（应返回 400）
+POST http://localhost:5000/api/firewall/switch?profile=all
+Content-Type: application/json
+
+### 错误的 enabled 参数（应返回 400）
+POST http://localhost:5000/api/firewall/switch?enabled=maybe&profile=all
+Content-Type: application/json

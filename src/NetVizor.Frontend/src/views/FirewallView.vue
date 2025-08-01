@@ -11,7 +11,12 @@
           <!-- 防火墙总开关 -->
           <div class="firewall-status">
             <span class="status-label">防火墙状态</span>
-            <n-switch v-model:value="firewallEnabled" size="medium" />
+            <n-switch 
+              v-model:value="firewallEnabled" 
+              size="medium" 
+              :loading="switchLoading"
+              @update:value="handleFirewallToggle" 
+            />
           </div>
           <n-button type="primary" size="medium" @click="openRuleForm()">
             <template #icon>
@@ -351,6 +356,7 @@ const currentEditRule = ref(null)
 const ruleFormRef = ref() // 表单组件引用
 const originalRuleName = ref<string>('') // 用于跟踪编辑时的原始规则名称
 const firewallEnabled = ref(true)
+const switchLoading = ref(false) // 开关加载状态
 const checkedRowKeys = ref<string[]>([])
 
 // 搜索与过滤
@@ -415,21 +421,33 @@ const stats = ref({
   inboundRules: 0,
 })
 
+// 刷新防火墙状态数据
+const refreshFirewallStatus = async () => {
+  try {
+    const res: ApiResponse<FirewallStatus> = await httpClient.get('/firewall/status')
+    if (!res.success) {
+      console.error('获取防火墙状态失败:', res.message)
+      return
+    }
+    if (res.data === null || res.data === undefined) {
+      console.error('获取数据为空!')
+      return
+    }
+    
+    console.log(res.data.isEnabled,'防火墙是否打开');
+    // 同步防火墙开关状态和统计数据
+    firewallEnabled.value = res.data.isEnabled
+    stats.value.inboundRules = res.data.inboundRules
+    stats.value.outboundRules = res.data.outboundRules
+    stats.value.active = res.data.enabledRules
+    stats.value.disableRules = res.data.totalRules - res.data.enabledRules
+  } catch (error) {
+    console.error('刷新防火墙状态失败:', error)
+  }
+}
+
 // 请求统计数据
-httpClient.get('/firewall/status').then((res: ApiResponse<FirewallStatus>) => {
-  if (!res.success) {
-    message.error(StringUtils.isBlank(res.message) ? '错误信息为空!' : res.message)
-    return
-  }
-  if (res.data === null || res.data === undefined) {
-    message.error('获取数据为空!')
-    return
-  }
-  stats.value.inboundRules = res.data!.inboundRules
-  stats.value.outboundRules = res.data!.outboundRules
-  stats.value.active = res.data!.enabledRules
-  stats.value.disableRules = res.data!.totalRules - res.data!.enabledRules
-})
+refreshFirewallStatus()
 
 // 当前筛选条件下的总数量（从接口获取）
 const totalCount = ref(0)
@@ -801,9 +819,6 @@ async function resetAndLoadFirst() {
 /**
  * 滚动事件处理 - 检测是否需要加载更多数据
  */
-/**
- * 滚动事件处理 - 检测是否需要加载更多数据
- */
 function onVisibleRangeUpdate(event?: unknown) {
   console.log('可见范围更新触发:', event)
 
@@ -851,9 +866,6 @@ function onVisibleRangeUpdate(event?: unknown) {
   }
 }
 
-/**
- * 普通滚动事件处理
- */
 /**
  * 普通滚动事件处理
  */
@@ -1052,6 +1064,55 @@ const clearFilters = () => {
     enabled: null,
     protocol: null,
   }
+}
+
+// 处理防火墙开关切换
+const handleFirewallToggle = async (enabled: boolean) => {
+  // 由于开关的双向绑定，需要先恢复原状态，然后显示确认对话框
+  const originalState = !enabled
+  firewallEnabled.value = originalState
+
+  // 显示确认对话框
+  const actionText = enabled ? '启用' : '禁用'
+  const warningText = enabled 
+    ? '启用防火墙将开始过滤网络流量，可能会阻止某些网络连接。' 
+    : '禁用防火墙将停止所有网络保护，您的计算机将面临安全风险。'
+
+  dialog.warning({
+    title: `确认${actionText}防火墙`,
+    content: `${warningText}\n\n您确定要${actionText}防火墙吗？`,
+    positiveText: `确认${actionText}`,
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        switchLoading.value = true
+        console.log('切换防火墙状态:', enabled)
+
+        // 调用防火墙开关API，影响所有配置文件
+        const res: ApiResponse<null> = await httpClient.post(`/firewall/switch?enabled=${enabled}&profile=all`)
+        
+        if (!res.success) {
+          const errorMsg = StringUtils.isBlank(res.message) ? '切换防火墙状态失败！' : res.message
+          message.error(errorMsg)
+          return
+        }
+
+        message.success(`防火墙已${enabled ? '启用' : '禁用'}`)
+        
+        // 刷新防火墙状态数据
+        await refreshFirewallStatus()
+      } catch (error) {
+        console.error('切换防火墙状态失败:', error)
+        message.error('切换防火墙状态时发生错误')
+      } finally {
+        switchLoading.value = false
+      }
+    },
+    onNegativeClick: () => {
+      // 用户取消，保持原状态
+      console.log('用户取消防火墙状态切换')
+    }
+  })
 }
 
 const handleSaveRule = async (rule: unknown) => {
