@@ -19,7 +19,7 @@ public class NetworkMonitorUsageExample
         Log.Info("启动网络监控系统...");
 
         // 初始化网络管理器
-        _networkManager = new EnhancedEtwNetworkManager();
+        // _networkManager = new EnhancedEtwNetworkManager();
         _cancellationTokenSource = new CancellationTokenSource();
 
         try

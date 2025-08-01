@@ -10,6 +10,7 @@ using Common.Net.HttpConn;
 using Common.Net.Models;
 using Common.Net.WebSocketConn;
 using Common.Utils;
+using Data;
 using Shell.Views;
 using Utils.ETW.Etw;
 using Utils.Firewall;
@@ -23,7 +24,7 @@ namespace Shell;
 /// </summary>
 public partial class App : System.Windows.Application
 {
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         // 异常处理
         ExceptionCatch();
@@ -32,19 +33,44 @@ public partial class App : System.Windows.Application
         Log.Initialize(configModelLogging);
         base.OnStartup(e);
 
+        // 初始化数据库和数据收集服务
+        try
+        {
+            Log.Information("正在初始化数据库和网络监控服务...");
+            await DatabaseManager.InitializeAsync();
+            Log.Information("数据库和网络监控服务初始化完成");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "数据库初始化失败");
+            MessageBox.Show($"数据库初始化失败: {ex.Message}", "错误", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Error);
+        }
+
         // 启动服务（如 WebSocket、HTTP、端口监听等）
         StartMyServer();
 
-        // NetView 网络监看
-        var netView = new NetView();
-        netView.Show();
+        // 获取用户设置并应用到NetView窗口
+        try
+        {
+            var userSettings = await DatabaseManager.GetUserSettingsAsync();
+            Log.Information($"读取用户设置: 位置({userSettings.WindowX}, {userSettings.WindowY})");
+
+            // NetView 网络监看 - 应用用户设置的位置
+            var netView = new NetView();
+            netView.Left = userSettings.WindowX;
+            netView.Top = userSettings.WindowY;
+            netView.Show();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "应用用户设置失败，使用默认设置");
+            // 使用默认设置创建窗口
+            var netView = new NetView();
+            netView.Show();
+        }
 
         // Mouth();
-
-
-        // 网速监视
-        // var window = new NetView();
-        // window.Show();
 
         // 设置应用程序在关闭最后一个窗口时不自动退出
         this.ShutdownMode = ShutdownMode.OnExplicitShutdown;

@@ -9,6 +9,11 @@ public class AppInfo
     public int Id { get; set; }
 
     /// <summary>
+    /// 软件 ID = 路径 + 文件签名发布者 + 进程名 （文件签名发布者 可无）
+    /// </summary>
+    public string AppId { get; set; }
+
+    /// <summary>
     /// 名字
     /// </summary>
     public string Name { get; set; }
