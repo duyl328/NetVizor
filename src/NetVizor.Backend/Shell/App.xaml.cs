@@ -693,6 +693,121 @@ public partial class App : System.Windows.Application
 
         #endregion
 
+        #region 防火墙开关
+
+        // 防火墙开关控制
+        server.Post("/api/firewall/switch", async (context) =>
+        {
+            try
+            {
+                var queryParams = context.QueryParams;
+                // 解析请求参数
+                var enabledParam = !string.IsNullOrEmpty(queryParams["enabled"]) ? queryParams["enabled"] : "";
+                var profileParam = !string.IsNullOrEmpty(queryParams["profile"]) ? queryParams["enabled"] : "";
+
+                // 解析enabled参数
+                if (string.IsNullOrEmpty(enabledParam))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "缺少必需参数 'enabled'，请使用 true 或 false",
+                        Data = null
+                    });
+                    return;
+                }
+
+                var trim = enabledParam.Trim();
+                bool enabled = trim switch
+                {
+                    "true" => true,
+                    "TRUE" => true,
+                    "True" => true,
+                    "false" => false,
+                    "FALSE" => false,
+                    "False" => false,
+                    "1" => true,
+                    "0" => false,
+                    _ => throw new ArgumentException("enabled参数值无效，请使用 true/false 或 1/0")
+                };
+
+                // 解析profile参数
+                FirewallProfile profile = FirewallProfile.All;
+                if (!string.IsNullOrEmpty(profileParam))
+                {
+                    profile = profileParam switch
+                    {
+                        "domain" => FirewallProfile.Domain,
+                        "private" => FirewallProfile.Private,
+                        "public" => FirewallProfile.Public,
+                        "all" => FirewallProfile.All,
+                        _ => FirewallProfile.All
+                    };
+                }
+
+                var api = new WindowsFirewallApi();
+                bool result;
+                string action;
+
+                if (enabled)
+                {
+                    result = api.EnableFirewall(profile);
+                    action = "启用";
+                }
+                else
+                {
+                    result = api.DisableFirewall(profile);
+                    action = "禁用";
+                }
+
+                if (result)
+                {
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = true,
+                        Message = $"防火墙{action}成功 ({profile})",
+                        Data = new
+                        {
+                            profile = profile.ToString(),
+                            enabled = enabled,
+                            action = action
+                        }
+                    });
+                }
+                else
+                {
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = $"防火墙{action}失败，可能需要管理员权限",
+                        Data = null
+                    });
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null
+                });
+            }
+            catch (Exception ex)
+            {
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"操作防火墙时发生错误: {ex.Message}",
+                    Data = null
+                });
+            }
+        });
+
+        #endregion
+
         #region 取消订阅
 
         server.Post("/api/unsubscribe", async (context) =>
