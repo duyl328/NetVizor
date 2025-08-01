@@ -1,4 +1,3 @@
-
 namespace Infrastructure.Models;
 
 /// <summary>
@@ -6,6 +5,11 @@ namespace Infrastructure.Models;
 /// </summary>
 public class ProgramInfo
 {
+    /// <summary>
+    /// 编译时间
+    /// </summary>
+    public DateTime? CompileTimestamp { get; set; }
+
     /// <summary>
     /// 进程名称
     /// </summary>
@@ -28,9 +32,9 @@ public class ProgramInfo
 
     /*
      ExitTime 和 ExitCode 这两个属性只有在进程已经退出后才能访问。对于正在运行的进程，
-     访问这些属性会抛出 "Process must exit before requested information can be determined" 异常。 
+     访问这些属性会抛出 "Process must exit before requested information can be determined" 异常。
      */
-    
+
     /// <summary>
     /// 退出时间
     /// </summary>
@@ -95,6 +99,7 @@ public class ProgramInfo
 public class ApplicationInfoModel
 {
     public required string Id { get; set; }
+
     /// <summary>
     /// 进程名称
     /// </summary>

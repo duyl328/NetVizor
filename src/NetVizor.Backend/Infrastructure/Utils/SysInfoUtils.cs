@@ -1,3 +1,4 @@
+using System.IO;
 using Common;
 using Common.ExpandException;
 using Common.Logger;
@@ -230,6 +231,21 @@ public static class SysInfoUtils
                 Log.Information($"无法获取进程 {pid} 的图标: {ex.Message}");
             }
 
+            // 获取编译时间戳（PE Header 中的时间戳）
+            try
+            {
+                if (!string.IsNullOrEmpty(exeInfo.MainModulePath))
+                {
+                    var compileTime = GetPECompileTime(exeInfo.MainModulePath);
+                    exeInfo.CompileTimestamp = compileTime;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"无法获取进程 {pid} 的编译时间戳: {ex.Message}");
+                exeInfo.CompileTimestamp = null;
+            }
+
             #endregion
 
             ProcessCache.Instance.Set(pck, exeInfo);
@@ -265,6 +281,32 @@ public static class SysInfoUtils
         {
             // 4. 添加资源清理（如果需要）
             // proc?.Dispose(); // 注意：Process 对象通常不需要手动释放，GC 会处理
+        }
+    }
+
+    /// <summary>
+    /// 获取项目编译时间
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns></returns>
+    private static DateTime? GetPECompileTime(string filePath)
+    {
+        try
+        {
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            using var reader = new BinaryReader(fs);
+
+            fs.Seek(0x3C, SeekOrigin.Begin);
+            int peOffset = reader.ReadInt32();
+
+            fs.Seek(peOffset + 8, SeekOrigin.Begin);
+            int timestamp = reader.ReadInt32();
+
+            return DateTimeOffset.FromUnixTimeSeconds(timestamp).LocalDateTime;
+        }
+        catch
+        {
+            return null;
         }
     }
 
