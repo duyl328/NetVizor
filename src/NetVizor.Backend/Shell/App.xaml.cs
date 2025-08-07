@@ -905,6 +905,172 @@ public partial class App : System.Windows.Application
 
         #endregion
 
+        #region 网络数据API接口
+
+        // 获取全局网络实时数据
+        server.Get("/api/network/global/realtime", async (context) =>
+        {
+            try
+            {
+                var networkCardGuid = context.QueryParams["networkCardGuid"];
+
+                // 获取网络接口状态
+                var interfaces = BasicNetworkMonitor.GetConnectedNetworkInterfaces();
+                var targetInterfaces = string.IsNullOrEmpty(networkCardGuid)
+                    ? interfaces
+                    : interfaces.Where(i => i.Id == networkCardGuid).ToList();
+
+                var realtimeData = new List<object>();
+                foreach (var networkInterface in targetInterfaces)
+                {
+                    var speed = BasicNetworkMonitor.CalculateSpeedById(networkInterface.Id);
+                    realtimeData.Add(new
+                    {
+                        networkCardGuid = networkInterface.Id,
+                        networkCardName = networkInterface.Name,
+                        uploadSpeed = speed.UploadSpeed,
+                        downloadSpeed = speed.DownloadSpeed,
+                        uploadSpeedText = speed.UploadSpeedText,
+                        downloadSpeedText = speed.DownloadSpeedText,
+                        isConnected = networkInterface.IsConnected,
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    });
+                }
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = realtimeData,
+                    Message = "获取实时网络数据成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取实时网络数据失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取实时活跃应用
+        server.Get("/api/realtime/active-apps", async (context) =>
+        {
+            try
+            {
+                var limit = int.Parse(context.QueryParams["limit"] ?? "10");
+
+                // 获取当前活跃的网络监控快照
+                var snapshot = GlobalNetworkMonitor.Instance.GetSnapshot();
+
+                var activeApps = snapshot.Applications
+                    .Where(app => app.Connections.Any(c => c.IsActive && (c.BytesSent > 0 || c.BytesReceived > 0)))
+                    .OrderByDescending(app => app.Connections.Sum(c => c.BytesSent + c.BytesReceived))
+                    .Take(limit)
+                    .Select(app => new
+                    {
+                        processId = app.ProcessId,
+                        processName = app.ProgramInfo?.ProcessName ?? "Unknown",
+                        path = app.ProgramInfo?.MainModulePath ?? "",
+                        totalUploadBytes = app.Connections.Sum(c => c.BytesSent),
+                        totalDownloadBytes = app.Connections.Sum(c => c.BytesReceived),
+                        activeConnections = app.Connections.Count(c => c.IsActive),
+                        icon = app.ProgramInfo?.IconBase64 ?? ""
+                    })
+                    .ToList();
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = activeApps,
+                    Message = "获取实时活跃应用成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取实时活跃应用失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取系统信息
+        server.Get("/api/system/info", async (context) =>
+        {
+            try
+            {
+                var systemInfo = new
+                {
+                    version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ??
+                              "Unknown",
+                    isAdministrator = SysHelper.IsAdministrator(),
+                    etwEnabled = SysHelper.IsAdministrator(), // ETW需要管理员权限
+                    operatingSystem = Environment.OSVersion.ToString(),
+                    machineName = Environment.MachineName,
+                    userDomainName = Environment.UserDomainName,
+                    userName = Environment.UserName,
+                    processorCount = Environment.ProcessorCount,
+                    workingSet = Environment.WorkingSet,
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                };
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = systemInfo,
+                    Message = "获取系统信息成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取系统信息失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取数据收集统计信息
+        server.Get("/api/system/collection-stats", async (context) =>
+        {
+            try
+            {
+                // TODO: 实现获取NetworkDataCollectionService的统计信息
+                var stats = new
+                {
+                    isRunning = true,
+                    activeNetworkInterfaces = BasicNetworkMonitor.GetConnectedNetworkInterfaces().Count,
+                    etwStatus = SysHelper.IsAdministrator() ? "运行中" : "需要管理员权限",
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                };
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = stats,
+                    Message = "获取收集统计信息成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取收集统计信息失败: {ex.Message}"
+                });
+            }
+        });
+
+        #endregion
+
         // 启动服务器
         try
         {
