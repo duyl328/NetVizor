@@ -62,12 +62,25 @@ public class NetVizorDbContext : IDisposable
                 DeleteTime INTEGER DEFAULT 0
             )");
 
-        // 创建AppSetting表 - 简化结构
+        // 创建AppSetting表 - 完整结构
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS AppSetting (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 WindowX INTEGER DEFAULT 0,
                 WindowY INTEGER DEFAULT 0,
+                IsClickThrough INTEGER DEFAULT 0,
+                IsPositionLocked INTEGER DEFAULT 0,
+                SnapToScreen INTEGER DEFAULT 0,
+                ShowDetailedInfo INTEGER DEFAULT 0,
+                IsTopmost INTEGER DEFAULT 0,
+                TextColor TEXT DEFAULT '#FFFFFF',
+                BackgroundColor TEXT DEFAULT '#000000',
+                Opacity INTEGER DEFAULT 100,
+                SpeedUnit INTEGER DEFAULT 1,
+                LayoutDirection INTEGER DEFAULT 0,
+                ShowUnit INTEGER DEFAULT 1,
+                DoubleClickAction INTEGER DEFAULT 0,
+                RunAsAdmin INTEGER DEFAULT 0,
                 AutoStart INTEGER DEFAULT 0,
                 UpdateTime INTEGER NOT NULL
             )");
@@ -268,7 +281,8 @@ public class NetVizorDbContext : IDisposable
             var columns = await GetTableColumnsAsync("AppSetting");
             var needsMigration = columns.Contains("WindowWidth") || columns.Contains("WindowHeight") ||
                                  columns.Contains("Theme") || columns.Contains("Language") ||
-                                 columns.Contains("MonitoringEnabled");
+                                 columns.Contains("MonitoringEnabled") ||
+                                 !columns.Contains("IsClickThrough") || !columns.Contains("TextColor");
 
             if (needsMigration)
             {
@@ -287,6 +301,19 @@ public class NetVizorDbContext : IDisposable
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         WindowX INTEGER DEFAULT 0,
                         WindowY INTEGER DEFAULT 0,
+                        IsClickThrough INTEGER DEFAULT 0,
+                        IsPositionLocked INTEGER DEFAULT 0,
+                        SnapToScreen INTEGER DEFAULT 0,
+                        ShowDetailedInfo INTEGER DEFAULT 0,
+                        IsTopmost INTEGER DEFAULT 0,
+                        TextColor TEXT DEFAULT '#FFFFFF',
+                        BackgroundColor TEXT DEFAULT '#000000',
+                        Opacity INTEGER DEFAULT 100,
+                        SpeedUnit INTEGER DEFAULT 1,
+                        LayoutDirection INTEGER DEFAULT 0,
+                        ShowUnit INTEGER DEFAULT 1,
+                        DoubleClickAction INTEGER DEFAULT 0,
+                        RunAsAdmin INTEGER DEFAULT 0,
                         AutoStart INTEGER DEFAULT 0,
                         UpdateTime INTEGER NOT NULL
                     )");

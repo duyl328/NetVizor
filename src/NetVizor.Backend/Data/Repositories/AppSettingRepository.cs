@@ -30,8 +30,16 @@ public class AppSettingRepository : IAppSettingRepository
         setting.UpdateTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         const string sql = @"
-            INSERT INTO AppSetting (WindowX, WindowY, AutoStart, UpdateTime)
-            VALUES (@WindowX, @WindowY, @AutoStart, @UpdateTime)";
+            INSERT INTO AppSetting (
+                WindowX, WindowY, IsClickThrough, IsPositionLocked, SnapToScreen, ShowDetailedInfo, 
+                IsTopmost, TextColor, BackgroundColor, Opacity, SpeedUnit, LayoutDirection, 
+                ShowUnit, DoubleClickAction, RunAsAdmin, AutoStart, UpdateTime
+            )
+            VALUES (
+                @WindowX, @WindowY, @IsClickThrough, @IsPositionLocked, @SnapToScreen, @ShowDetailedInfo,
+                @IsTopmost, @TextColor, @BackgroundColor, @Opacity, @SpeedUnit, @LayoutDirection,
+                @ShowUnit, @DoubleClickAction, @RunAsAdmin, @AutoStart, @UpdateTime
+            )";
 
         var result = await _context.Connection.ExecuteAsync(sql, setting);
 
@@ -49,7 +57,13 @@ public class AppSettingRepository : IAppSettingRepository
 
         const string sql = @"
             UPDATE AppSetting 
-            SET WindowX = @WindowX, WindowY = @WindowY, AutoStart = @AutoStart, UpdateTime = @UpdateTime
+            SET WindowX = @WindowX, WindowY = @WindowY, IsClickThrough = @IsClickThrough, 
+                IsPositionLocked = @IsPositionLocked, SnapToScreen = @SnapToScreen, 
+                ShowDetailedInfo = @ShowDetailedInfo, IsTopmost = @IsTopmost, 
+                TextColor = @TextColor, BackgroundColor = @BackgroundColor, Opacity = @Opacity,
+                SpeedUnit = @SpeedUnit, LayoutDirection = @LayoutDirection, ShowUnit = @ShowUnit,
+                DoubleClickAction = @DoubleClickAction, RunAsAdmin = @RunAsAdmin, 
+                AutoStart = @AutoStart, UpdateTime = @UpdateTime
             WHERE Id = @Id";
 
         return await _context.Connection.ExecuteAsync(sql, setting);

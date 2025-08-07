@@ -59,11 +59,24 @@ public class DataService : IDataService, IDisposable
             {
                 WindowX = 100,
                 WindowY = 100,
+                IsClickThrough = false,
+                IsPositionLocked = false,
+                SnapToScreen = false,
+                ShowDetailedInfo = false,
+                IsTopmost = false,
+                TextColor = "#FFFFFF",
+                BackgroundColor = "#000000",
+                Opacity = 100,
+                SpeedUnit = 1, // KB/s
+                LayoutDirection = 0, // 横向
+                ShowUnit = true,
+                DoubleClickAction = 0, // None
+                RunAsAdmin = false,
                 AutoStart = false,
                 UpdateTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
-            setting.Id = await AppSettings.SaveSettingAsync(setting);
+            await AppSettings.SaveSettingAsync(setting);
         }
 
         return setting;

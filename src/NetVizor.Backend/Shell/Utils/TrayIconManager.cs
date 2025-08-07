@@ -112,7 +112,11 @@ public class TrayIconManager : IDisposable
         {
             /* 菜单关闭 */
         };
-        _contextMenu.LostFocus += (s, e) => _contextMenu.IsOpen = false;
+        _contextMenu.LostFocus += (s, e) =>
+        {
+            if (_contextMenu != null)
+                _contextMenu.IsOpen = false;
+        };
 
         // 展示主窗口（可勾选）
         var showMainWindowItem = new MenuItem
@@ -124,7 +128,8 @@ public class TrayIconManager : IDisposable
         showMainWindowItem.Click += (s, e) =>
         {
             ToggleMainWindow();
-            _contextMenu.IsOpen = false;
+            if (_contextMenu != null)
+                _contextMenu.IsOpen = false;
         };
         _contextMenu.Items.Add(showMainWindowItem);
 
@@ -140,7 +145,8 @@ public class TrayIconManager : IDisposable
         resetPositionItem.Click += (s, e) =>
         {
             ResetNetViewPosition();
-            _contextMenu.IsOpen = false;
+            if (_contextMenu != null)
+                _contextMenu.IsOpen = false;
         };
         _contextMenu.Items.Add(resetPositionItem);
 
@@ -162,7 +168,8 @@ public class TrayIconManager : IDisposable
         detailedInfoItem.Click += (s, e) =>
         {
             ToggleDetailedInfo();
-            _contextMenu.IsOpen = false;
+            if (_contextMenu != null)
+                _contextMenu.IsOpen = false;
         };
         _contextMenu.Items.Add(detailedInfoItem);
 
@@ -178,7 +185,8 @@ public class TrayIconManager : IDisposable
         trafficAnalysisItem.Click += (s, e) =>
         {
             OpenTrafficAnalysis();
-            _contextMenu.IsOpen = false;
+            if (_contextMenu != null)
+                _contextMenu.IsOpen = false;
         };
         _contextMenu.Items.Add(trafficAnalysisItem);
 
@@ -191,7 +199,8 @@ public class TrayIconManager : IDisposable
         settingsItem.Click += (s, e) =>
         {
             OpenSettings();
-            _contextMenu.IsOpen = false;
+            if (_contextMenu != null)
+                _contextMenu.IsOpen = false;
         };
         _contextMenu.Items.Add(settingsItem);
 
@@ -211,7 +220,10 @@ public class TrayIconManager : IDisposable
         exitItem.Click += (s, e) =>
         {
             ExitApplication();
-            _contextMenu.IsOpen = false;
+            if (_contextMenu != null)
+            {
+                _contextMenu.IsOpen = false;
+            }
         };
         _contextMenu.Items.Add(exitItem);
     }
@@ -299,8 +311,9 @@ public class TrayIconManager : IDisposable
             // 检查ESC键是否被按下
             if (System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.Escape))
             {
-                _contextMenu.IsOpen = false;
-                _menuCloseTimer.Stop();
+                if (_contextMenu != null)
+                    _contextMenu.IsOpen = false;
+                _menuCloseTimer?.Stop();
                 return;
             }
 
@@ -311,8 +324,9 @@ public class TrayIconManager : IDisposable
                 // 如果鼠标不在菜单区域内且有按键按下，则关闭菜单
                 if (!IsMouseOverContextMenu())
                 {
-                    _contextMenu.IsOpen = false;
-                    _menuCloseTimer.Stop();
+                    if (_contextMenu != null)
+                        _contextMenu.IsOpen = false;
+                    _menuCloseTimer?.Stop();
                 }
             }
         };
@@ -324,7 +338,7 @@ public class TrayIconManager : IDisposable
     {
         try
         {
-            if (!_contextMenu.IsOpen) return false;
+            if (_contextMenu == null || !_contextMenu.IsOpen) return false;
 
             // 获取屏幕上的鼠标位置
             GetCursorPos(out POINT screenPoint);
@@ -356,12 +370,12 @@ public class TrayIconManager : IDisposable
 
     private void UpdateContextMenuStates()
     {
-        if (_mainWindow is Shell.Views.NetView netView)
+        if (_mainWindow != null && _mainWindow is Shell.Views.NetView netView)
         {
             // 获取各个菜单项并更新状态
             foreach (var item in _contextMenu.Items.OfType<MenuItem>())
             {
-                switch (item.Header.ToString())
+                switch (item.Header?.ToString())
                 {
                     case "展示主窗口":
                         item.IsChecked = netView.IsVisible;
@@ -420,7 +434,7 @@ public class TrayIconManager : IDisposable
 
     private void ResetNetViewPosition()
     {
-        if (_mainWindow is Shell.Views.NetView netView)
+        if (_mainWindow != null && _mainWindow is Shell.Views.NetView netView)
         {
             var workArea = SystemParameters.WorkArea;
             netView.Left = workArea.Right - netView.Width - 20;
@@ -430,7 +444,7 @@ public class TrayIconManager : IDisposable
 
     private void ToggleDetailedInfo()
     {
-        if (_mainWindow is Shell.Views.NetView netView)
+        if (_mainWindow != null && _mainWindow is Shell.Views.NetView netView)
         {
             var contextMenu = netView.ContextMenu;
             if (contextMenu?.Items != null)
@@ -502,14 +516,39 @@ public class TrayIconManager : IDisposable
             {
                 netView.ForceClose();
             }
+            else if (_mainWindow != null)
+            {
+                // 如果不是NetView类型，直接关闭应用程序
+                System.Windows.Application.Current?.Shutdown();
+            }
+            else
+            {
+                // _mainWindow为null时，直接关闭应用程序
+                System.Windows.Application.Current?.Shutdown();
+            }
         }
     }
 
     public void Dispose()
     {
-        _notifyIcon?.Dispose();
-        _contextMenu = null;
-        _clickTimer?.Stop();
-        _menuCloseTimer?.Stop();
+        try
+        {
+            _clickTimer?.Stop();
+            _menuCloseTimer?.Stop();
+
+            if (_contextMenu != null)
+            {
+                _contextMenu.IsOpen = false;
+                _contextMenu = null;
+            }
+
+            _notifyIcon?.Dispose();
+            _mainWindow = null;
+        }
+        catch (Exception ex)
+        {
+            // 记录异常但不抛出，避免在Dispose中出现异常
+            System.Diagnostics.Debug.WriteLine($"Error in TrayIconManager.Dispose: {ex.Message}");
+        }
     }
 }

@@ -6,16 +6,15 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Shell.Utils;
+using Data;
+using Data.Models;
 
 namespace Shell.Views;
 
 public partial class NetView : Window
 {
     private TrayIconManager _trayIconManager;
-    private bool _isClickThrough = false;
-    private bool _isPositionLocked = false;
-    private bool _snapToScreen = false;
-    private bool _showDetailedInfo = false;
+    private AppSetting _appSettings;
 
     // Double-click detection
     private DispatcherTimer _doubleClickTimer;
@@ -50,22 +49,22 @@ public partial class NetView : Window
 
         // Initialize double-click timer
         InitializeDoubleClickTimer();
+
+        // Initialize settings - will be loaded asynchronously in OnLoaded
+        _appSettings = new AppSetting();
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // 重置位置
-        ResetToDefaultPosition();
+        // 从数据库加载设置
+        await LoadSettingsFromDatabase();
+
+        // 应用设置到窗口
+        ApplySettingsToWindow();
     }
 
     private void NetView_Loaded(object sender, RoutedEventArgs e)
     {
-        // Initialize default position if needed
-        if (this.Left == 0 && this.Top == 0)
-        {
-            ResetToDefaultPosition();
-        }
-
         // 设置窗口为工具窗口，隐藏在Alt+Tab中
         HideFromAltTab();
 
@@ -74,6 +73,74 @@ public partial class NetView : Window
 
         // Populate network interfaces in context menu
         PopulateNetworkMenu();
+    }
+
+    private async Task LoadSettingsFromDatabase()
+    {
+        try
+        {
+            _appSettings = await DatabaseManager.GetUserSettingsAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading settings from database: {ex.Message}");
+            // 使用默认设置
+            _appSettings = new AppSetting();
+        }
+    }
+
+    private void ApplySettingsToWindow()
+    {
+        // 应用窗口位置
+        if (_appSettings.WindowX != 0 || _appSettings.WindowY != 0)
+        {
+            this.Left = _appSettings.WindowX;
+            this.Top = _appSettings.WindowY;
+        }
+        else
+        {
+            ResetToDefaultPosition();
+        }
+
+        // 应用其他窗口设置
+        this.Topmost = _appSettings.IsTopmost;
+        SetClickThrough(_appSettings.IsClickThrough);
+
+        // 更新菜单项的选中状态
+        if (LockPositionMenuItem != null)
+            LockPositionMenuItem.IsChecked = _appSettings.IsPositionLocked;
+        if (ClickThroughMenuItem != null)
+            ClickThroughMenuItem.IsChecked = _appSettings.IsClickThrough;
+        if (TopmostMenuItem != null)
+            TopmostMenuItem.IsChecked = _appSettings.IsTopmost;
+        if (SnapToScreenMenuItem != null)
+            SnapToScreenMenuItem.IsChecked = _appSettings.SnapToScreen;
+        if (DetailedInfoMenuItem != null)
+            DetailedInfoMenuItem.IsChecked = _appSettings.ShowDetailedInfo;
+    }
+
+    private async Task SaveSettingsToDatabase()
+    {
+        try
+        {
+            // 更新窗口位置
+            _appSettings.WindowX = (int)this.Left;
+            _appSettings.WindowY = (int)this.Top;
+
+            // 保存到数据库
+            if (_appSettings.Id == 0)
+            {
+                await DatabaseManager.Instance.AppSettings.SaveSettingAsync(_appSettings);
+            }
+            else
+            {
+                await DatabaseManager.Instance.AppSettings.UpdateSettingAsync(_appSettings);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error saving settings to database: {ex.Message}");
+        }
     }
 
     private void PopulateNetworkMenu()
@@ -213,16 +280,15 @@ public partial class NetView : Window
     {
         try
         {
-            var settings = Shell.Models.NetViewSettings.Instance;
-            switch (settings.DoubleClickAction)
+            switch (_appSettings.DoubleClickAction)
             {
-                case Shell.Models.DoubleClickAction.TrafficAnalysis:
+                case 1: // TrafficAnalysis
                     TrafficAnalysisWindow.ShowWindow();
                     break;
-                case Shell.Models.DoubleClickAction.Settings:
+                case 2: // Settings
                     SettingsWindow.ShowWindow();
                     break;
-                case Shell.Models.DoubleClickAction.None:
+                case 0: // None
                 default:
                     // 无动作
                     break;
@@ -296,20 +362,23 @@ public partial class NetView : Window
         this.Top = workArea.Top + 20;
     }
 
-    private void LockPosition_Click(object sender, RoutedEventArgs e)
+    private async void LockPosition_Click(object sender, RoutedEventArgs e)
     {
-        _isPositionLocked = !_isPositionLocked;
-        LockPositionMenuItem.IsChecked = _isPositionLocked;
+        _appSettings.IsPositionLocked = !_appSettings.IsPositionLocked;
+        LockPositionMenuItem.IsChecked = _appSettings.IsPositionLocked;
 
-        // Don't change ResizeMode to maintain consistent window behavior
-        // The dragging logic will check _isPositionLocked instead
+        // 保存设置到数据库
+        await SaveSettingsToDatabase();
     }
 
-    private void ToggleClickThrough_Click(object sender, RoutedEventArgs e)
+    private async void ToggleClickThrough_Click(object sender, RoutedEventArgs e)
     {
-        _isClickThrough = !_isClickThrough;
-        ClickThroughMenuItem.IsChecked = _isClickThrough;
-        SetClickThrough(_isClickThrough);
+        _appSettings.IsClickThrough = !_appSettings.IsClickThrough;
+        ClickThroughMenuItem.IsChecked = _appSettings.IsClickThrough;
+        SetClickThrough(_appSettings.IsClickThrough);
+
+        // 保存设置到数据库
+        await SaveSettingsToDatabase();
     }
 
     private void SetClickThrough(bool enabled)
@@ -329,21 +398,28 @@ public partial class NetView : Window
         }
     }
 
-    private void ToggleTopmost_Click(object sender, RoutedEventArgs e)
+    private async void ToggleTopmost_Click(object sender, RoutedEventArgs e)
     {
-        this.Topmost = !this.Topmost;
-        TopmostMenuItem.IsChecked = this.Topmost;
+        _appSettings.IsTopmost = !_appSettings.IsTopmost;
+        this.Topmost = _appSettings.IsTopmost;
+        TopmostMenuItem.IsChecked = _appSettings.IsTopmost;
+
+        // 保存设置到数据库
+        await SaveSettingsToDatabase();
     }
 
-    private void ToggleSnapToScreen_Click(object sender, RoutedEventArgs e)
+    private async void ToggleSnapToScreen_Click(object sender, RoutedEventArgs e)
     {
-        _snapToScreen = !_snapToScreen;
-        SnapToScreenMenuItem.IsChecked = _snapToScreen;
+        _appSettings.SnapToScreen = !_appSettings.SnapToScreen;
+        SnapToScreenMenuItem.IsChecked = _appSettings.SnapToScreen;
 
-        if (_snapToScreen)
+        if (_appSettings.SnapToScreen)
         {
             SnapToScreen();
         }
+
+        // 保存设置到数据库
+        await SaveSettingsToDatabase();
     }
 
     private void SnapToScreen()
@@ -356,10 +432,10 @@ public partial class NetView : Window
         this.Top = top;
     }
 
-    private void ToggleDetailedInfo_Click(object sender, RoutedEventArgs e)
+    private async void ToggleDetailedInfo_Click(object sender, RoutedEventArgs e)
     {
-        _showDetailedInfo = !_showDetailedInfo;
-        DetailedInfoMenuItem.IsChecked = _showDetailedInfo;
+        _appSettings.ShowDetailedInfo = !_appSettings.ShowDetailedInfo;
+        DetailedInfoMenuItem.IsChecked = _appSettings.ShowDetailedInfo;
 
         // The window will automatically resize based on content
         // No need to manually set height anymore due to SizeToContent="WidthAndHeight"
@@ -367,6 +443,9 @@ public partial class NetView : Window
         // You can trigger a re-layout if needed
         this.InvalidateMeasure();
         this.UpdateLayout();
+
+        // 保存设置到数据库
+        await SaveSettingsToDatabase();
     }
 
     private void HideToTray_Click(object sender, RoutedEventArgs e)
@@ -431,7 +510,7 @@ public partial class NetView : Window
         }
 
         // Only allow dragging if position is not locked and click-through is disabled
-        if (!_isPositionLocked && !_isClickThrough)
+        if (!_appSettings.IsPositionLocked && !_appSettings.IsClickThrough)
         {
             try
             {
@@ -450,16 +529,19 @@ public partial class NetView : Window
         base.OnLocationChanged(e);
 
         // Only check snap to screen if that option is enabled
-        if (_snapToScreen && !_isPositionLocked)
+        if (_appSettings.SnapToScreen && !_appSettings.IsPositionLocked)
         {
             SnapToScreen();
         }
 
         // Perform boundary check after drag is complete (with delay to avoid flicker)
-        if (!_isPositionLocked)
+        if (!_appSettings.IsPositionLocked)
         {
             CheckBoundariesDelayed();
         }
+
+        // 自动保存位置变化
+        _ = Task.Run(async () => await SaveSettingsToDatabase());
     }
 
     private System.Windows.Threading.DispatcherTimer? _boundaryCheckTimer;
