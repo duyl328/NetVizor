@@ -102,6 +102,10 @@ public partial class NetView : Window
             ResetToDefaultPosition();
         }
 
+        // 记录当前位置为已保存位置，避免首次加载时触发不必要的保存
+        _lastSavedLeft = this.Left;
+        _lastSavedTop = this.Top;
+
         // 应用其他窗口设置
         this.Topmost = _appSettings.IsTopmost;
         SetClickThrough(_appSettings.IsClickThrough);
@@ -303,6 +307,9 @@ public partial class NetView : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
+        // 在关闭前确保保存当前窗口位置
+        _ = SaveSettingsToDatabase().ConfigureAwait(false);
+
         // 阻止窗口关闭，而是隐藏到托盘
         e.Cancel = true;
         this.Hide();
@@ -315,8 +322,18 @@ public partial class NetView : Window
     }
 
     // 如果你想要真正关闭程序的方法
-    public void ForceClose()
+    public async void ForceClose()
     {
+        // 在真正关闭前确保保存当前窗口位置
+        try
+        {
+            await SaveSettingsToDatabase();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error saving settings on exit: {ex.Message}");
+        }
+
         // Close TrafficAnalysisWindow if it exists
         try
         {
@@ -540,11 +557,14 @@ public partial class NetView : Window
             CheckBoundariesDelayed();
         }
 
-        // 自动保存位置变化
-        _ = Task.Run(async () => await SaveSettingsToDatabase());
+        // 自动保存位置变化 - 使用延迟保存避免频繁数据库写入
+        SavePositionDelayed();
     }
 
     private System.Windows.Threading.DispatcherTimer? _boundaryCheckTimer;
+    private System.Windows.Threading.DispatcherTimer? _positionSaveTimer;
+    private double _lastSavedLeft = double.NaN;
+    private double _lastSavedTop = double.NaN;
 
     private void CheckBoundariesDelayed()
     {
@@ -608,5 +628,46 @@ public partial class NetView : Window
 
         this.BeginAnimation(Window.LeftProperty, leftAnimation);
         this.BeginAnimation(Window.TopProperty, topAnimation);
+    }
+
+    private void SavePositionDelayed()
+    {
+        // 检查位置是否真正发生了变化，避免不必要的保存
+        if (Math.Abs(this.Left - _lastSavedLeft) < 1.0 && Math.Abs(this.Top - _lastSavedTop) < 1.0)
+        {
+            return; // 位置变化不足1像素，无需保存
+        }
+
+        // 防抖机制：如果定时器正在运行，则停止并重新开始计时
+        // 这样如果用户在3秒内频繁移动窗口，只会保存最后一次位置
+        _positionSaveTimer?.Stop();
+
+        // 创建新的延迟保存定时器
+        _positionSaveTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(3000) // 3秒延迟保存，防抖优化
+        };
+
+        _positionSaveTimer.Tick += async (s, e) =>
+        {
+            _positionSaveTimer.Stop();
+            try
+            {
+                // 保存当前窗口位置到数据库
+                await SaveSettingsToDatabase();
+
+                // 记录已保存的位置，用于下次比较
+                _lastSavedLeft = this.Left;
+                _lastSavedTop = this.Top;
+
+                System.Diagnostics.Debug.WriteLine($"窗口位置已保存: Left={this.Left}, Top={this.Top}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"保存窗口位置失败: {ex.Message}");
+            }
+        };
+
+        _positionSaveTimer.Start();
     }
 }
