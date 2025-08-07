@@ -29,6 +29,7 @@ public class NetVizorDbContext : IDisposable
                 _connection.Execute("PRAGMA synchronous=NORMAL;");
                 _connection.Execute("PRAGMA cache_size=10000;");
                 _connection.Execute("PRAGMA temp_store=memory;");
+                _connection.Execute("PRAGMA auto_vacuum = INCREMENTAL;");
             }
 
             return _connection;
@@ -96,65 +97,132 @@ public class NetVizorDbContext : IDisposable
                 NetworkCardGuid TEXT NOT NULL
             )");
 
-        // 创建聚合数据表 - 按小时聚合的应用网络数据
+        // 创建应用网络聚合数据表 - 按小时聚合
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS AppNetworkHourly (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 AppId TEXT NOT NULL,
                 HourTimestamp INTEGER NOT NULL,
-                RemoteIP TEXT NOT NULL,
-                RemotePort INTEGER NOT NULL,
-                Protocol TEXT NOT NULL,
-                TotalUpload INTEGER DEFAULT 0,
-                TotalDownload INTEGER DEFAULT 0,
+                TotalUploadBytes INTEGER DEFAULT 0,
+                TotalDownloadBytes INTEGER DEFAULT 0,
                 ConnectionCount INTEGER DEFAULT 0,
-                FirstSeen INTEGER NOT NULL,
-                LastSeen INTEGER NOT NULL,
-                UNIQUE(AppId, HourTimestamp, RemoteIP, RemotePort, Protocol)
+                UniqueRemoteIPs INTEGER DEFAULT 0,
+                UniqueRemotePorts INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(AppId, HourTimestamp)
             )");
 
-        // 创建聚合数据表 - 按天聚合的应用网络数据
+        // 创建应用网络聚合数据表 - 按天聚合
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS AppNetworkDaily (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 AppId TEXT NOT NULL,
                 DayTimestamp INTEGER NOT NULL,
-                TotalUpload INTEGER DEFAULT 0,
-                TotalDownload INTEGER DEFAULT 0,
+                TotalUploadBytes INTEGER DEFAULT 0,
+                TotalDownloadBytes INTEGER DEFAULT 0,
                 ConnectionCount INTEGER DEFAULT 0,
-                TopRemoteIP TEXT,
-                TopRemotePort INTEGER,
-                FirstSeen INTEGER NOT NULL,
-                LastSeen INTEGER NOT NULL,
+                UniqueRemoteIPs INTEGER DEFAULT 0,
+                UniqueRemotePorts INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
                 UNIQUE(AppId, DayTimestamp)
             )");
 
-        // 创建全局网络按小时聚合表
+        // 创建应用网络聚合数据表 - 按周聚合
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS AppNetworkWeekly (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                AppId TEXT NOT NULL,
+                WeekTimestamp INTEGER NOT NULL,
+                TotalUploadBytes INTEGER DEFAULT 0,
+                TotalDownloadBytes INTEGER DEFAULT 0,
+                ConnectionCount INTEGER DEFAULT 0,
+                UniqueRemoteIPs INTEGER DEFAULT 0,
+                UniqueRemotePorts INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(AppId, WeekTimestamp)
+            )");
+
+        // 创建应用网络聚合数据表 - 按月聚合
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS AppNetworkMonthly (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                AppId TEXT NOT NULL,
+                MonthTimestamp INTEGER NOT NULL,
+                TotalUploadBytes INTEGER DEFAULT 0,
+                TotalDownloadBytes INTEGER DEFAULT 0,
+                ConnectionCount INTEGER DEFAULT 0,
+                UniqueRemoteIPs INTEGER DEFAULT 0,
+                UniqueRemotePorts INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(AppId, MonthTimestamp)
+            )");
+
+        // 创建全局网络聚合数据表 - 按小时聚合
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS GlobalNetworkHourly (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                HourTimestamp INTEGER NOT NULL,
                 NetworkCardGuid TEXT NOT NULL,
+                HourTimestamp INTEGER NOT NULL,
                 TotalUpload INTEGER DEFAULT 0,
                 TotalDownload INTEGER DEFAULT 0,
-                MaxUploadSpeed INTEGER DEFAULT 0,
-                MaxDownloadSpeed INTEGER DEFAULT 0,
-                UNIQUE(HourTimestamp, NetworkCardGuid)
+                AvgUpload INTEGER DEFAULT 0,
+                AvgDownload INTEGER DEFAULT 0,
+                MaxUpload INTEGER DEFAULT 0,
+                MaxDownload INTEGER DEFAULT 0,
+                RecordCount INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(NetworkCardGuid, HourTimestamp)
             )");
 
-        // 创建全局网络按天聚合表
+        // 创建全局网络聚合数据表 - 按天聚合
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS GlobalNetworkDaily (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                DayTimestamp INTEGER NOT NULL,
                 NetworkCardGuid TEXT NOT NULL,
+                DayTimestamp INTEGER NOT NULL,
                 TotalUpload INTEGER DEFAULT 0,
                 TotalDownload INTEGER DEFAULT 0,
-                AvgUploadSpeed INTEGER DEFAULT 0,
-                AvgDownloadSpeed INTEGER DEFAULT 0,
-                PeakUploadSpeed INTEGER DEFAULT 0,
-                PeakDownloadSpeed INTEGER DEFAULT 0,
-                UNIQUE(DayTimestamp, NetworkCardGuid)
+                AvgUpload INTEGER DEFAULT 0,
+                AvgDownload INTEGER DEFAULT 0,
+                MaxUpload INTEGER DEFAULT 0,
+                MaxDownload INTEGER DEFAULT 0,
+                RecordCount INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(NetworkCardGuid, DayTimestamp)
+            )");
+
+        // 创建全局网络聚合数据表 - 按周聚合
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS GlobalNetworkWeekly (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                NetworkCardGuid TEXT NOT NULL,
+                WeekTimestamp INTEGER NOT NULL,
+                TotalUpload INTEGER DEFAULT 0,
+                TotalDownload INTEGER DEFAULT 0,
+                AvgUpload INTEGER DEFAULT 0,
+                AvgDownload INTEGER DEFAULT 0,
+                MaxUpload INTEGER DEFAULT 0,
+                MaxDownload INTEGER DEFAULT 0,
+                RecordCount INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(NetworkCardGuid, WeekTimestamp)
+            )");
+
+        // 创建全局网络聚合数据表 - 按月聚合
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS GlobalNetworkMonthly (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                NetworkCardGuid TEXT NOT NULL,
+                MonthTimestamp INTEGER NOT NULL,
+                TotalUpload INTEGER DEFAULT 0,
+                TotalDownload INTEGER DEFAULT 0,
+                AvgUpload INTEGER DEFAULT 0,
+                AvgDownload INTEGER DEFAULT 0,
+                MaxUpload INTEGER DEFAULT 0,
+                MaxDownload INTEGER DEFAULT 0,
+                RecordCount INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(NetworkCardGuid, MonthTimestamp)
             )");
 
         // 创建索引以提高查询性能
@@ -169,14 +237,25 @@ public class NetVizorDbContext : IDisposable
         await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_globalnetwork_guid ON GlobalNetwork(NetworkCardGuid)");
 
+        // 应用网络聚合表索引
         await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_appnetwork_hourly_timestamp ON AppNetworkHourly(HourTimestamp)");
         await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_appnetwork_daily_timestamp ON AppNetworkDaily(DayTimestamp)");
         await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_appnetwork_weekly_timestamp ON AppNetworkWeekly(WeekTimestamp)");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_appnetwork_monthly_timestamp ON AppNetworkMonthly(MonthTimestamp)");
+
+        // 全局网络聚合表索引
+        await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_globalnetwork_hourly_timestamp ON GlobalNetworkHourly(HourTimestamp)");
         await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_globalnetwork_daily_timestamp ON GlobalNetworkDaily(DayTimestamp)");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_globalnetwork_weekly_timestamp ON GlobalNetworkWeekly(WeekTimestamp)");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_globalnetwork_monthly_timestamp ON GlobalNetworkMonthly(MonthTimestamp)");
     }
 
     private async Task MigrateDatabaseAsync()

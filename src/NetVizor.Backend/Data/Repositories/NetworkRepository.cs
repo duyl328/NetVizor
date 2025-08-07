@@ -42,6 +42,38 @@ public interface INetworkRepository
     // 数据维护
     Task<int> DeleteOldAppNetworkDataAsync(long beforeTimestamp);
     Task<int> DeleteOldGlobalNetworkDataAsync(long beforeTimestamp);
+
+    // 应用网络聚合数据操作
+    Task<int> SaveAppNetworkHourlyAsync(AppNetworkHourly hourly);
+    Task<int> SaveAppNetworkDailyAsync(AppNetworkDaily daily);
+    Task<int> SaveAppNetworkWeeklyAsync(AppNetworkWeekly weekly);
+    Task<int> SaveAppNetworkMonthlyAsync(AppNetworkMonthly monthly);
+
+    // 全局网络聚合数据操作
+    Task<int> SaveGlobalNetworkHourlyAsync(GlobalNetworkHourly hourly);
+    Task<int> SaveGlobalNetworkDailyAsync(GlobalNetworkDaily daily);
+    Task<int> SaveGlobalNetworkWeeklyAsync(GlobalNetworkWeekly weekly);
+    Task<int> SaveGlobalNetworkMonthlyAsync(GlobalNetworkMonthly monthly);
+
+    // 数据存在性检查
+    Task<bool> AppNetworkHourlyExistsAsync(string appId, long hourTimestamp);
+    Task<bool> AppNetworkDailyExistsAsync(string appId, long dayTimestamp);
+    Task<bool> AppNetworkWeeklyExistsAsync(string appId, long weekTimestamp);
+    Task<bool> AppNetworkMonthlyExistsAsync(string appId, long monthTimestamp);
+
+    Task<bool> GlobalNetworkHourlyExistsAsync(string networkCardGuid, long hourTimestamp);
+    Task<bool> GlobalNetworkDailyExistsAsync(string networkCardGuid, long dayTimestamp);
+    Task<bool> GlobalNetworkWeeklyExistsAsync(string networkCardGuid, long weekTimestamp);
+    Task<bool> GlobalNetworkMonthlyExistsAsync(string networkCardGuid, long monthTimestamp);
+
+    // 聚合数据清理
+    Task<int> DeleteAppNetworkHourlyBeforeAsync(long beforeTimestamp);
+    Task<int> DeleteAppNetworkDailyBeforeAsync(long beforeTimestamp);
+    Task<int> DeleteAppNetworkWeeklyBeforeAsync(long beforeTimestamp);
+
+    Task<int> DeleteGlobalNetworkHourlyBeforeAsync(long beforeTimestamp);
+    Task<int> DeleteGlobalNetworkDailyBeforeAsync(long beforeTimestamp);
+    Task<int> DeleteGlobalNetworkWeeklyBeforeAsync(long beforeTimestamp);
 }
 
 public class NetworkRepository : INetworkRepository
@@ -420,6 +452,201 @@ public class NetworkRepository : INetworkRepository
     public async Task<int> DeleteOldGlobalNetworkDataAsync(long beforeTimestamp)
     {
         const string sql = "DELETE FROM GlobalNetwork WHERE Timestep < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
+    #endregion
+
+    #region 应用网络聚合数据操作
+
+    public async Task<int> SaveAppNetworkHourlyAsync(AppNetworkHourly hourly)
+    {
+        const string sql = @"
+            INSERT INTO AppNetworkHourly (AppId, HourTimestamp, TotalUploadBytes, TotalDownloadBytes, ConnectionCount, UniqueRemoteIPs, UniqueRemotePorts, CreatedTimestamp)
+            VALUES (@AppId, @HourTimestamp, @TotalUploadBytes, @TotalDownloadBytes, @ConnectionCount, @UniqueRemoteIPs, @UniqueRemotePorts, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, hourly);
+    }
+
+    public async Task<int> SaveAppNetworkDailyAsync(AppNetworkDaily daily)
+    {
+        const string sql = @"
+            INSERT INTO AppNetworkDaily (AppId, DayTimestamp, TotalUploadBytes, TotalDownloadBytes, ConnectionCount, UniqueRemoteIPs, UniqueRemotePorts, CreatedTimestamp)
+            VALUES (@AppId, @DayTimestamp, @TotalUploadBytes, @TotalDownloadBytes, @ConnectionCount, @UniqueRemoteIPs, @UniqueRemotePorts, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, daily);
+    }
+
+    public async Task<int> SaveAppNetworkWeeklyAsync(AppNetworkWeekly weekly)
+    {
+        const string sql = @"
+            INSERT INTO AppNetworkWeekly (AppId, WeekTimestamp, TotalUploadBytes, TotalDownloadBytes, ConnectionCount, UniqueRemoteIPs, UniqueRemotePorts, CreatedTimestamp)
+            VALUES (@AppId, @WeekTimestamp, @TotalUploadBytes, @TotalDownloadBytes, @ConnectionCount, @UniqueRemoteIPs, @UniqueRemotePorts, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, weekly);
+    }
+
+    public async Task<int> SaveAppNetworkMonthlyAsync(AppNetworkMonthly monthly)
+    {
+        const string sql = @"
+            INSERT INTO AppNetworkMonthly (AppId, MonthTimestamp, TotalUploadBytes, TotalDownloadBytes, ConnectionCount, UniqueRemoteIPs, UniqueRemotePorts, CreatedTimestamp)
+            VALUES (@AppId, @MonthTimestamp, @TotalUploadBytes, @TotalDownloadBytes, @ConnectionCount, @UniqueRemoteIPs, @UniqueRemotePorts, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, monthly);
+    }
+
+    #endregion
+
+    #region 全局网络聚合数据操作
+
+    public async Task<int> SaveGlobalNetworkHourlyAsync(GlobalNetworkHourly hourly)
+    {
+        const string sql = @"
+            INSERT INTO GlobalNetworkHourly (NetworkCardGuid, HourTimestamp, TotalUpload, TotalDownload, AvgUpload, AvgDownload, MaxUpload, MaxDownload, RecordCount, CreatedTimestamp)
+            VALUES (@NetworkCardGuid, @HourTimestamp, @TotalUpload, @TotalDownload, @AvgUpload, @AvgDownload, @MaxUpload, @MaxDownload, @RecordCount, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, hourly);
+    }
+
+    public async Task<int> SaveGlobalNetworkDailyAsync(GlobalNetworkDaily daily)
+    {
+        const string sql = @"
+            INSERT INTO GlobalNetworkDaily (NetworkCardGuid, DayTimestamp, TotalUpload, TotalDownload, AvgUpload, AvgDownload, MaxUpload, MaxDownload, RecordCount, CreatedTimestamp)
+            VALUES (@NetworkCardGuid, @DayTimestamp, @TotalUpload, @TotalDownload, @AvgUpload, @AvgDownload, @MaxUpload, @MaxDownload, @RecordCount, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, daily);
+    }
+
+    public async Task<int> SaveGlobalNetworkWeeklyAsync(GlobalNetworkWeekly weekly)
+    {
+        const string sql = @"
+            INSERT INTO GlobalNetworkWeekly (NetworkCardGuid, WeekTimestamp, TotalUpload, TotalDownload, AvgUpload, AvgDownload, MaxUpload, MaxDownload, RecordCount, CreatedTimestamp)
+            VALUES (@NetworkCardGuid, @WeekTimestamp, @TotalUpload, @TotalDownload, @AvgUpload, @AvgDownload, @MaxUpload, @MaxDownload, @RecordCount, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, weekly);
+    }
+
+    public async Task<int> SaveGlobalNetworkMonthlyAsync(GlobalNetworkMonthly monthly)
+    {
+        const string sql = @"
+            INSERT INTO GlobalNetworkMonthly (NetworkCardGuid, MonthTimestamp, TotalUpload, TotalDownload, AvgUpload, AvgDownload, MaxUpload, MaxDownload, RecordCount, CreatedTimestamp)
+            VALUES (@NetworkCardGuid, @MonthTimestamp, @TotalUpload, @TotalDownload, @AvgUpload, @AvgDownload, @MaxUpload, @MaxDownload, @RecordCount, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, monthly);
+    }
+
+    #endregion
+
+    #region 数据存在性检查
+
+    public async Task<bool> AppNetworkHourlyExistsAsync(string appId, long hourTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM AppNetworkHourly WHERE AppId = @AppId AND HourTimestamp = @HourTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { AppId = appId, HourTimestamp = hourTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> AppNetworkDailyExistsAsync(string appId, long dayTimestamp)
+    {
+        const string sql = "SELECT COUNT(1) FROM AppNetworkDaily WHERE AppId = @AppId AND DayTimestamp = @DayTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { AppId = appId, DayTimestamp = dayTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> AppNetworkWeeklyExistsAsync(string appId, long weekTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM AppNetworkWeekly WHERE AppId = @AppId AND WeekTimestamp = @WeekTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { AppId = appId, WeekTimestamp = weekTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> AppNetworkMonthlyExistsAsync(string appId, long monthTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM AppNetworkMonthly WHERE AppId = @AppId AND MonthTimestamp = @MonthTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { AppId = appId, MonthTimestamp = monthTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> GlobalNetworkHourlyExistsAsync(string networkCardGuid, long hourTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM GlobalNetworkHourly WHERE NetworkCardGuid = @NetworkCardGuid AND HourTimestamp = @HourTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { NetworkCardGuid = networkCardGuid, HourTimestamp = hourTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> GlobalNetworkDailyExistsAsync(string networkCardGuid, long dayTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM GlobalNetworkDaily WHERE NetworkCardGuid = @NetworkCardGuid AND DayTimestamp = @DayTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { NetworkCardGuid = networkCardGuid, DayTimestamp = dayTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> GlobalNetworkWeeklyExistsAsync(string networkCardGuid, long weekTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM GlobalNetworkWeekly WHERE NetworkCardGuid = @NetworkCardGuid AND WeekTimestamp = @WeekTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { NetworkCardGuid = networkCardGuid, WeekTimestamp = weekTimestamp });
+        return count > 0;
+    }
+
+    public async Task<bool> GlobalNetworkMonthlyExistsAsync(string networkCardGuid, long monthTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM GlobalNetworkMonthly WHERE NetworkCardGuid = @NetworkCardGuid AND MonthTimestamp = @MonthTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { NetworkCardGuid = networkCardGuid, MonthTimestamp = monthTimestamp });
+        return count > 0;
+    }
+
+    #endregion
+
+    #region 聚合数据清理
+
+    public async Task<int> DeleteAppNetworkHourlyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM AppNetworkHourly WHERE HourTimestamp < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
+    public async Task<int> DeleteAppNetworkDailyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM AppNetworkDaily WHERE DayTimestamp < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
+    public async Task<int> DeleteAppNetworkWeeklyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM AppNetworkWeekly WHERE WeekTimestamp < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
+    public async Task<int> DeleteGlobalNetworkHourlyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM GlobalNetworkHourly WHERE HourTimestamp < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
+    public async Task<int> DeleteGlobalNetworkDailyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM GlobalNetworkDaily WHERE DayTimestamp < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
+    public async Task<int> DeleteGlobalNetworkWeeklyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM GlobalNetworkWeekly WHERE WeekTimestamp < @BeforeTimestamp";
         return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
     }
 

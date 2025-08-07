@@ -20,6 +20,7 @@ public class NetworkDataCollectionService : IDisposable
     private readonly Timer _etwNetworkTimer;
     private readonly Timer _networkInterfaceUpdateTimer;
     private readonly Timer _batchFlushTimer;
+    private readonly Timer _dataCleanupTimer;
 
     // 网卡信息缓存
     private readonly ConcurrentDictionary<string, BasicNetworkMonitor.BasicNetworkInterface> _networkInterfaces = new();
@@ -47,6 +48,10 @@ public class NetworkDataCollectionService : IDisposable
         // 每30秒强制刷新一次批处理缓存
         _batchFlushTimer = new Timer(async _ => await _writeManager.FlushAllBatchesAsync(), null,
             TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
+        // 每小时检测清理并合并旧数据
+        _dataCleanupTimer = new Timer(TriggerDataCleanupAndAggregation, null,
+            TimeSpan.FromHours(1), TimeSpan.FromHours(1));
 
         Log.Information("网络数据收集服务已启动");
     }
@@ -220,7 +225,7 @@ public class NetworkDataCollectionService : IDisposable
 
             _lastNetworkInterfaceUpdate = DateTime.UtcNow;
 
-            Log.Information($"更新网络接口列表，共找到 {interfaces.Count} 个活跃接口");
+            // Log.Information($"更新网络接口列表，共找到 {interfaces.Count} 个活跃接口");
         }
         catch (Exception ex)
         {
@@ -286,6 +291,48 @@ public class NetworkDataCollectionService : IDisposable
         };
     }
 
+    /// <summary>
+    /// 触发数据清理和聚合任务
+    /// </summary>
+    private async void TriggerDataCleanupAndAggregation(object state)
+    {
+        try
+        {
+            Log.Information("Start 开始执行定时数据清理和聚合任务");
+
+            // 先触发数据聚合
+            Log.Information("触发数据聚合任务");
+            var aggregationResult = await _writeManager.TriggerDataAggregationAsync();
+
+            if (aggregationResult)
+            {
+                Log.Information("数据聚合任务完成，开始触发数据清理任务");
+
+                // 聚合成功后进行数据清理
+                var cleanupResult = await _writeManager.TriggerDataCleanupAsync();
+
+                if (cleanupResult)
+                {
+                    Log.Information("数据清理任务完成");
+                }
+                else
+                {
+                    Log.Warning("数据清理任务执行失败");
+                }
+            }
+            else
+            {
+                Log.Warning("数据聚合任务执行失败，跳过清理任务");
+            }
+
+            Log.Information("定时数据清理和聚合任务执行完成");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "定时数据清理和聚合任务执行时发生错误");
+        }
+    }
+
     public void Dispose()
     {
         Log.Information("正在关闭网络数据收集服务...");
@@ -294,6 +341,7 @@ public class NetworkDataCollectionService : IDisposable
         _etwNetworkTimer?.Dispose();
         _networkInterfaceUpdateTimer?.Dispose();
         _batchFlushTimer?.Dispose();
+        _dataCleanupTimer?.Dispose();
 
         // 强制刷新所有批处理数据
         try
