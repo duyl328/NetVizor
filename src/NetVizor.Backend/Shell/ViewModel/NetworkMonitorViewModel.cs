@@ -493,38 +493,30 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
             // 更新NetworkTopListManager的统计数据
             NetworkTopListManager.Instance.UpdateAllProcessStats();
 
-            // 获取Top榜数据
+            // 获取Top榜数据（现在总是返回固定数量的项目）
             var topList = NetworkTopListManager.Instance.GetTopList(settings.NetworkTopListCount);
 
-            if (topList.HasData)
+            // 总是显示Top榜，因为现在保证有固定数量的项目
+            var newViewModels = topList.TopProcesses.Select(stats =>
             {
-                // 更新现有项目或添加新项目
-                var newViewModels = topList.TopProcesses.Select(stats =>
+                var existing = TopProcesses.FirstOrDefault(vm => vm.ProcessId == stats.ProcessId);
+                if (existing != null)
                 {
-                    var existing = TopProcesses.FirstOrDefault(vm => vm.ProcessId == stats.ProcessId);
-                    if (existing != null)
-                    {
-                        existing.UpdateStats(stats);
-                        return existing;
-                    }
-
-                    return new ProcessNetworkStatsViewModel(stats);
-                }).ToList();
-
-                // 更新集合
-                TopProcesses.Clear();
-                foreach (var vm in newViewModels)
-                {
-                    TopProcesses.Add(vm);
+                    existing.UpdateStats(stats);
+                    return existing;
                 }
 
-                TopListVisibility = System.Windows.Visibility.Visible;
-            }
-            else
+                return new ProcessNetworkStatsViewModel(stats);
+            }).ToList();
+
+            // 更新集合
+            TopProcesses.Clear();
+            foreach (var vm in newViewModels)
             {
-                TopProcesses.Clear();
-                TopListVisibility = System.Windows.Visibility.Collapsed;
+                TopProcesses.Add(vm);
             }
+
+            TopListVisibility = System.Windows.Visibility.Visible;
         }
         catch (Exception ex)
         {
@@ -537,36 +529,57 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
     /// </summary>
     private void UpdateDesignTimeTopList()
     {
-        if (TopProcesses.Count == 0)
+        var settings = NetViewSettings.Instance;
+        var targetCount = settings.NetworkTopListCount;
+
+        // 确保始终显示固定数量的项目
+        if (TopProcesses.Count != targetCount)
         {
-            // 添加一些假数据用于设计时预览
-            var fakeStats = new[]
+            // 创建固定数量的假数据
+            var fakeStats = new List<ProcessNetworkStats>();
+
+            // 添加有网络活动的进程
+            fakeStats.Add(new ProcessNetworkStats
             {
-                new ProcessNetworkStats
+                ProcessId = 1234,
+                ProcessName = "chrome",
+                CurrentUploadSpeed = 1024 * 500, // 500 KB/s
+                CurrentDownloadSpeed = 1024 * 1024 * 15.5, // 15.5 MB/s
+            });
+
+            fakeStats.Add(new ProcessNetworkStats
+            {
+                ProcessId = 5678,
+                ProcessName = "firefox",
+                CurrentUploadSpeed = 1024 * 200, // 200 KB/s
+                CurrentDownloadSpeed = 1024 * 1024 * 8.2, // 8.2 MB/s
+            });
+
+            fakeStats.Add(new ProcessNetworkStats
+            {
+                ProcessId = 9012,
+                ProcessName = "steam",
+                CurrentUploadSpeed = 1024 * 50, // 50 KB/s
+                CurrentDownloadSpeed = 1024 * 1024 * 5.1, // 5.1 MB/s
+            });
+
+            // 如果需要更多项目，添加无网络活动的进程
+            while (fakeStats.Count < targetCount)
+            {
+                fakeStats.Add(new ProcessNetworkStats
                 {
-                    ProcessId = 1234,
-                    ProcessName = "chrome",
-                    CurrentUploadSpeed = 1024 * 500, // 500 KB/s
-                    CurrentDownloadSpeed = 1024 * 1024 * 15.5, // 15.5 MB/s
-                },
-                new ProcessNetworkStats
-                {
-                    ProcessId = 5678,
-                    ProcessName = "firefox",
-                    CurrentUploadSpeed = 1024 * 200, // 200 KB/s
-                    CurrentDownloadSpeed = 1024 * 1024 * 8.2, // 8.2 MB/s
-                },
-                new ProcessNetworkStats
-                {
-                    ProcessId = 9012,
-                    ProcessName = "steam",
-                    CurrentUploadSpeed = 1024 * 50, // 50 KB/s
-                    CurrentDownloadSpeed = 1024 * 1024 * 5.1, // 5.1 MB/s
-                }
-            };
+                    ProcessId = 1000 + fakeStats.Count,
+                    ProcessName = $"app{fakeStats.Count + 1}",
+                    CurrentUploadSpeed = 0,
+                    CurrentDownloadSpeed = 0,
+                });
+            }
+
+            // 取前N个项目
+            var selectedStats = fakeStats.Take(targetCount).ToList();
 
             TopProcesses.Clear();
-            foreach (var stats in fakeStats)
+            foreach (var stats in selectedStats)
             {
                 TopProcesses.Add(new ProcessNetworkStatsViewModel(stats));
             }

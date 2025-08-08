@@ -132,8 +132,9 @@
                                                    FontSize="9" FontWeight="Normal"
                                                    Foreground="#666666"
                                                    VerticalAlignment="Center"
-                                                   MinWidth="35"
-                                                   TextAlignment="Right" />
+                                                   Width="40"
+                                                   TextAlignment="Right"
+                                                   FontFamily="Consolas" />
                                     </Grid>
 
                                     <!-- Download Speed -->
@@ -150,8 +151,9 @@
                                                    FontSize="9" FontWeight="Normal"
                                                    Foreground="#666666"
                                                    VerticalAlignment="Center"
-                                                   MinWidth="35"
-                                                   TextAlignment="Right" />
+                                                   Width="40"
+                                                   TextAlignment="Right"
+                                                   FontFamily="Consolas" />
                                     </Grid>
                                 </Grid>
                             </DataTemplate>
