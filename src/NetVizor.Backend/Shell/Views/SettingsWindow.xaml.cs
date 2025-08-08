@@ -594,9 +594,18 @@ public partial class SettingsWindow : Window
                 .GetMethod("OnPropertyChanged",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            propertyChangedMethod?.Invoke(netViewSettings, new object[] { "ShowNetworkTopList" });
-            propertyChangedMethod?.Invoke(netViewSettings, new object[] { "NetworkTopListCount" });
-            propertyChangedMethod?.Invoke(netViewSettings, new object[] { "IsTopListAvailable" });
+            if (propertyChangedMethod != null)
+            {
+                propertyChangedMethod.Invoke(netViewSettings, new object[] { "ShowNetworkTopList" });
+                propertyChangedMethod.Invoke(netViewSettings, new object[] { "NetworkTopListCount" });
+                propertyChangedMethod.Invoke(netViewSettings, new object[] { "LayoutDirection" });
+                propertyChangedMethod.Invoke(netViewSettings, new object[] { "IsTopListAvailable" });
+            }
+            else
+            {
+                // 备用方案：保存设置到NetViewSettings的json文件
+                netViewSettings.SaveSettings();
+            }
 
             Log.Info("NetworkMonitorViewModel 排行榜显示已刷新");
         }

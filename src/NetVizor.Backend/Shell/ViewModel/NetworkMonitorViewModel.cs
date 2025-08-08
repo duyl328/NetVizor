@@ -156,6 +156,10 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
             // 初始化数据
             LoadNetworkInterfaces();
             LoadTopListSettings();
+
+            // 监听NetViewSettings的变更
+            NetViewSettings.Instance.PropertyChanged += OnNetViewSettingsChanged;
+
             _updateTimer.Start();
         }
     }
@@ -461,6 +465,19 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
+    /// 处理NetViewSettings变更事件
+    /// </summary>
+    private void OnNetViewSettingsChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NetViewSettings.ShowNetworkTopList) ||
+            e.PropertyName == nameof(NetViewSettings.NetworkTopListCount) ||
+            e.PropertyName == nameof(NetViewSettings.LayoutDirection))
+        {
+            UpdateTopListVisibility();
+        }
+    }
+
+    /// <summary>
     /// 更新Top榜可见性
     /// </summary>
     private void UpdateTopListVisibility()
@@ -626,6 +643,9 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
 
         Log.Info("NetworkMonitorViewModel 销毁");
         _updateTimer?.Stop();
+
+        // 取消事件监听
+        NetViewSettings.Instance.PropertyChanged -= OnNetViewSettingsChanged;
     }
 
     #endregion

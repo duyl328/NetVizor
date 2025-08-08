@@ -5,10 +5,16 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:viewModel="clr-namespace:Shell.ViewModel"
+    xmlns:converters="clr-namespace:Shell.Converters"
     mc:Ignorable="d"
     d:DesignHeight="120"
     d:DesignWidth="200"
     Background="Transparent">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <converters:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter" />
+    </UserControl.Resources>
 
     <d:UserControl.DataContext>
         <viewModel:NetworkMonitorViewModel />
@@ -102,10 +108,24 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- App Icon -->
-                                    <Image Grid.Column="0" Width="12" Height="12"
-                                           Source="{Binding IconSource}"
-                                           VerticalAlignment="Center" />
+                                    <!-- App Icon or Initial Letter -->
+                                    <Grid Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center">
+                                        <!-- Process Icon -->
+                                        <Image Source="{Binding IconSource}"
+                                               Visibility="{Binding HasIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <!-- Initial Letter Fallback -->
+                                        <Border Background="{Binding InitialBackgroundColor}"
+                                                CornerRadius="6"
+                                                Visibility="{Binding HasIcon, Converter={StaticResource InvertedBooleanToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding InitialLetter}"
+                                                       FontSize="8"
+                                                       FontWeight="Bold"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,-1,0,0" />
+                                        </Border>
+                                    </Grid>
 
                                     <!-- App Name -->
                                     <TextBlock Grid.Column="1"
@@ -125,11 +145,11 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="↑"
-                                                   Foreground="#FF6B6B" FontSize="9"
+                                                   Foreground="#FF6B6B" FontSize="10"
                                                    VerticalAlignment="Center" Margin="0,0,2,0" />
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding FormattedUploadSpeed}"
-                                                   FontSize="9" FontWeight="Normal"
+                                                   FontSize="10" FontWeight="Normal"
                                                    Foreground="#666666"
                                                    VerticalAlignment="Center"
                                                    Width="40"
@@ -144,11 +164,11 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="↓"
-                                                   Foreground="#4ECDC4" FontSize="9"
+                                                   Foreground="#4ECDC4" FontSize="10"
                                                    VerticalAlignment="Center" Margin="0,0,2,0" />
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding FormattedDownloadSpeed}"
-                                                   FontSize="9" FontWeight="Normal"
+                                                   FontSize="10" FontWeight="Normal"
                                                    Foreground="#666666"
                                                    VerticalAlignment="Center"
                                                    Width="40"

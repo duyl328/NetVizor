@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Utils.ETW.Models;
 
@@ -61,8 +62,24 @@ public class ProcessNetworkStatsViewModel : INotifyPropertyChanged
         {
             _iconSource = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HasIcon));
         }
     }
+
+    /// <summary>
+    /// 是否有图标
+    /// </summary>
+    public bool HasIcon => _iconSource != null;
+
+    /// <summary>
+    /// 首字母
+    /// </summary>
+    public string InitialLetter => GetInitialLetter();
+
+    /// <summary>
+    /// 首字母背景色
+    /// </summary>
+    public System.Windows.Media.Brush InitialBackgroundColor => GetInitialBackgroundColor();
 
     /// <summary>
     /// 更新统计数据
@@ -75,6 +92,10 @@ public class ProcessNetworkStatsViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(FormattedDownloadSpeed));
         OnPropertyChanged(nameof(FormattedTotalSpeed));
         OnPropertyChanged(nameof(TotalSpeed));
+
+        // 通知首字母相关属性更新
+        OnPropertyChanged(nameof(InitialLetter));
+        OnPropertyChanged(nameof(InitialBackgroundColor));
 
         // 如果图标还未加载，尝试重新加载
         if (_iconSource == null)
@@ -115,6 +136,59 @@ public class ProcessNetworkStatsViewModel : INotifyPropertyChanged
             // 如果图标加载失败，使用null（UI会显示默认外观）
             IconSource = null;
         }
+    }
+
+    /// <summary>
+    /// 获取进程名首字母
+    /// </summary>
+    private string GetInitialLetter()
+    {
+        if (string.IsNullOrEmpty(ProcessName))
+            return "?";
+
+        var name = ProcessName.Trim();
+        if (name.Length == 0)
+            return "?";
+
+        // 获取第一个字符，转为大写
+        var firstChar = name[0];
+        if (char.IsLetter(firstChar))
+        {
+            return char.ToUpper(firstChar).ToString();
+        }
+        else if (char.IsDigit(firstChar))
+        {
+            return firstChar.ToString();
+        }
+        else
+        {
+            return "?";
+        }
+    }
+
+    /// <summary>
+    /// 根据进程名生成背景色
+    /// </summary>
+    private System.Windows.Media.Brush GetInitialBackgroundColor()
+    {
+        var colors = new[]
+        {
+            "#FF5722", "#E91E63", "#9C27B0", "#673AB7", "#3F51B5",
+            "#2196F3", "#03A9F4", "#00BCD4", "#009688", "#4CAF50",
+            "#8BC34A", "#CDDC39", "#FFC107", "#FF9800", "#FF5722"
+        };
+
+        if (string.IsNullOrEmpty(ProcessName))
+        {
+            return new SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#9E9E9E"));
+        }
+
+        // 使用进程名的哈希值来选择颜色，确保同名进程使用相同颜色
+        var hash = ProcessName.GetHashCode();
+        var index = Math.Abs(hash) % colors.Length;
+        return new SolidColorBrush(
+            (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colors[index]));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
