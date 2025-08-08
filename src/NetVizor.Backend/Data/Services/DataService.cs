@@ -73,6 +73,8 @@ public class DataService : IDataService, IDisposable
                 DoubleClickAction = 0, // None
                 RunAsAdmin = false,
                 AutoStart = false,
+                ShowNetworkTopList = false, // 默认关闭网速Top榜
+                NetworkTopListCount = 3, // 默认显示3个
                 UpdateTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 

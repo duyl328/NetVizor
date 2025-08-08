@@ -5,6 +5,10 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Common.Logger;
 using Common.Utils;
+using Utils.ETW.Services;
+using Shell.Models;
+using Data;
+using Utils.ETW.Models;
 
 namespace Shell.ViewModel;
 
@@ -90,6 +94,31 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
         }
     }
 
+    // Top榜相关属性
+    private ObservableCollection<ProcessNetworkStatsViewModel> _topProcesses = new();
+
+    public ObservableCollection<ProcessNetworkStatsViewModel> TopProcesses
+    {
+        get => _topProcesses;
+        set
+        {
+            _topProcesses = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private System.Windows.Visibility _topListVisibility = System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility TopListVisibility
+    {
+        get => _topListVisibility;
+        set
+        {
+            _topListVisibility = value;
+            OnPropertyChanged();
+        }
+    }
+
     #endregion
 
     #region Commands
@@ -126,6 +155,7 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
 
             // 初始化数据
             LoadNetworkInterfaces();
+            LoadTopListSettings();
             _updateTimer.Start();
         }
     }
@@ -369,6 +399,9 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
             DownloadSpeed = speed.DownloadSpeedText;
             UploadSpeed = speed.UploadSpeedText;
             TotalSpeed = speed.TotalSpeedText;
+
+            // 更新Top榜
+            UpdateTopList();
         }
         catch (Exception ex)
         {
@@ -401,6 +434,145 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
         _updateTimer.Start();
 
         StatusText = "接口列表已刷新";
+    }
+
+    /// <summary>
+    /// 加载Top榜设置
+    /// </summary>
+    private async void LoadTopListSettings()
+    {
+        try
+        {
+            // 从数据库加载设置
+            var settings = await DatabaseManager.GetUserSettingsAsync();
+            var netViewSettings = NetViewSettings.Instance;
+
+            // 同步设置
+            netViewSettings.ShowNetworkTopList = settings.ShowNetworkTopList;
+            netViewSettings.NetworkTopListCount = settings.NetworkTopListCount;
+
+            // 更新可见性
+            UpdateTopListVisibility();
+        }
+        catch (Exception ex)
+        {
+            Log.Error4Ctx($"加载Top榜设置失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 更新Top榜可见性
+    /// </summary>
+    private void UpdateTopListVisibility()
+    {
+        var settings = NetViewSettings.Instance;
+        var shouldShow = settings.ShowNetworkTopList && settings.IsTopListAvailable;
+        TopListVisibility = shouldShow ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// 更新Top榜数据
+    /// </summary>
+    private void UpdateTopList()
+    {
+        if (_isDesignMode)
+        {
+            UpdateDesignTimeTopList();
+            return;
+        }
+
+        try
+        {
+            var settings = NetViewSettings.Instance;
+            if (!settings.ShowNetworkTopList || !settings.IsTopListAvailable)
+            {
+                TopListVisibility = System.Windows.Visibility.Collapsed;
+                return;
+            }
+
+            // 更新NetworkTopListManager的统计数据
+            NetworkTopListManager.Instance.UpdateAllProcessStats();
+
+            // 获取Top榜数据
+            var topList = NetworkTopListManager.Instance.GetTopList(settings.NetworkTopListCount);
+
+            if (topList.HasData)
+            {
+                // 更新现有项目或添加新项目
+                var newViewModels = topList.TopProcesses.Select(stats =>
+                {
+                    var existing = TopProcesses.FirstOrDefault(vm => vm.ProcessId == stats.ProcessId);
+                    if (existing != null)
+                    {
+                        existing.UpdateStats(stats);
+                        return existing;
+                    }
+
+                    return new ProcessNetworkStatsViewModel(stats);
+                }).ToList();
+
+                // 更新集合
+                TopProcesses.Clear();
+                foreach (var vm in newViewModels)
+                {
+                    TopProcesses.Add(vm);
+                }
+
+                TopListVisibility = System.Windows.Visibility.Visible;
+            }
+            else
+            {
+                TopProcesses.Clear();
+                TopListVisibility = System.Windows.Visibility.Collapsed;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error4Ctx($"更新Top榜时发生错误: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 设计时Top榜数据
+    /// </summary>
+    private void UpdateDesignTimeTopList()
+    {
+        if (TopProcesses.Count == 0)
+        {
+            // 添加一些假数据用于设计时预览
+            var fakeStats = new[]
+            {
+                new ProcessNetworkStats
+                {
+                    ProcessId = 1234,
+                    ProcessName = "chrome",
+                    CurrentUploadSpeed = 1024 * 500, // 500 KB/s
+                    CurrentDownloadSpeed = 1024 * 1024 * 15.5, // 15.5 MB/s
+                },
+                new ProcessNetworkStats
+                {
+                    ProcessId = 5678,
+                    ProcessName = "firefox",
+                    CurrentUploadSpeed = 1024 * 200, // 200 KB/s
+                    CurrentDownloadSpeed = 1024 * 1024 * 8.2, // 8.2 MB/s
+                },
+                new ProcessNetworkStats
+                {
+                    ProcessId = 9012,
+                    ProcessName = "steam",
+                    CurrentUploadSpeed = 1024 * 50, // 50 KB/s
+                    CurrentDownloadSpeed = 1024 * 1024 * 5.1, // 5.1 MB/s
+                }
+            };
+
+            TopProcesses.Clear();
+            foreach (var stats in fakeStats)
+            {
+                TopProcesses.Add(new ProcessNetworkStatsViewModel(stats));
+            }
+
+            TopListVisibility = System.Windows.Visibility.Visible;
+        }
     }
 
     // 测试用的异步方法

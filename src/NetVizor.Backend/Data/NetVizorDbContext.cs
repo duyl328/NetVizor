@@ -82,6 +82,8 @@ public class NetVizorDbContext : IDisposable
                 DoubleClickAction INTEGER DEFAULT 0,
                 RunAsAdmin INTEGER DEFAULT 0,
                 AutoStart INTEGER DEFAULT 0,
+                ShowNetworkTopList INTEGER DEFAULT 0,
+                NetworkTopListCount INTEGER DEFAULT 3,
                 UpdateTime INTEGER NOT NULL
             )");
 
@@ -282,7 +284,8 @@ public class NetVizorDbContext : IDisposable
             var needsMigration = columns.Contains("WindowWidth") || columns.Contains("WindowHeight") ||
                                  columns.Contains("Theme") || columns.Contains("Language") ||
                                  columns.Contains("MonitoringEnabled") ||
-                                 !columns.Contains("IsClickThrough") || !columns.Contains("TextColor");
+                                 !columns.Contains("IsClickThrough") || !columns.Contains("TextColor") ||
+                                 !columns.Contains("ShowNetworkTopList") || !columns.Contains("NetworkTopListCount");
 
             if (needsMigration)
             {
@@ -315,6 +318,8 @@ public class NetVizorDbContext : IDisposable
                         DoubleClickAction INTEGER DEFAULT 0,
                         RunAsAdmin INTEGER DEFAULT 0,
                         AutoStart INTEGER DEFAULT 0,
+                        ShowNetworkTopList INTEGER DEFAULT 0,
+                        NetworkTopListCount INTEGER DEFAULT 3,
                         UpdateTime INTEGER NOT NULL
                     )");
 

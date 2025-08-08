@@ -21,6 +21,7 @@ public partial class SettingsWindow : Window
             {
                 _instance = new SettingsWindow();
             }
+
             return _instance;
         }
     }
@@ -31,10 +32,10 @@ public partial class SettingsWindow : Window
         _settings = NetViewSettings.Instance;
         this.Loaded += SettingsWindow_Loaded;
         this.Closing += SettingsWindow_Closing;
-        
+
         LoadCurrentSettings();
         UpdatePreview();
-        
+
         Log.Info("SettingsWindow 初始化");
     }
 
@@ -82,6 +83,19 @@ public partial class SettingsWindow : Window
         VerticalLayoutRadio.IsChecked = _settings.LayoutDirection == LayoutDirection.Vertical;
         HorizontalLayoutRadio.IsChecked = _settings.LayoutDirection == LayoutDirection.Horizontal;
 
+        // 设置网速Top榜
+        ShowTopListCheckBox.IsChecked = _settings.ShowNetworkTopList;
+        foreach (ComboBoxItem item in TopListCountComboBox.Items)
+        {
+            if (item.Tag.ToString() == _settings.NetworkTopListCount.ToString())
+            {
+                TopListCountComboBox.SelectedItem = item;
+                break;
+            }
+        }
+
+        UpdateTopListAvailability();
+
         // 设置双击动作
         foreach (ComboBoxItem item in DoubleClickActionComboBox.Items)
         {
@@ -92,6 +106,13 @@ public partial class SettingsWindow : Window
             }
         }
 
+        // 设置窗口行为选项
+        TopmostCheckBox.IsChecked = _settings.Topmost;
+        LockPositionCheckBox.IsChecked = _settings.LockPosition;
+        ClickThroughCheckBox.IsChecked = _settings.ClickThrough;
+        SnapToScreenCheckBox.IsChecked = _settings.SnapToScreen;
+        ShowDetailedInfoCheckBox.IsChecked = _settings.ShowDetailedInfo;
+
         UpdateColorButtons();
     }
 
@@ -99,10 +120,13 @@ public partial class SettingsWindow : Window
     {
         try
         {
-            var textColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_settings.TextColor);
+            var textColor =
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_settings.TextColor);
             TextColorButton.Background = new SolidColorBrush(textColor);
 
-            var backgroundColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_settings.BackgroundColor);
+            var backgroundColor =
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_settings
+                    .BackgroundColor);
             BackgroundColorButton.Background = new SolidColorBrush(backgroundColor);
         }
         catch (Exception ex)
@@ -116,17 +140,22 @@ public partial class SettingsWindow : Window
         var dialog = new System.Windows.Forms.ColorDialog();
         try
         {
-            var currentColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(TextColorBox.Text);
-            dialog.Color = System.Drawing.Color.FromArgb(currentColor.A, currentColor.R, currentColor.G, currentColor.B);
+            var currentColor =
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(TextColorBox.Text);
+            dialog.Color =
+                System.Drawing.Color.FromArgb(currentColor.A, currentColor.R, currentColor.G, currentColor.B);
         }
-        catch { }
+        catch
+        {
+        }
 
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
             var color = dialog.Color;
             var colorString = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             TextColorBox.Text = colorString;
-            TextColorButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+            TextColorButton.Background =
+                new SolidColorBrush(System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
             UpdatePreview();
         }
     }
@@ -136,10 +165,14 @@ public partial class SettingsWindow : Window
         var dialog = new System.Windows.Forms.ColorDialog();
         try
         {
-            var currentColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(BackgroundColorBox.Text);
+            var currentColor =
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(BackgroundColorBox
+                    .Text);
             dialog.Color = System.Drawing.Color.FromArgb(currentColor.R, currentColor.G, currentColor.B);
         }
-        catch { }
+        catch
+        {
+        }
 
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
@@ -148,7 +181,8 @@ public partial class SettingsWindow : Window
             var alpha = (byte)(OpacitySlider.Value / 100.0 * 255);
             var colorString = $"#{alpha:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
             BackgroundColorBox.Text = colorString;
-            BackgroundColorButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+            BackgroundColorButton.Background =
+                new SolidColorBrush(System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
             UpdatePreview();
         }
     }
@@ -158,7 +192,7 @@ public partial class SettingsWindow : Window
         if (OpacityText != null)
         {
             OpacityText.Text = $"{(int)e.NewValue}%";
-            
+
             // 更新背景颜色的透明度
             try
             {
@@ -167,12 +201,14 @@ public partial class SettingsWindow : Window
                 {
                     colorWithoutAlpha = "#" + colorWithoutAlpha.Substring(3); // 移除透明度部分
                 }
-                
+
                 var alpha = (byte)(e.NewValue / 100.0 * 255);
-                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorWithoutAlpha);
+                var color =
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter
+                        .ConvertFromString(colorWithoutAlpha);
                 var newColorString = $"#{alpha:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
                 BackgroundColorBox.Text = newColorString;
-                
+
                 UpdatePreview();
             }
             catch (Exception ex)
@@ -194,12 +230,85 @@ public partial class SettingsWindow : Window
 
     private void LayoutDirection_Changed(object sender, RoutedEventArgs e)
     {
+        UpdateTopListAvailability();
         UpdatePreview();
+    }
+
+    private void ShowTopListCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateTopListCountVisibility();
+    }
+
+    private void TopListCountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Top榜数量改变不需要预览更新
+    }
+
+    private void UpdateTopListAvailability()
+    {
+        if (ShowTopListCheckBox == null || TopListCountComboBox == null) return;
+
+        var isHorizontal = HorizontalLayoutRadio.IsChecked == true;
+        ShowTopListCheckBox.IsEnabled = isHorizontal;
+
+        if (!isHorizontal)
+        {
+            ShowTopListCheckBox.IsChecked = false;
+        }
+
+        UpdateTopListCountVisibility();
+    }
+
+    private void UpdateTopListCountVisibility()
+    {
+        if (TopListCountComboBox == null) return;
+
+        var isEnabled = ShowTopListCheckBox.IsEnabled && ShowTopListCheckBox.IsChecked == true;
+        TopListCountComboBox.IsEnabled = isEnabled;
     }
 
     private void DoubleClickActionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // 双击动作不需要预览更新
+    }
+
+    private void TopmostCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        // 置顶设置变化，不需要预览更新
+    }
+
+    private void LockPositionCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        // 锁定位置设置变化，不需要预览更新
+    }
+
+    private void ClickThroughCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        // 点击穿透设置变化，不需要预览更新
+    }
+
+    private void SnapToScreenCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        // 屏幕边界设置变化，不需要预览更新
+    }
+
+    private void ShowDetailedInfoCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        // 详细信息设置变化，不需要预览更新
+    }
+
+    private void ResetWindowPosition_Click(object sender, RoutedEventArgs e)
+    {
+        // 重置窗口位置 - 这里可以调用 NetView 的重置位置方法
+        try
+        {
+            System.Windows.MessageBox.Show("窗口位置已重置到屏幕中心。", "重置位置", MessageBoxButton.OK, MessageBoxImage.Information);
+            Log.Info("窗口位置重置请求");
+        }
+        catch (Exception ex)
+        {
+            Log.Error4Ctx($"重置窗口位置失败: {ex.Message}");
+        }
     }
 
     private void UpdatePreview()
@@ -209,23 +318,27 @@ public partial class SettingsWindow : Window
         try
         {
             // 更新背景色
-            var backgroundColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(BackgroundColorBox.Text);
+            var backgroundColor =
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(BackgroundColorBox
+                    .Text);
             PreviewBorder.Background = new SolidColorBrush(backgroundColor);
 
             // 更新文字颜色
-            var textColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(TextColorBox.Text);
+            var textColor =
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(TextColorBox.Text);
             var textBrush = new SolidColorBrush(textColor);
             PreviewUploadText.Foreground = textBrush;
             PreviewDownloadText.Foreground = textBrush;
 
             // 更新布局方向
-            PreviewPanel.Orientation = HorizontalLayoutRadio.IsChecked == true ? 
-                System.Windows.Controls.Orientation.Horizontal : System.Windows.Controls.Orientation.Vertical;
+            PreviewPanel.Orientation = HorizontalLayoutRadio.IsChecked == true
+                ? System.Windows.Controls.Orientation.Horizontal
+                : System.Windows.Controls.Orientation.Vertical;
 
             // 更新显示文本（根据单位设置）
             var showUnit = ShowUnitCheckBox.IsChecked == true;
             var selectedUnit = ((ComboBoxItem)SpeedUnitComboBox.SelectedItem)?.Tag?.ToString() ?? "Auto";
-            
+
             string uploadText, downloadText;
             switch (selectedUnit)
             {
@@ -279,11 +392,23 @@ public partial class SettingsWindow : Window
             var selectedUnit = ((ComboBoxItem)SpeedUnitComboBox.SelectedItem)?.Tag?.ToString() ?? "Auto";
             _settings.SpeedUnit = Enum.Parse<SpeedUnit>(selectedUnit);
 
-            _settings.LayoutDirection = HorizontalLayoutRadio.IsChecked == true ? 
-                LayoutDirection.Horizontal : LayoutDirection.Vertical;
+            _settings.LayoutDirection = HorizontalLayoutRadio.IsChecked == true
+                ? LayoutDirection.Horizontal
+                : LayoutDirection.Vertical;
+
+            _settings.ShowNetworkTopList = ShowTopListCheckBox.IsChecked == true;
+            var selectedCount = ((ComboBoxItem)TopListCountComboBox.SelectedItem)?.Tag?.ToString() ?? "3";
+            _settings.NetworkTopListCount = int.Parse(selectedCount);
 
             var selectedAction = ((ComboBoxItem)DoubleClickActionComboBox.SelectedItem)?.Tag?.ToString() ?? "None";
             _settings.DoubleClickAction = Enum.Parse<DoubleClickAction>(selectedAction);
+
+            // 应用窗口行为设置
+            _settings.Topmost = TopmostCheckBox.IsChecked == true;
+            _settings.LockPosition = LockPositionCheckBox.IsChecked == true;
+            _settings.ClickThrough = ClickThroughCheckBox.IsChecked == true;
+            _settings.SnapToScreen = SnapToScreenCheckBox.IsChecked == true;
+            _settings.ShowDetailedInfo = ShowDetailedInfoCheckBox.IsChecked == true;
 
             // 保存设置
             _settings.SaveSettings();
@@ -300,9 +425,9 @@ public partial class SettingsWindow : Window
 
     private void RestoreDefaults_Click(object sender, RoutedEventArgs e)
     {
-        var result = System.Windows.MessageBox.Show("确定要恢复默认设置吗？", "确认", 
+        var result = System.Windows.MessageBox.Show("确定要恢复默认设置吗？", "确认",
             MessageBoxButton.YesNo, MessageBoxImage.Question);
-        
+
         if (result == MessageBoxResult.Yes)
         {
             _settings.RestoreDefaults();

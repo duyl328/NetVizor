@@ -13,7 +13,7 @@
     <d:UserControl.DataContext>
         <viewModel:NetworkMonitorViewModel />
     </d:UserControl.DataContext>
-    
+
     <Border
         x:Name="MainBorder"
         CornerRadius="8"
@@ -29,56 +29,135 @@
                 Opacity="0.3"
                 BlurRadius="8" />
         </Border.Effect>
-        
-        <Grid Margin="10,8">
-            <StackPanel x:Name="SpeedPanel" Orientation="Vertical">
-                <!-- Upload Speed -->
-                <Grid x:Name="UploadGrid">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock
-                        Grid.Column="0"
-                        Text="↑"
-                        Foreground="#FF6B6B"
-                        FontSize="12"
-                        FontWeight="Bold"
-                        VerticalAlignment="Center"
-                        Margin="0,0,6,0" />
-                    <TextBlock
-                        x:Name="UploadSpeedText"
-                        Grid.Column="1"
-                        Text="{Binding UploadSpeed}"
-                        FontSize="12"
-                        FontWeight="SemiBold"
-                        Foreground="#333333"
-                        VerticalAlignment="Center" />
-                </Grid>
 
-                <!-- Download Speed -->
-                <Grid x:Name="DownloadGrid" Margin="0,5,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock
-                        Grid.Column="0"
-                        Text="↓"
-                        Foreground="#4ECDC4"
-                        FontSize="12"
-                        FontWeight="Bold"
-                        VerticalAlignment="Center"
-                        Margin="0,0,6,0" />
-                    <TextBlock
-                        x:Name="DownloadSpeedText"
-                        Grid.Column="1"
-                        Text="{Binding DownloadSpeed}"
-                        FontSize="12"
-                        FontWeight="SemiBold"
-                        Foreground="#333333"
-                        VerticalAlignment="Center" />
-                </Grid>
+        <Grid Margin="10,8">
+            <StackPanel x:Name="MainPanel" Orientation="Vertical">
+                <!-- Global Speed Panel -->
+                <StackPanel x:Name="SpeedPanel" Orientation="Vertical">
+                    <!-- Upload Speed -->
+                    <Grid x:Name="UploadGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            Grid.Column="0"
+                            Text="↑"
+                            Foreground="#FF6B6B"
+                            FontSize="12"
+                            FontWeight="Bold"
+                            VerticalAlignment="Center"
+                            Margin="0,0,6,0" />
+                        <TextBlock
+                            x:Name="UploadSpeedText"
+                            Grid.Column="1"
+                            Text="{Binding UploadSpeed}"
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="#333333"
+                            VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Download Speed -->
+                    <Grid x:Name="DownloadGrid" Margin="0,5,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            Grid.Column="0"
+                            Text="↓"
+                            Foreground="#4ECDC4"
+                            FontSize="12"
+                            FontWeight="Bold"
+                            VerticalAlignment="Center"
+                            Margin="0,0,6,0" />
+                        <TextBlock
+                            x:Name="DownloadSpeedText"
+                            Grid.Column="1"
+                            Text="{Binding DownloadSpeed}"
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="#333333"
+                            VerticalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+
+                <!-- Network Top List Panel -->
+                <StackPanel x:Name="TopListPanel" Orientation="Vertical" Margin="0,8,0,0"
+                            Visibility="{Binding TopListVisibility}">
+                    <!-- Separator Line -->
+                    <Border Height="1" Background="#E0E0E0" Margin="0,0,0,6" />
+
+                    <!-- Top List Items -->
+                    <ItemsControl x:Name="TopListItems" ItemsSource="{Binding TopProcesses}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" MinWidth="40" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- App Icon -->
+                                    <Image Grid.Column="0" Width="12" Height="12"
+                                           Source="{Binding IconSource}"
+                                           VerticalAlignment="Center" />
+
+                                    <!-- App Name -->
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding ProcessName}"
+                                               FontSize="10"
+                                               FontWeight="Normal"
+                                               Foreground="#666666"
+                                               VerticalAlignment="Center"
+                                               MaxWidth="60"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="4,0,8,0" />
+
+                                    <!-- Upload Speed -->
+                                    <Grid Grid.Column="3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="↑"
+                                                   Foreground="#FF6B6B" FontSize="9"
+                                                   VerticalAlignment="Center" Margin="0,0,2,0" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding FormattedUploadSpeed}"
+                                                   FontSize="9" FontWeight="Normal"
+                                                   Foreground="#666666"
+                                                   VerticalAlignment="Center"
+                                                   MinWidth="35"
+                                                   TextAlignment="Right" />
+                                    </Grid>
+
+                                    <!-- Download Speed -->
+                                    <Grid Grid.Column="4" Margin="8,0,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="↓"
+                                                   Foreground="#4ECDC4" FontSize="9"
+                                                   VerticalAlignment="Center" Margin="0,0,2,0" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding FormattedDownloadSpeed}"
+                                                   FontSize="9" FontWeight="Normal"
+                                                   Foreground="#666666"
+                                                   VerticalAlignment="Center"
+                                                   MinWidth="35"
+                                                   TextAlignment="Right" />
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
         </Grid>
     </Border>

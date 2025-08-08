@@ -87,6 +87,15 @@ public class AppSetting
     /// </summary>
     public bool AutoStart { get; set; } = false;
 
+    /// <summary>
+    /// 是否显示网速Top榜 (只在横向布局时可用)
+    /// </summary>
+    public bool ShowNetworkTopList { get; set; } = false;
+
+    /// <summary>
+    /// 网速Top榜显示数量 (1-5)
+    /// </summary>
+    public int NetworkTopListCount { get; set; } = 3;
 
     /// <summary>
     /// 更新时间

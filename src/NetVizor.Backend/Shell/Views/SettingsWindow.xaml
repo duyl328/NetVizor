@@ -6,11 +6,11 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     mc:Ignorable="d"
     Title="NetVizor - 设置"
-    Height="480"
+    Height="620"
     Width="470"
-    MinHeight="480"
+    MinHeight="620"
     MinWidth="470"
-    MaxHeight="480"
+    MaxHeight="620"
     MaxWidth="470"
     WindowStartupLocation="CenterScreen"
     ResizeMode="NoResize">
@@ -108,14 +108,30 @@
 
                     <!-- 显示单位 -->
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="显示选项" VerticalAlignment="Center" />
-                    <CheckBox Grid.Row="4" Grid.Column="1" x:Name="ShowUnitCheckBox" Content="显示单位"
-                              IsChecked="True" Checked="ShowUnitCheckBox_Changed"
-                              Unchecked="ShowUnitCheckBox_Changed" />
+                    <StackPanel Grid.Row="4" Grid.Column="1">
+                        <CheckBox x:Name="ShowUnitCheckBox" Content="显示单位"
+                                  IsChecked="True" Checked="ShowUnitCheckBox_Changed"
+                                  Unchecked="ShowUnitCheckBox_Changed" />
+                        <CheckBox x:Name="ShowTopListCheckBox" Content="显示网速排行榜" Margin="0,4,0,0"
+                                  IsChecked="False" Checked="ShowTopListCheckBox_Changed"
+                                  Unchecked="ShowTopListCheckBox_Changed" IsEnabled="False" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="排行榜数量:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <ComboBox x:Name="TopListCountComboBox" Width="80"
+                                      SelectionChanged="TopListCountComboBox_SelectionChanged" IsEnabled="False">
+                                <ComboBoxItem Content="1" Tag="1" />
+                                <ComboBoxItem Content="2" Tag="2" />
+                                <ComboBoxItem Content="3" Tag="3" IsSelected="True" />
+                                <ComboBoxItem Content="4" Tag="4" />
+                                <ComboBoxItem Content="5" Tag="5" />
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
                 </Grid>
 
                 <!-- 交互 -->
                 <TextBlock Text="交互" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
-                <Grid>
+                <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="*" />
@@ -128,6 +144,56 @@
                         <ComboBoxItem Content="流量分析" Tag="TrafficAnalysis" />
                         <ComboBoxItem Content="打开设置" Tag="Settings" />
                     </ComboBox>
+                </Grid>
+
+                <!-- 窗口行为 -->
+                <TextBlock Text="窗口行为" FontSize="14" FontWeight="Bold" Margin="0,0,0,12" />
+                <Grid Margin="0,0,0,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 始终置顶 -->
+                    <CheckBox Grid.Row="0" x:Name="TopmostCheckBox" Content="始终置顶"
+                              IsChecked="True" Checked="TopmostCheckBox_Changed"
+                              Unchecked="TopmostCheckBox_Changed" />
+
+                    <!-- 锁定窗口位置 -->
+                    <CheckBox Grid.Row="2" x:Name="LockPositionCheckBox" Content="锁定窗口位置"
+                              IsChecked="False" Checked="LockPositionCheckBox_Changed"
+                              Unchecked="LockPositionCheckBox_Changed" />
+
+                    <!-- 启用点击穿透 -->
+                    <CheckBox Grid.Row="4" x:Name="ClickThroughCheckBox" Content="启用点击穿透"
+                              IsChecked="False" Checked="ClickThroughCheckBox_Changed"
+                              Unchecked="ClickThroughCheckBox_Changed" />
+
+                    <!-- 不能超出屏幕 -->
+                    <CheckBox Grid.Row="6" x:Name="SnapToScreenCheckBox" Content="不能超出屏幕"
+                              IsChecked="False" Checked="SnapToScreenCheckBox_Changed"
+                              Unchecked="SnapToScreenCheckBox_Changed" />
+
+                    <!-- 显示详细信息 -->
+                    <CheckBox Grid.Row="8" x:Name="ShowDetailedInfoCheckBox" Content="显示详细信息"
+                              IsChecked="False" Checked="ShowDetailedInfoCheckBox_Changed"
+                              Unchecked="ShowDetailedInfoCheckBox_Changed" />
+
+                    <!-- 重置窗口位置按钮 -->
+                    <Button Grid.Row="10" HorizontalAlignment="Left" Content="重置窗口位置"
+                            Click="ResetWindowPosition_Click" Padding="12,6" MinWidth="100" />
                 </Grid>
             </StackPanel>
 
