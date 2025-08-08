@@ -134,8 +134,9 @@
                                                FontWeight="Normal"
                                                Foreground="#666666"
                                                VerticalAlignment="Center"
-                                               MaxWidth="60"
+                                               Width="70"
                                                TextTrimming="CharacterEllipsis"
+                                               TextAlignment="Left"
                                                Margin="4,0,8,0" />
 
                                     <!-- Upload Speed -->

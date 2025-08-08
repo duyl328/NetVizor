@@ -36,16 +36,13 @@ public partial class SettingsWindow : Window
         this.Loaded += SettingsWindow_Loaded;
         this.Closing += SettingsWindow_Closing;
 
-        LoadCurrentSettings();
-        UpdatePreview();
-
         Log.Info("SettingsWindow 初始化");
     }
 
-    public static void ShowWindow()
+    public static async void ShowWindow()
     {
         var window = Instance;
-        window.LoadCurrentSettingsAsync();
+        await window.LoadCurrentSettingsAsync();
         window.UpdatePreview();
         window.Show();
         window.Activate();
@@ -64,7 +61,7 @@ public partial class SettingsWindow : Window
         Log.Info("SettingsWindow 隐藏");
     }
 
-    private async void LoadCurrentSettingsAsync()
+    private async Task LoadCurrentSettingsAsync()
     {
         try
         {
@@ -118,6 +115,9 @@ public partial class SettingsWindow : Window
                 break;
             }
         }
+
+        Log.Info(
+            $"加载网速排行榜设置: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}, IsHorizontal={_settings.LayoutDirection == 0}");
 
         UpdateTopListAvailability();
 
@@ -283,11 +283,6 @@ public partial class SettingsWindow : Window
         var isHorizontal = HorizontalLayoutRadio.IsChecked == true;
         ShowTopListCheckBox.IsEnabled = isHorizontal;
 
-        if (!isHorizontal)
-        {
-            ShowTopListCheckBox.IsChecked = false;
-        }
-
         UpdateTopListCountVisibility();
     }
 
@@ -420,9 +415,13 @@ public partial class SettingsWindow : Window
             // 转换布局方向
             _settings.LayoutDirection = HorizontalLayoutRadio.IsChecked == true ? 0 : 1; // 0为横向，1为纵向
 
+            // 保存网速Top榜设置 - 只在横向布局时保存为true，纵向布局时保存实际的UI状态但应用时会被忽略
             _settings.ShowNetworkTopList = ShowTopListCheckBox.IsChecked == true;
             var selectedCount = ((ComboBoxItem)TopListCountComboBox.SelectedItem)?.Tag?.ToString() ?? "3";
             _settings.NetworkTopListCount = int.Parse(selectedCount);
+
+            Log.Info(
+                $"保存网速排行榜设置: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}, IsHorizontal={HorizontalLayoutRadio.IsChecked}");
 
             // 转换双击动作
             var selectedAction = ((ComboBoxItem)DoubleClickActionComboBox.SelectedItem)?.Tag?.ToString() ?? "None";
