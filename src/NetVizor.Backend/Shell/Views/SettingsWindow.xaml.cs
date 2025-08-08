@@ -464,6 +464,36 @@ public partial class SettingsWindow : Window
     {
         try
         {
+            // 同步到NetViewSettings（用于UI显示）
+            var netViewSettings = Shell.Models.NetViewSettings.Instance;
+            netViewSettings.ShowNetworkTopList = _settings.ShowNetworkTopList;
+            netViewSettings.NetworkTopListCount = _settings.NetworkTopListCount;
+
+            // 转换布局方向
+            netViewSettings.LayoutDirection = _settings.LayoutDirection == 0
+                ? Shell.Models.LayoutDirection.Horizontal
+                : Shell.Models.LayoutDirection.Vertical;
+
+            // 同步其他设置
+            netViewSettings.TextColor = _settings.TextColor;
+            netViewSettings.BackgroundColor = _settings.BackgroundColor;
+            netViewSettings.BackgroundOpacity = _settings.Opacity;
+            netViewSettings.ShowUnit = _settings.ShowUnit;
+            netViewSettings.SpeedUnit = _settings.SpeedUnit switch
+            {
+                0 => Shell.Models.SpeedUnit.Bytes,
+                1 => Shell.Models.SpeedUnit.KB,
+                2 => Shell.Models.SpeedUnit.MB,
+                _ => Shell.Models.SpeedUnit.Auto
+            };
+            netViewSettings.DoubleClickAction = _settings.DoubleClickAction switch
+            {
+                0 => Shell.Models.DoubleClickAction.None,
+                1 => Shell.Models.DoubleClickAction.TrafficAnalysis,
+                2 => Shell.Models.DoubleClickAction.Settings,
+                _ => Shell.Models.DoubleClickAction.None
+            };
+
             // 查找NetView窗口实例
             var netViewWindow = System.Windows.Application.Current.Windows.OfType<NetView>().FirstOrDefault();
             if (netViewWindow != null)
@@ -501,6 +531,9 @@ public partial class SettingsWindow : Window
 
                     // 更新菜单项状态
                     UpdateNetViewMenuItems(netViewWindow);
+
+                    // 强制刷新NetworkMonitorView中的TopList显示
+                    await RefreshNetworkMonitorViewModel();
 
                     Log.Info("NetView设置已实时应用");
                 }
@@ -546,6 +579,30 @@ public partial class SettingsWindow : Window
         catch (Exception ex)
         {
             Log.Warning($"更新NetView菜单项状态失败: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshNetworkMonitorViewModel()
+    {
+        try
+        {
+            // 直接通过NetViewSettings实例通知属性更改来触发UI更新
+            var netViewSettings = Shell.Models.NetViewSettings.Instance;
+
+            // 触发PropertyChanged事件来通知UI更新
+            var propertyChangedMethod = typeof(Shell.Models.NetViewSettings)
+                .GetMethod("OnPropertyChanged",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            propertyChangedMethod?.Invoke(netViewSettings, new object[] { "ShowNetworkTopList" });
+            propertyChangedMethod?.Invoke(netViewSettings, new object[] { "NetworkTopListCount" });
+            propertyChangedMethod?.Invoke(netViewSettings, new object[] { "IsTopListAvailable" });
+
+            Log.Info("NetworkMonitorViewModel 排行榜显示已刷新");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning($"刷新NetworkMonitorViewModel失败: {ex.Message}");
         }
     }
 
