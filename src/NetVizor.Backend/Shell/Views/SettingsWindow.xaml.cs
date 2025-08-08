@@ -5,13 +5,16 @@ using System.Windows.Media;
 using Shell.Models;
 using Microsoft.Win32;
 using Common.Logger;
+using Data.Models;
+using Data;
+using System.Linq;
 
 namespace Shell.Views;
 
 public partial class SettingsWindow : Window
 {
     private static SettingsWindow? _instance;
-    private NetViewSettings _settings;
+    private AppSetting _settings;
 
     public static SettingsWindow Instance
     {
@@ -29,7 +32,7 @@ public partial class SettingsWindow : Window
     private SettingsWindow()
     {
         InitializeComponent();
-        _settings = NetViewSettings.Instance;
+        _settings = new AppSetting();
         this.Loaded += SettingsWindow_Loaded;
         this.Closing += SettingsWindow_Closing;
 
@@ -42,7 +45,7 @@ public partial class SettingsWindow : Window
     public static void ShowWindow()
     {
         var window = Instance;
-        window.LoadCurrentSettings();
+        window.LoadCurrentSettingsAsync();
         window.UpdatePreview();
         window.Show();
         window.Activate();
@@ -61,27 +64,49 @@ public partial class SettingsWindow : Window
         Log.Info("SettingsWindow 隐藏");
     }
 
+    private async void LoadCurrentSettingsAsync()
+    {
+        try
+        {
+            _settings = await DatabaseManager.GetUserSettingsAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error4Ctx($"加载数据库设置失败: {ex.Message}");
+            _settings = new AppSetting(); // 使用默认设置
+        }
+
+        LoadCurrentSettings();
+    }
+
     private void LoadCurrentSettings()
     {
         // 加载当前设置到UI控件
         TextColorBox.Text = _settings.TextColor;
         BackgroundColorBox.Text = _settings.BackgroundColor;
-        OpacitySlider.Value = _settings.BackgroundOpacity;
+        OpacitySlider.Value = _settings.Opacity;
         ShowUnitCheckBox.IsChecked = _settings.ShowUnit;
 
-        // 设置速度单位
+        // 设置速度单位 - 需要转换数据库的int值到枚举
+        var speedUnitTag = _settings.SpeedUnit switch
+        {
+            0 => "Bytes",
+            1 => "KB",
+            2 => "MB",
+            _ => "Auto"
+        };
         foreach (ComboBoxItem item in SpeedUnitComboBox.Items)
         {
-            if (item.Tag.ToString() == _settings.SpeedUnit.ToString())
+            if (item.Tag.ToString() == speedUnitTag)
             {
                 SpeedUnitComboBox.SelectedItem = item;
                 break;
             }
         }
 
-        // 设置布局方向
-        VerticalLayoutRadio.IsChecked = _settings.LayoutDirection == LayoutDirection.Vertical;
-        HorizontalLayoutRadio.IsChecked = _settings.LayoutDirection == LayoutDirection.Horizontal;
+        // 设置布局方向 - 需要转换数据库的int值
+        VerticalLayoutRadio.IsChecked = _settings.LayoutDirection == 1; // 1为纵向
+        HorizontalLayoutRadio.IsChecked = _settings.LayoutDirection == 0; // 0为横向
 
         // 设置网速Top榜
         ShowTopListCheckBox.IsChecked = _settings.ShowNetworkTopList;
@@ -97,9 +122,16 @@ public partial class SettingsWindow : Window
         UpdateTopListAvailability();
 
         // 设置双击动作
+        var doubleClickTag = _settings.DoubleClickAction switch
+        {
+            0 => "None",
+            1 => "TrafficAnalysis",
+            2 => "Settings",
+            _ => "None"
+        };
         foreach (ComboBoxItem item in DoubleClickActionComboBox.Items)
         {
-            if (item.Tag.ToString() == _settings.DoubleClickAction.ToString())
+            if (item.Tag.ToString() == doubleClickTag)
             {
                 DoubleClickActionComboBox.SelectedItem = item;
                 break;
@@ -107,9 +139,9 @@ public partial class SettingsWindow : Window
         }
 
         // 设置窗口行为选项
-        TopmostCheckBox.IsChecked = _settings.Topmost;
-        LockPositionCheckBox.IsChecked = _settings.LockPosition;
-        ClickThroughCheckBox.IsChecked = _settings.ClickThrough;
+        TopmostCheckBox.IsChecked = _settings.IsTopmost;
+        LockPositionCheckBox.IsChecked = _settings.IsPositionLocked;
+        ClickThroughCheckBox.IsChecked = _settings.IsClickThrough;
         SnapToScreenCheckBox.IsChecked = _settings.SnapToScreen;
         ShowDetailedInfoCheckBox.IsChecked = _settings.ShowDetailedInfo;
 
@@ -297,20 +329,6 @@ public partial class SettingsWindow : Window
         // 详细信息设置变化，不需要预览更新
     }
 
-    private void ResetWindowPosition_Click(object sender, RoutedEventArgs e)
-    {
-        // 重置窗口位置 - 这里可以调用 NetView 的重置位置方法
-        try
-        {
-            System.Windows.MessageBox.Show("窗口位置已重置到屏幕中心。", "重置位置", MessageBoxButton.OK, MessageBoxImage.Information);
-            Log.Info("窗口位置重置请求");
-        }
-        catch (Exception ex)
-        {
-            Log.Error4Ctx($"重置窗口位置失败: {ex.Message}");
-        }
-    }
-
     private void UpdatePreview()
     {
         if (PreviewBorder == null || PreviewPanel == null) return;
@@ -379,39 +397,58 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void Apply_Click(object sender, RoutedEventArgs e)
+    private async void Apply_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            // 应用设置
+            // 应用设置到AppSetting对象
             _settings.TextColor = TextColorBox.Text;
             _settings.BackgroundColor = BackgroundColorBox.Text;
-            _settings.BackgroundOpacity = OpacitySlider.Value;
+            _settings.Opacity = (int)OpacitySlider.Value;
             _settings.ShowUnit = ShowUnitCheckBox.IsChecked == true;
 
-            var selectedUnit = ((ComboBoxItem)SpeedUnitComboBox.SelectedItem)?.Tag?.ToString() ?? "Auto";
-            _settings.SpeedUnit = Enum.Parse<SpeedUnit>(selectedUnit);
+            // 转换速度单位
+            var selectedUnit = ((ComboBoxItem)SpeedUnitComboBox.SelectedItem)?.Tag?.ToString() ?? "KB";
+            _settings.SpeedUnit = selectedUnit switch
+            {
+                "Bytes" => 0,
+                "KB" => 1,
+                "MB" => 2,
+                _ => 1 // 默认KB
+            };
 
-            _settings.LayoutDirection = HorizontalLayoutRadio.IsChecked == true
-                ? LayoutDirection.Horizontal
-                : LayoutDirection.Vertical;
+            // 转换布局方向
+            _settings.LayoutDirection = HorizontalLayoutRadio.IsChecked == true ? 0 : 1; // 0为横向，1为纵向
 
             _settings.ShowNetworkTopList = ShowTopListCheckBox.IsChecked == true;
             var selectedCount = ((ComboBoxItem)TopListCountComboBox.SelectedItem)?.Tag?.ToString() ?? "3";
             _settings.NetworkTopListCount = int.Parse(selectedCount);
 
+            // 转换双击动作
             var selectedAction = ((ComboBoxItem)DoubleClickActionComboBox.SelectedItem)?.Tag?.ToString() ?? "None";
-            _settings.DoubleClickAction = Enum.Parse<DoubleClickAction>(selectedAction);
+            _settings.DoubleClickAction = selectedAction switch
+            {
+                "None" => 0,
+                "TrafficAnalysis" => 1,
+                "Settings" => 2,
+                _ => 0
+            };
 
             // 应用窗口行为设置
-            _settings.Topmost = TopmostCheckBox.IsChecked == true;
-            _settings.LockPosition = LockPositionCheckBox.IsChecked == true;
-            _settings.ClickThrough = ClickThroughCheckBox.IsChecked == true;
+            _settings.IsTopmost = TopmostCheckBox.IsChecked == true;
+            _settings.IsPositionLocked = LockPositionCheckBox.IsChecked == true;
+            _settings.IsClickThrough = ClickThroughCheckBox.IsChecked == true;
             _settings.SnapToScreen = SnapToScreenCheckBox.IsChecked == true;
             _settings.ShowDetailedInfo = ShowDetailedInfoCheckBox.IsChecked == true;
 
-            // 保存设置
-            _settings.SaveSettings();
+            // 设置更新时间
+            _settings.UpdateTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+
+            // 保存设置到数据库
+            await DatabaseManager.SaveUserSettingsAsync(_settings);
+
+            // 通知NetView窗口应用新设置
+            await ApplySettingsToNetView();
 
             System.Windows.MessageBox.Show("设置已应用并保存。", "设置", MessageBoxButton.OK, MessageBoxImage.Information);
             Log.Info("设置已应用");
@@ -423,6 +460,95 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private async Task ApplySettingsToNetView()
+    {
+        try
+        {
+            // 查找NetView窗口实例
+            var netViewWindow = System.Windows.Application.Current.Windows.OfType<NetView>().FirstOrDefault();
+            if (netViewWindow != null)
+            {
+                // 通过反射获取私有字段_appSettings
+                var appSettingsField = typeof(NetView).GetField("_appSettings",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                if (appSettingsField != null)
+                {
+                    // 更新NetView的设置
+                    appSettingsField.SetValue(netViewWindow, _settings);
+
+                    // 应用窗口行为设置
+                    netViewWindow.Topmost = _settings.IsTopmost;
+
+                    // 应用点击穿透设置
+                    var setClickThroughMethod = typeof(NetView).GetMethod("SetClickThrough",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    setClickThroughMethod?.Invoke(netViewWindow, new object[] { _settings.IsClickThrough });
+
+                    // 应用屏幕边界约束设置
+                    if (_settings.SnapToScreen && !_settings.IsPositionLocked)
+                    {
+                        var snapToScreenMethod = typeof(NetView).GetMethod("SnapToScreen",
+                            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        snapToScreenMethod?.Invoke(netViewWindow, null);
+                    }
+
+                    // 触发窗口重绘以应用显示详细信息设置
+                    if (_settings.ShowDetailedInfo)
+                    {
+                        netViewWindow.InvalidateMeasure();
+                    }
+
+                    // 更新菜单项状态
+                    UpdateNetViewMenuItems(netViewWindow);
+
+                    Log.Info("NetView设置已实时应用");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning($"应用设置到NetView失败: {ex.Message}");
+        }
+    }
+
+    private void UpdateNetViewMenuItems(NetView netViewWindow)
+    {
+        try
+        {
+            // 通过反射更新菜单项状态
+            var contextMenu = netViewWindow.ContextMenu;
+            if (contextMenu?.Items != null)
+            {
+                foreach (var item in contextMenu.Items.OfType<MenuItem>())
+                {
+                    switch (item.Name)
+                    {
+                        case "TopmostMenuItem":
+                            item.IsChecked = _settings.IsTopmost;
+                            break;
+                        case "LockPositionMenuItem":
+                            item.IsChecked = _settings.IsPositionLocked;
+                            break;
+                        case "ClickThroughMenuItem":
+                            item.IsChecked = _settings.IsClickThrough;
+                            break;
+                        case "SnapToScreenMenuItem":
+                            item.IsChecked = _settings.SnapToScreen;
+                            break;
+                        case "DetailedInfoMenuItem":
+                            item.IsChecked = _settings.ShowDetailedInfo;
+                            break;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning($"更新NetView菜单项状态失败: {ex.Message}");
+        }
+    }
+
     private void RestoreDefaults_Click(object sender, RoutedEventArgs e)
     {
         var result = System.Windows.MessageBox.Show("确定要恢复默认设置吗？", "确认",
@@ -430,9 +556,43 @@ public partial class SettingsWindow : Window
 
         if (result == MessageBoxResult.Yes)
         {
-            _settings.RestoreDefaults();
+            // 恢复默认设置
+            _settings = new AppSetting(); // 使用默认值
             LoadCurrentSettings();
             UpdatePreview();
+        }
+    }
+
+    private void ResetWindowPosition_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // 查找NetView窗口实例
+            var netViewWindow = System.Windows.Application.Current.Windows.OfType<NetView>().FirstOrDefault();
+            if (netViewWindow != null)
+            {
+                // 重置到屏幕右上角
+                var workArea = SystemParameters.WorkArea;
+                netViewWindow.Left = workArea.Right - netViewWindow.Width - 20;
+                netViewWindow.Top = workArea.Top + 20;
+
+                // 同时更新数据库中的位置信息
+                _settings.WindowX = (int)netViewWindow.Left;
+                _settings.WindowY = (int)netViewWindow.Top;
+
+                System.Windows.MessageBox.Show("窗口位置已重置到屏幕右上角。", "重置位置", MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                Log.Info("NetView窗口位置已重置");
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("未找到NetView窗口。", "重置位置", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error4Ctx($"重置窗口位置失败: {ex.Message}");
+            System.Windows.MessageBox.Show($"重置窗口位置失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

@@ -58,6 +58,14 @@ public static class DatabaseManager
     }
 
     /// <summary>
+    /// 保存用户设置
+    /// </summary>
+    public static async Task SaveUserSettingsAsync(AppSetting settings)
+    {
+        await Instance.AppSettings.SaveSettingAsync(settings);
+    }
+
+    /// <summary>
     /// 检查数据库健康状态
     /// </summary>
     public static async Task<bool> IsHealthyAsync()
