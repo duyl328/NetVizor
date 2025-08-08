@@ -167,3 +167,6 @@ onMounted(() => {
   height: 100%;
 }
 </style>
+现在我想在src\views\MonitorView\components\TrafficChart.vue中实现网速的动态展示，目前他已经可以收集到信息，也能展示一些信息了，但是展示的效果不是我想要的
+src\views\dev\charts\BarAnimationDelay.vue 中我用模拟数据也实现了一个demo，可以展示网速数据并且可以通过滑块动态展示，你可以直接参照使用把TrafficChart中的组件换掉
+换成BarAnimationDelay中那样的使用形式，不过标题和图例可能要重新考虑拜访位置。 帮我做到把
