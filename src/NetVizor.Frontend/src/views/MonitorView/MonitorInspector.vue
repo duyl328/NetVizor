@@ -74,18 +74,8 @@
 
         <!-- 流量统计 -->
         <div class="detail-section">
-          <h4 class="detail-section-title">流量概览 (模拟)</h4>
-          <div class="traffic-stats">
-            <div class="traffic-item">
-              <span class="traffic-label">上传</span>
-              <span class="traffic-value upload">{{ trafficData.upload }}</span>
-            </div>
-            <div class="traffic-item">
-              <span class="traffic-label">下载</span>
-              <span class="traffic-value download">{{ trafficData.download }}</span>
-            </div>
-          </div>
-          <TrafficChart :data="chartData" />
+          <h4 class="detail-section-title">流量概览</h4>
+          <TrafficChart :data="trafficHistory" :max-data-points="60" />
         </div>
       </div>
 
@@ -107,6 +97,7 @@ import { storeToRefs } from 'pinia'
 import TrafficChart from './components/TrafficChart.vue'
 import { useApplicationStore } from '@/stores/application'
 import { useWebSocketStore } from '@/stores/websocketStore'
+import { useTrafficStore } from '@/stores/trafficStore'
 import { httpClient } from '@/utils/http'
 import { SubscriptionInfo } from '@/types/response'
 import { convertFileSize } from '@/utils/fileUtil'
@@ -120,8 +111,10 @@ defineProps<{
 // Store
 const applicationStore = useApplicationStore()
 const webSocketStore = useWebSocketStore()
+const trafficStore = useTrafficStore()
 const { selectedApp, inspectingAppDetails, isInspecting } = storeToRefs(applicationStore)
 const { isOpen } = storeToRefs(webSocketStore)
+const { trafficHistory } = storeToRefs(trafficStore)
 
 // 订阅应用详情
 const subscribeToAppDetails = (appPath: string) => {
@@ -190,23 +183,6 @@ const formatMemory = (memoryInBytes: number): string => {
   const result = convertFileSize(memoryInBytes, FILE_SIZE_UNIT_ENUM.B)
   return result.size + result.unit
 }
-
-// 模拟流量数据
-const trafficData = computed(() => {
-  if (!isInspecting.value) {
-    return { upload: '0 B', download: '0 B' }
-  }
-  // 将来可以从API获取真实数据
-  return {
-    upload: '1.2 MB',
-    download: '5.8 MB',
-  }
-})
-
-// 模拟图表数据
-const chartData = computed(() => {
-  return Array.from({ length: 20 }, () => Math.random() * 100)
-})
 </script>
 
 <style scoped>

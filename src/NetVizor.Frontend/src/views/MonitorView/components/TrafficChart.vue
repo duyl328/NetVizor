@@ -5,31 +5,24 @@
       <span class="chart-value">{{ currentSpeed }}</span>
     </div>
     <div class="chart-container">
-      <div class="chart-bars">
-        <div
-          v-for="(value, index) in data"
-          :key="index"
-          class="chart-bar"
-          :style="{ height: value + '%' }"
-          :class="{ 'bar-active': index === data.length - 1 }"
-        >
-          <div class="bar-tooltip">{{ formatSpeed(value) }}</div>
-        </div>
-      </div>
-      <div class="chart-grid">
-        <div class="grid-line" v-for="i in 4" :key="i"></div>
-      </div>
+      <v-chart
+        ref="chartRef"
+        class="echarts-container"
+        :option="chartOption"
+        :autoresize="true"
+        :theme="chartTheme"
+      />
     </div>
     <div class="chart-footer">
       <span class="chart-label">{{ timeRange }}</span>
       <div class="chart-legend">
         <span class="legend-item upload">
-          <span class="legend-dot"></span>
-          上传
+          <span class="legend-dot upload"></span>
+          上传: {{ formatSpeed(currentUploadSpeed) }}
         </span>
         <span class="legend-item download">
-          <span class="legend-dot"></span>
-          下载
+          <span class="legend-dot download"></span>
+          下载: {{ formatSpeed(currentDownloadSpeed) }}
         </span>
       </div>
     </div>
@@ -37,47 +30,318 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import VChart from 'vue-echarts'
+import { use, getInstanceByDom } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart } from 'echarts/charts'
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DataZoomComponent,
+  ToolboxComponent
+} from 'echarts/components'
+import type { EChartsOption } from 'echarts'
+import { convertFileSize } from '@/utils/fileUtil'
+import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
+
+// 注册必需的组件
+use([
+  CanvasRenderer,
+  BarChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DataZoomComponent,
+  ToolboxComponent
+])
+
+// 数据点管理常量
+const MAX_POINTS = 300 // 最大数据点数（5分钟）
+const DEFAULT_SHOW = 30 // 默认显示数量
+const MAX_SHOW = 60 // 最大显示数量
+const MIN_SHOW = 30 // 最小显示数量
+
+// Props接口定义
+interface TrafficDataPoint {
+  timestamp: number
+  uploadSpeed: number
+  downloadSpeed: number
+}
 
 // Props
 const props = defineProps<{
-  data: number[]
+  data?: TrafficDataPoint[]
+  maxDataPoints?: number
 }>()
 
-// 当前速度
+// 默认props值
+const maxDataPoints = computed(() => props.maxDataPoints || 60) // 默认60个数据点（约20分钟，每20秒一个点）
+
+// 组件引用
+const chartRef = ref()
+
+// 图表主题（深色模式适配）
+const chartTheme = ref('light')
+
+// 当前网速数据
+const currentUploadSpeed = computed(() => {
+  const data = props.data || []
+  return data.length > 0 ? data[data.length - 1].uploadSpeed : 0
+})
+
+const currentDownloadSpeed = computed(() => {
+  const data = props.data || []
+  return data.length > 0 ? data[data.length - 1].downloadSpeed : 0
+})
+
 const currentSpeed = computed(() => {
-  const lastValue = props.data[props.data.length - 1] || 0
-  return formatSpeed(lastValue)
+  const total = currentUploadSpeed.value + currentDownloadSpeed.value
+  return formatSpeed(total)
 })
 
 // 时间范围
-const timeRange = ref('最近 60 秒')
+const timeRange = computed(() => {
+  const minutes = Math.ceil((maxDataPoints.value * 20) / 60) // 20秒一个点
+  return `最近 ${minutes} 分钟`
+})
 
 // 格式化速度
-const formatSpeed = (value: number) => {
-  const speed = (value / 100) * 10 // 假设最大10MB/s
-  if (speed < 1) {
-    return `${(speed * 1024).toFixed(0)} KB/s`
-  }
-  return `${speed.toFixed(1)} MB/s`
+const formatSpeed = (bytesPerSecond: number): string => {
+  if (bytesPerSecond === 0) return '0 B/s'
+  const result = convertFileSize(bytesPerSecond, FILE_SIZE_UNIT_ENUM.B)
+  return `${result.size}${result.unit}/s`
 }
 
-// 动画定时器
-let animationTimer: number | null = null
+// 计算缩放范围
+const getZoomRange = (currentPoints: number) => {
+  if (currentPoints <= DEFAULT_SHOW) {
+    return { start: 0, end: 100 }
+  }
+  const spanPercent = (DEFAULT_SHOW / currentPoints) * 100
+  return { start: 100 - spanPercent, end: 100 }
+}
+
+// 生成时间标签
+const generateTimeLabels = (dataLength: number): string[] => {
+  const labels: string[] = []
+  const now = Date.now()
+
+  for (let i = dataLength - 1; i >= 0; i--) {
+    const time = new Date(now - i * 1000) // 每秒一个点
+    const minutes = time.getMinutes().toString().padStart(2, '0')
+    const seconds = time.getSeconds().toString().padStart(2, '0')
+    labels.push(`${minutes}:${seconds}`)
+  }
+
+  return labels
+}
+
+// ECharts配置
+const chartOption = computed<EChartsOption>(() => {
+  const data = props.data || []
+  const limitedData = data.slice(-maxDataPoints.value) // 只取最近的数据点
+
+  // 准备数据
+  const uploadData = limitedData.map(d => +(d.uploadSpeed / 1024 / 1024).toFixed(2))
+  const downloadData = limitedData.map(d => +(d.downloadSpeed / 1024 / 1024).toFixed(2))
+  const timeLabels = generateTimeLabels(limitedData.length)
+
+  return {
+    animation: true,
+    animationDuration: 1000,
+    animationEasing: 'elasticOut',
+    animationDelayUpdate: (idx: number) => idx * 25,
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
+      formatter: (params: unknown[]) => {
+        const time = params[0]?.axisValue || ''
+        let tooltip = `<div style="margin-bottom: 4px; font-weight: bold;">${time}</div>`
+
+        params.forEach((param) => {
+          const color = param.color
+          const seriesName = param.seriesName
+          const value = param.value
+          tooltip += `
+            <div style="margin-bottom: 2px;">
+              <span style="display:inline-block;margin-right:4px;border-radius:50%;width:10px;height:10px;background-color:${color};"></span>
+              ${seriesName}: ${value} MB/s
+            </div>
+          `
+        })
+
+        return tooltip
+      },
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      textStyle: {
+        color: '#ffffff',
+        fontSize: 12
+      }
+    },
+    legend: {
+      show: false // 我们使用自定义图例
+    },
+    grid: {
+      top: 10,
+      left: 10,
+      right: 10,
+      bottom: 20,
+      containLabel: false
+    },
+    xAxis: {
+      type: 'category',
+      data: timeLabels,
+      show: false // 隐藏x轴，节省空间
+    },
+    yAxis: {
+      type: 'value',
+      show: false, // 隐藏y轴，节省空间
+      min: 0
+    },
+    series: [
+      {
+        name: '上传',
+        type: 'bar',
+        data: uploadData,
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              {
+                offset: 0,
+                color: '#10b981' // 绿色 - 顶部
+              },
+              {
+                offset: 1,
+                color: '#059669' // 深绿色 - 底部
+              }
+            ]
+          },
+          borderRadius: [2, 2, 0, 0]
+        },
+        emphasis: {
+          itemStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                {
+                  offset: 0,
+                  color: '#34d399'
+                },
+                {
+                  offset: 1,
+                  color: '#10b981'
+                }
+              ]
+            }
+          }
+        },
+        animationDelay: (idx: number) => idx * 10, // bar-animation-delay效果
+      },
+      {
+        name: '下载',
+        type: 'bar',
+        data: downloadData,
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              {
+                offset: 0,
+                color: '#3b82f6' // 蓝色 - 顶部
+              },
+              {
+                offset: 1,
+                color: '#1d4ed8' // 深蓝色 - 底部
+              }
+            ]
+          },
+          borderRadius: [2, 2, 0, 0]
+        },
+        emphasis: {
+          itemStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                {
+                  offset: 0,
+                  color: '#60a5fa'
+                },
+                {
+                  offset: 1,
+                  color: '#3b82f6'
+                }
+              ]
+            }
+          }
+        },
+        animationDelay: (idx: number) => idx * 10 + 100 ,// bar-animation-delay效果，稍微延迟
+      }
+    ]
+  }
+})
+
+// 监听数据变化，更新图表
+watch(
+  () => props.data,
+  () => {
+    nextTick(() => {
+      if (chartRef.value) {
+        chartRef.value.resize()
+      }
+    })
+  },
+  { deep: true }
+)
+
+// 主题切换检测
+const detectTheme = () => {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  chartTheme.value = isDark ? 'dark' : 'light'
+}
 
 onMounted(() => {
-  // 添加入场动画
-  animationTimer = window.setTimeout(() => {
-    document.querySelectorAll('.chart-bar').forEach((el, index) => {
-      ;(el as HTMLElement).style.transitionDelay = `${index * 20}ms`
-    })
-  }, 100)
+  detectTheme()
+
+  // 监听主题变化
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  mediaQuery.addEventListener('change', detectTheme)
+
+  // 确保图表正确初始化
+  nextTick(() => {
+    if (chartRef.value) {
+      chartRef.value.resize()
+    }
+  })
 })
 
 onUnmounted(() => {
-  if (animationTimer) {
-    clearTimeout(animationTimer)
-  }
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  mediaQuery.removeEventListener('change', detectTheme)
 })
 </script>
 
@@ -88,6 +352,9 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 16px;
   border: 1px solid var(--border-tertiary);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 图表头部 */
@@ -96,6 +363,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .chart-title {
@@ -115,74 +383,16 @@ onUnmounted(() => {
 
 /* 图表主体 */
 .chart-container {
-  position: relative;
-  height: 80px;
-  margin-bottom: 8px;
-}
-
-.chart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 100%;
-  position: relative;
-  z-index: 2;
-}
-
-.chart-bar {
   flex: 1;
-  background: linear-gradient(to top, var(--accent-primary), var(--accent-secondary));
-  border-radius: 2px 2px 0 0;
-  min-height: 2px;
-  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 120px;
+  margin-bottom: 12px;
   position: relative;
-  cursor: pointer;
 }
 
-.chart-bar:hover {
-  background: linear-gradient(to top, #1d4ed8, #0891b2);
-}
-
-.chart-bar.bar-active {
-  background: linear-gradient(to top, var(--accent-warning), var(--accent-purple));
-}
-
-/* 工具提示 */
-.bar-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-4px);
-  background: var(--bg-tooltip);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-
-.chart-bar:hover .bar-tooltip {
-  opacity: 1;
-}
-
-/* 网格线 */
-.chart-grid {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  pointer-events: none;
-}
-
-.grid-line {
-  height: 1px;
-  background: var(--border-secondary);
-  opacity: 0.5;
+.echarts-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 120px;
 }
 
 /* 图表底部 */
@@ -190,6 +400,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .chart-label {
@@ -201,6 +412,7 @@ onUnmounted(() => {
 .chart-legend {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .legend-item {
@@ -209,27 +421,100 @@ onUnmounted(() => {
   gap: 4px;
   font-size: 11px;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .legend-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-primary);
+  flex-shrink: 0;
 }
 
-.legend-item.upload .legend-dot {
-  background: var(--accent-warning);
+.legend-dot.upload {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
 }
 
-.legend-item.download .legend-dot {
-  background: var(--accent-secondary);
+.legend-dot.download {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
 }
 
-/* 响应式 */
+/* 上传和下载颜色区分 */
+.legend-item.upload {
+  color: #10b981;
+}
+
+.legend-item.download {
+  color: #3b82f6;
+}
+
+/* 响应式设计 */
 @media (max-width: 1400px) {
   .chart-container {
-    height: 60px;
+    min-height: 100px;
   }
+
+  .echarts-container {
+    min-height: 100px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .traffic-chart {
+    padding: 12px;
+  }
+
+  .chart-legend {
+    gap: 8px;
+  }
+
+  .legend-item {
+    font-size: 10px;
+  }
+
+  .chart-header {
+    margin-bottom: 8px;
+  }
+
+  .chart-container {
+    margin-bottom: 8px;
+    min-height: 80px;
+  }
+
+  .echarts-container {
+    min-height: 80px;
+  }
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .chart-value {
+    color: #60a5fa;
+  }
+
+  .legend-item.upload {
+    color: #34d399;
+  }
+
+  .legend-item.download {
+    color: #60a5fa;
+  }
+
+  .legend-dot.upload {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 0 4px rgba(52, 211, 153, 0.4);
+  }
+
+  .legend-dot.download {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    box-shadow: 0 0 4px rgba(96, 165, 250, 0.4);
+  }
+}
+
+/* ECharts自定义样式覆盖 */
+:deep(.echarts-tooltip) {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
 }
 </style>

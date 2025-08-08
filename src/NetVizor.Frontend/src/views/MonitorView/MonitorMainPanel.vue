@@ -363,6 +363,7 @@ import { httpClient } from '@/utils/http'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { useProcessStore } from '@/stores/processInfo'
 import { useFilterStore } from '@/stores/filterStore'
+import { useTrafficStore } from '@/stores/trafficStore'
 import type { ProcessType, ConnectionInfo, IPEndPoint } from '@/types/process'
 import { ConnectionState, FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
 import { convertFileSize } from '@/utils/fileUtil'
@@ -379,6 +380,8 @@ const { processInfos } = storeToRefs(processStore)
 
 const filterStore = useFilterStore()
 const { filterText, isFiltering, filteredProcesses } = storeToRefs(filterStore)
+
+const trafficStore = useTrafficStore()
 
 // 订阅进程信息
 processStore.subscribe()
@@ -438,6 +441,37 @@ const stats = computed(() => {
     totalDownloadSpeed,
   }
 })
+
+// 数据收集定时器
+let dataCollectionTimer: number | null = null
+
+// 收集网络流量数据
+const collectTrafficData = () => {
+  const currentStats = stats.value
+  trafficStore.addTrafficData(
+    currentStats.totalUploadSpeed,
+    currentStats.totalDownloadSpeed
+  )
+}
+
+// 启动数据收集
+const startDataCollection = () => {
+  // 立即收集一次数据
+  collectTrafficData()
+  
+  // 每20秒收集一次数据
+  dataCollectionTimer = window.setInterval(() => {
+    collectTrafficData()
+  }, trafficStore.dataInterval)
+}
+
+// 停止数据收集
+const stopDataCollection = () => {
+  if (dataCollectionTimer) {
+    clearInterval(dataCollectionTimer)
+    dataCollectionTimer = null
+  }
+}
 
 // 获取所有连接列表（统一显示）
 const allConnections = computed(() => {
@@ -796,6 +830,9 @@ onMounted(() => {
 
   window.addEventListener('resize', updateMainViewHeight)
 
+  // 启动数据收集
+  startDataCollection()
+
   watch(
     [isOpen, selectedApp],
     ([newValue, newValue1]) => {
@@ -823,6 +860,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateMainViewHeight)
+
+  // 停止数据收集
+  stopDataCollection()
 
   const subAppInfo: SubscriptionInfo = {
     subscriptionType: 'ProcessInfo',
