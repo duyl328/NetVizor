@@ -45,12 +45,12 @@ public class AppSetting
     /// <summary>
     /// 文本颜色
     /// </summary>
-    public string TextColor { get; set; } = "#FFFFFF";
+    public string TextColor { get; set; } = "#000000";
 
     /// <summary>
     /// 背景颜色
     /// </summary>
-    public string BackgroundColor { get; set; } = "#000000";
+    public string BackgroundColor { get; set; } = "#FFFFFF";
 
     /// <summary>
     /// 透明度 (0-100)

@@ -78,6 +78,9 @@ public partial class SettingsWindow : Window
 
     private void LoadCurrentSettings()
     {
+        Log.Info(
+            $"开始加载设置，数据库中的值: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}");
+
         // 加载当前设置到UI控件
         TextColorBox.Text = _settings.TextColor;
         BackgroundColorBox.Text = _settings.BackgroundColor;
@@ -105,19 +108,26 @@ public partial class SettingsWindow : Window
         VerticalLayoutRadio.IsChecked = _settings.LayoutDirection == 1; // 1为纵向
         HorizontalLayoutRadio.IsChecked = _settings.LayoutDirection == 0; // 0为横向
 
+        Log.Info(
+            $"布局方向设置: LayoutDirection={_settings.LayoutDirection}, VerticalLayoutRadio.IsChecked={VerticalLayoutRadio.IsChecked}, HorizontalLayoutRadio.IsChecked={HorizontalLayoutRadio.IsChecked}");
+
         // 设置网速Top榜
         ShowTopListCheckBox.IsChecked = _settings.ShowNetworkTopList;
+        Log.Info(
+            $"设置ShowTopListCheckBox.IsChecked = {_settings.ShowNetworkTopList}, 实际值: {ShowTopListCheckBox.IsChecked}");
+
         foreach (ComboBoxItem item in TopListCountComboBox.Items)
         {
             if (item.Tag.ToString() == _settings.NetworkTopListCount.ToString())
             {
                 TopListCountComboBox.SelectedItem = item;
+                Log.Info($"设置TopListCountComboBox选中项为: {_settings.NetworkTopListCount}");
                 break;
             }
         }
 
         Log.Info(
-            $"加载网速排行榜设置: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}, IsHorizontal={_settings.LayoutDirection == 0}");
+            $"加载网速排行榜设置完成: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}, IsHorizontal={_settings.LayoutDirection == 0}");
 
         UpdateTopListAvailability();
 
@@ -268,6 +278,7 @@ public partial class SettingsWindow : Window
 
     private void ShowTopListCheckBox_Changed(object sender, RoutedEventArgs e)
     {
+        Log.Info($"ShowTopListCheckBox_Changed: IsChecked={ShowTopListCheckBox.IsChecked}");
         UpdateTopListCountVisibility();
     }
 
@@ -283,6 +294,9 @@ public partial class SettingsWindow : Window
         var isHorizontal = HorizontalLayoutRadio.IsChecked == true;
         ShowTopListCheckBox.IsEnabled = isHorizontal;
 
+        Log.Info(
+            $"UpdateTopListAvailability: isHorizontal={isHorizontal}, ShowTopListCheckBox.IsEnabled={ShowTopListCheckBox.IsEnabled}");
+
         UpdateTopListCountVisibility();
     }
 
@@ -292,6 +306,9 @@ public partial class SettingsWindow : Window
 
         var isEnabled = ShowTopListCheckBox.IsEnabled && ShowTopListCheckBox.IsChecked == true;
         TopListCountComboBox.IsEnabled = isEnabled;
+
+        Log.Info(
+            $"UpdateTopListCountVisibility: ShowTopListCheckBox.IsEnabled={ShowTopListCheckBox.IsEnabled}, ShowTopListCheckBox.IsChecked={ShowTopListCheckBox.IsChecked}, TopListCountComboBox.IsEnabled={TopListCountComboBox.IsEnabled}");
     }
 
     private void DoubleClickActionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -396,6 +413,10 @@ public partial class SettingsWindow : Window
     {
         try
         {
+            Log.Info("开始应用设置");
+            Log.Info(
+                $"应用前UI状态: ShowTopListCheckBox.IsChecked={ShowTopListCheckBox.IsChecked}, TopListCountComboBox.SelectedItem={(TopListCountComboBox.SelectedItem as ComboBoxItem)?.Tag}");
+
             // 应用设置到AppSetting对象
             _settings.TextColor = TextColorBox.Text;
             _settings.BackgroundColor = BackgroundColorBox.Text;
@@ -416,12 +437,18 @@ public partial class SettingsWindow : Window
             _settings.LayoutDirection = HorizontalLayoutRadio.IsChecked == true ? 0 : 1; // 0为横向，1为纵向
 
             // 保存网速Top榜设置 - 只在横向布局时保存为true，纵向布局时保存实际的UI状态但应用时会被忽略
-            _settings.ShowNetworkTopList = ShowTopListCheckBox.IsChecked == true;
-            var selectedCount = ((ComboBoxItem)TopListCountComboBox.SelectedItem)?.Tag?.ToString() ?? "3";
-            _settings.NetworkTopListCount = int.Parse(selectedCount);
+            var uiShowTopList = ShowTopListCheckBox.IsChecked == true;
+            var selectedCountTag = ((ComboBoxItem)TopListCountComboBox.SelectedItem)?.Tag?.ToString() ?? "3";
+            var uiTopListCount = int.Parse(selectedCountTag);
 
             Log.Info(
-                $"保存网速排行榜设置: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}, IsHorizontal={HorizontalLayoutRadio.IsChecked}");
+                $"准备保存: UI状态 ShowTopList={uiShowTopList}, Count={uiTopListCount}, 当前布局方向={_settings.LayoutDirection}");
+
+            _settings.ShowNetworkTopList = uiShowTopList;
+            _settings.NetworkTopListCount = uiTopListCount;
+
+            Log.Info(
+                $"保存到_settings: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}, IsHorizontal={HorizontalLayoutRadio.IsChecked}");
 
             // 转换双击动作
             var selectedAction = ((ComboBoxItem)DoubleClickActionComboBox.SelectedItem)?.Tag?.ToString() ?? "None";
@@ -443,8 +470,18 @@ public partial class SettingsWindow : Window
             // 设置更新时间
             _settings.UpdateTime = DateTimeOffset.Now.ToUnixTimeSeconds();
 
+            Log.Info(
+                $"准备保存到数据库: ShowNetworkTopList={_settings.ShowNetworkTopList}, NetworkTopListCount={_settings.NetworkTopListCount}");
+
             // 保存设置到数据库
             await DatabaseManager.SaveUserSettingsAsync(_settings);
+
+            Log.Info("数据库保存完成，开始验证");
+
+            // 验证保存结果
+            var verifySettings = await DatabaseManager.GetUserSettingsAsync();
+            Log.Info(
+                $"验证保存结果: ShowNetworkTopList={verifySettings.ShowNetworkTopList}, NetworkTopListCount={verifySettings.NetworkTopListCount}");
 
             // 通知NetView窗口应用新设置
             await ApplySettingsToNetView();

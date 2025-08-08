@@ -114,11 +114,11 @@
                                   Unchecked="ShowUnitCheckBox_Changed" />
                         <CheckBox x:Name="ShowTopListCheckBox" Content="显示网速排行榜" Margin="0,4,0,0"
                                   IsChecked="False" Checked="ShowTopListCheckBox_Changed"
-                                  Unchecked="ShowTopListCheckBox_Changed" IsEnabled="False" />
+                                  Unchecked="ShowTopListCheckBox_Changed" />
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                             <TextBlock Text="排行榜数量:" VerticalAlignment="Center" Margin="0,0,8,0" />
                             <ComboBox x:Name="TopListCountComboBox" Width="80"
-                                      SelectionChanged="TopListCountComboBox_SelectionChanged" IsEnabled="False">
+                                      SelectionChanged="TopListCountComboBox_SelectionChanged">
                                 <ComboBoxItem Content="1" Tag="1" />
                                 <ComboBoxItem Content="2" Tag="2" />
                                 <ComboBoxItem Content="3" Tag="3" IsSelected="True" />
