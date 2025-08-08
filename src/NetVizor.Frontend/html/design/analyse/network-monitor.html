@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetVizor - 网络监控</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #1a1d23;
+            --secondary-bg: #252832;
+            --card-bg: #2d3142;
+            --border-color: #3e4451;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a6b8;
+            --accent-blue: #007bff;
+            --accent-green: #28a745;
+            --accent-red: #dc3545;
+            --accent-orange: #fd7e14;
+            --hover-bg: #3a3f4b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-blue);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-tab.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: var(--hover-bg);
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .time-selector {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #218838;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 64px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: var(--secondary-bg);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .search-box {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .app-item, .network-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .app-item:hover, .network-item:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-blue);
+        }
+
+        .app-item.active, .network-item.active {
+            border-color: var(--accent-blue);
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        .app-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-blue);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .app-info {
+            flex: 1;
+        }
+
+        .app-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .app-status {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .network-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            margin-left: auto;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            opacity: 0.3;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .stat-change {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-change.positive {
+            color: var(--accent-green);
+        }
+
+        .stat-change.negative {
+            color: var(--accent-red);
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .chart-canvas {
+            height: 300px;
+        }
+
+        .table-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: var(--secondary-bg);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--hover-bg);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--accent-green);
+        }
+
+        .status-inactive {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--accent-red);
+        }
+
+        .protocol-badge {
+            background: rgba(0, 123, 255, 0.2);
+            color: var(--accent-blue);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tabs {
+                gap: 1rem;
+            }
+            
+            .nav-tab {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--accent-blue);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-network-wired"></i>
+            NetVizor
+        </div>
+        <nav>
+            <ul class="nav-tabs">
+                <li class="nav-tab active" data-tab="overview">概览</li>
+                <li class="nav-tab" data-tab="network">网卡监控</li>
+                <li class="nav-tab" data-tab="applications">应用监控</li>
+                <li class="nav-tab" data-tab="connections">连接管理</li>
+            </ul>
+        </nav>
+        <div class="controls">
+            <select class="time-selector">
+                <option value="5s">实时 (5秒)</option>
+                <option value="1h">1 小时</option>
+                <option value="1d" selected>1 天</option>
+                <option value="1w">1 周</option>
+                <option value="1m">1 月</option>
+            </select>
+            <button class="refresh-btn">
+                <i class="fas fa-sync-alt"></i> 刷新
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- 概览标签页 -->
+        <div class="tab-content active" id="overview">
+            <div class="content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-blue);">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-blue);">125.3 MB/s</div>
+                        <div class="stat-label">下载速度</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +15.2% 比昨天
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-green);">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-green);">58.7 MB/s</div>
+                        <div class="stat-label">上传速度</div>
+                        <div class="stat-change negative">
+                            <i class="fas fa-arrow-down"></i>
+                            -3.8% 比昨天
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-orange);">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-orange);">342</div>
+                        <div class="stat-label">活跃连接</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +28 个新连接
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-red);">
+                            <i class="fas fa-desktop"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-red);">23</div>
+                        <div class="stat-label">活跃应用</div>
+                        <div class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i>
+                            +2 个应用
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">网络流量趋势</h3>
+                        <div class="chart-legend">
+                            <span style="color: var(--accent-blue);">● 下载</span>
+                            <span style="color: var(--accent-green); margin-left: 20px;">● 上传</span>
+                        </div>
+                    </div>
+                    <canvas id="overviewChart" class="chart-canvas"></canvas>
+                </div>
+
+                <div class="two-column-layout">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3 class="table-title">网卡状态</h3>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>网卡名称</th>
+                                    <th>状态</th>
+                                    <th>下载速度</th>
+                                    <th>上传速度</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-ethernet" style="color: var(--accent-blue);"></i>
+                                            以太网适配器
+                                        </div>
+                                    </td>
+                                    <td><span class="status-badge status-active">活跃</span></td>
+                                    <td>89.2 MB/s</td>
+                                    <td>32.1 MB/s</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-wifi" style="color: var(--accent-green);"></i>
+                                            Wi-Fi 6 适配器
+                                        </div>
+                                    </td>
+                                    <td><span class="status-badge status-active">活跃</span></td>
+                                    <td>36.1 MB/s</td>
+                                    <td>26.6 MB/s</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-network-wired" style="color: var(--text-secondary);"></i>
+                                            虚拟适配器 1
+                                        </div>
+                                    </td>
+                                    <td><span class="status-badge status-inactive">未使用</span></td>
+                                    <td>0 B/s</td>
+                                    <td>0 B/s</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3 class="table-title">流量排行 TOP 5</h3>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>应用程序</th>
+                                    <th>下载量</th>
+                                    <th>上传量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="app-icon" style="background: #4285f4;">
+                                                <i class="fab fa-chrome"></i>
+                                            </div>
+                                            Google Chrome
+                                        </div>
+                                    </td>
+                                    <td>2.3 GB</td>
+                                    <td>456 MB</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="app-icon" style="background: #7289da;">
+                                                <i class="fab fa-discord"></i>
+                                            </div>
+                                            Discord
+                                        </div>
+                                    </td>
+                                    <td>1.8 GB</td>
+                                    <td>890 MB</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="app-icon" style="background: #ff6b6b;">
+                                                <i class="fab fa-steam"></i>
+                                            </div>
+                                            Steam
+                                        </div>
+                                    </td>
+                                    <td>15.2 GB</td>
+                                    <td>125 MB</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="app-icon" style="background: #0078d4;">
+                                                <i class="fab fa-microsoft"></i>
+                                            </div>
+                                            Microsoft Edge
+                                        </div>
+                                    </td>
+                                    <td>892 MB</td>
+                                    <td>234 MB</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div class="app-icon" style="background: #00b4d8;">
+                                                <i class="fas fa-code"></i>
+                                            </div>
+                                            Visual Studio Code
+                                        </div>
+                                    </td>
+                                    <td>567 MB</td>
+                                    <td>189 MB</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 网卡监控标签页 -->
+        <div class="tab-content" id="network">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h3 class="sidebar-title">网络适配器</h3>
+                    <input type="text" class="search-box" placeholder="搜索网卡...">
+                </div>
+                <div class="sidebar-content">
+                    <div class="network-item active">
+                        <i class="fas fa-ethernet" style="color: var(--accent-blue); font-size: 1.5rem;"></i>
+                        <div class="app-info">
+                            <div class="app-name">以太网适配器</div>
+                            <div class="app-status">下载: 89.2 MB/s | 上传: 32.1 MB/s</div>
+                        </div>
+                        <div class="network-status"></div>
+                    </div>
+                    <div class="network-item">
+                        <i class="fas fa-wifi" style="color: var(--accent-green); font-size: 1.5rem;"></i>
+                        <div class="app-info">
+                            <div class="app-name">Wi-Fi 6 适配器</div>
+                            <div class="app-status">下载: 36.1 MB/s | 上传: 26.6 MB/s</div>
+                        </div>
+                        <div class="network-status"></div>
+                    </div>
+                    <div class="network-item">
+                        <i class="fas fa-network-wired" style="color: var(--text-secondary); font-size: 1.5rem;"></i>
+                        <div class="app-info">
+                            <div class="app-name">虚拟适配器 1</div>
+                            <div class="app-status">未使用</div>
+                        </div>
+                        <div class="network-status" style="background: var(--accent-red);"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-blue);">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-blue);">89.2 MB/s</div>
+                        <div class="stat-label">当前下载速度</div>
+                        <div class="stat-change">峰值: 156.8 MB/s</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-green);">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-green);">32.1 MB/s</div>
+                        <div class="stat-label">当前上传速度</div>
+                        <div class="stat-change">峰值: 89.4 MB/s</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-orange);">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-orange);">45.2 GB</div>
+                        <div class="stat-label">今日总流量</div>
+                        <div class="stat-change positive">比昨天多 12.3%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-red);">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-red);">1 Gbps</div>
+                        <div class="stat-label">接口速率</div>
+                        <div class="stat-change">全双工模式</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">以太网适配器 - 实时流量监控</h3>
+                    </div>
+                    <canvas id="networkChart" class="chart-canvas"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">网卡详细信息</h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>属性</th>
+                                <th>值</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>适配器名称</td>
+                                <td>Realtek PCIe GbE Family Controller</td>
+                            </tr>
+                            <tr>
+                                <td>MAC 地址</td>
+                                <td>00:1B:44:11:3A:B7</td>
+                            </tr>
+                            <tr>
+                                <td>IP 地址</td>
+                                <td>192.168.1.100</td>
+                            </tr>
+                            <tr>
+                                <td>子网掩码</td>
+                                <td>255.255.255.0</td>
+                            </tr>
+                            <tr>
+                                <td>默认网关</td>
+                                <td>192.168.1.1</td>
+                            </tr>
+                            <tr>
+                                <td>DNS 服务器</td>
+                                <td>8.8.8.8, 8.8.4.4</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 应用监控标签页 -->
+        <div class="tab-content" id="applications">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h3 class="sidebar-title">应用程序</h3>
+                    <input type="text" class="search-box" placeholder="搜索应用...">
+                </div>
+                <div class="sidebar-content">
+                    <div class="app-item active">
+                        <div class="app-icon" style="background: #4285f4;">
+                            <i class="fab fa-chrome"></i>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Google Chrome</div>
+                            <div class="app-status">下载: 45.2 MB/s | 上传: 12.1 MB/s</div>
+                        </div>
+                    </div>
+                    <div class="app-item">
+                        <div class="app-icon" style="background: #7289da;">
+                            <i class="fab fa-discord"></i>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Discord</div>
+                            <div class="app-status">下载: 2.3 MB/s | 上传: 8.7 MB/s</div>
+                        </div>
+                    </div>
+                    <div class="app-item">
+                        <div class="app-icon" style="background: #ff6b6b;">
+                            <i class="fab fa-steam"></i>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Steam</div>
+                            <div class="app-status">下载: 98.7 MB/s | 上传: 0.2 MB/s</div>
+                        </div>
+                    </div>
+                    <div class="app-item">
+                        <div class="app-icon" style="background: #0078d4;">
+                            <i class="fab fa-microsoft"></i>
+                        </div>
+                        <div class="app-info">
+                            <div class="app-name">Microsoft Edge</div>
+                            <div class="app-status">下载: 5.6 MB/s | 上传: 1.2 MB/s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-blue);">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-blue);">45.2 MB/s</div>
+                        <div class="stat-label">应用下载速度</div>
+                        <div class="stat-change positive">活跃连接: 28</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-green);">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-green);">12.1 MB/s</div>
+                        <div class="stat-label">应用上传速度</div>
+                        <div class="stat-change">发送连接: 15</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-orange);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-orange);">3h 42m</div>
+                        <div class="stat-label">运行时间</div>
+                        <div class="stat-change">进程 ID: 4892</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-red);">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-red);">1.2 GB</div>
+                        <div class="stat-label">内存使用</div>
+                        <div class="stat-change">CPU: 8.5%</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Google Chrome - 网络活动</h3>
+                    </div>
+                    <canvas id="appChart" class="chart-canvas"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">应用程序连接</h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>本地地址</th>
+                                <th>远程地址</th>
+                                <th>协议</th>
+                                <th>状态</th>
+                                <th>下载</th>
+                                <th>上传</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>192.168.1.100:52341</td>
+                                <td>142.250.191.3:443</td>
+                                <td><span class="protocol-badge">HTTPS</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>25.3 MB/s</td>
+                                <td>2.1 MB/s</td>
+                            </tr>
+                            <tr>
+                                <td>192.168.1.100:52342</td>
+                                <td>157.240.22.35:443</td>
+                                <td><span class="protocol-badge">HTTPS</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>8.7 MB/s</td>
+                                <td>1.5 MB/s</td>
+                            </tr>
+                            <tr>
+                                <td>192.168.1.100:52343</td>
+                                <td>104.244.42.193:443</td>
+                                <td><span class="protocol-badge">HTTPS</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>11.2 MB/s</td>
+                                <td>8.5 MB/s</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 连接管理标签页 -->
+        <div class="tab-content" id="connections">
+            <div class="content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-blue);">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-blue);">342</div>
+                        <div class="stat-label">总连接数</div>
+                        <div class="stat-change positive">+28 个新连接</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-green);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-green);">298</div>
+                        <div class="stat-label">已建立连接</div>
+                        <div class="stat-change positive">87.1% 成功率</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-orange);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-orange);">28</div>
+                        <div class="stat-label">等待连接</div>
+                        <div class="stat-change">平均延迟: 45ms</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--accent-red);">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-value" style="color: var(--accent-red);">16</div>
+                        <div class="stat-label">失败连接</div>
+                        <div class="stat-change negative">4.7% 失败率</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">所有网络连接</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" placeholder="搜索连接..." style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary);">
+                            <select style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-primary);">
+                                <option value="">所有协议</option>
+                                <option value="tcp">TCP</option>
+                                <option value="udp">UDP</option>
+                                <option value="http">HTTP</option>
+                                <option value="https">HTTPS</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>应用程序</th>
+                                <th>本地地址</th>
+                                <th>远程地址</th>
+                                <th>协议</th>
+                                <th>状态</th>
+                                <th>下载速度</th>
+                                <th>上传速度</th>
+                                <th>持续时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="app-icon" style="background: #4285f4; width: 24px; height: 24px; font-size: 0.7rem;">
+                                            <i class="fab fa-chrome"></i>
+                                        </div>
+                                        Chrome
+                                    </div>
+                                </td>
+                                <td>192.168.1.100:52341</td>
+                                <td>142.250.191.3:443</td>
+                                <td><span class="protocol-badge">HTTPS</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>25.3 MB/s</td>
+                                <td>2.1 MB/s</td>
+                                <td>2m 45s</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="app-icon" style="background: #7289da; width: 24px; height: 24px; font-size: 0.7rem;">
+                                            <i class="fab fa-discord"></i>
+                                        </div>
+                                        Discord
+                                    </div>
+                                </td>
+                                <td>192.168.1.100:52342</td>
+                                <td>162.159.130.232:443</td>
+                                <td><span class="protocol-badge">WSS</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>2.3 MB/s</td>
+                                <td>8.7 MB/s</td>
+                                <td>1h 15m</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="app-icon" style="background: #ff6b6b; width: 24px; height: 24px; font-size: 0.7rem;">
+                                            <i class="fab fa-steam"></i>
+                                        </div>
+                                        Steam
+                                    </div>
+                                </td>
+                                <td>192.168.1.100:52343</td>
+                                <td>23.78.102.184:27017</td>
+                                <td><span class="protocol-badge">TCP</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>98.7 MB/s</td>
+                                <td>0.2 MB/s</td>
+                                <td>12m 33s</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="app-icon" style="background: #0078d4; width: 24px; height: 24px; font-size: 0.7rem;">
+                                            <i class="fab fa-microsoft"></i>
+                                        </div>
+                                        Edge
+                                    </div>
+                                </td>
+                                <td>192.168.1.100:52344</td>
+                                <td>13.107.42.14:443</td>
+                                <td><span class="protocol-badge">HTTPS</span></td>
+                                <td><span class="status-badge status-active">已建立</span></td>
+                                <td>5.6 MB/s</td>
+                                <td>1.2 MB/s</td>
+                                <td>8m 22s</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="app-icon" style="background: #00b4d8; width: 24px; height: 24px; font-size: 0.7rem;">
+                                            <i class="fas fa-code"></i>
+                                        </div>
+                                        VS Code
+                                    </div>
+                                </td>
+                                <td>192.168.1.100:52345</td>
+                                <td>40.76.4.15:443</td>
+                                <td><span class="protocol-badge">HTTPS</span></td>
+                                <td><span class="status-badge status-inactive">TIME_WAIT</span></td>
+                                <td>0 B/s</td>
+                                <td>0 B/s</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换功能
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                // 更新导航标签状态
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // 更新内容区域
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+
+        // 侧边栏项目点击
+        document.querySelectorAll('.app-item, .network-item').forEach(item => {
+            item.addEventListener('click', () => {
+                item.parentElement.querySelectorAll('.app-item, .network-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Chart.js 配置
+        Chart.defaults.color = '#a0a6b8';
+        Chart.defaults.borderColor = '#3e4451';
+
+        // 生成随机数据
+        function generateTimeData() {
+            const now = new Date();
+            const data = [];
+            const labels = [];
+            
+            for (let i = 23; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+                labels.push(time.getHours() + ':00');
+                data.push(Math.random() * 100 + 20);
+            }
+            
+            return { labels, data };
+        }
+
+        // 概览图表
+        const overviewCtx = document.getElementById('overviewChart').getContext('2d');
+        const overviewData = generateTimeData();
+        new Chart(overviewCtx, {
+            type: 'line',
+            data: {
+                labels: overviewData.labels,
+                datasets: [{
+                    label: '下载速度 (MB/s)',
+                    data: overviewData.data,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: '上传速度 (MB/s)',
+                    data: overviewData.data.map(v => v * 0.6),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#3e4451'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: '#3e4451'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 网卡图表
+        const networkCtx = document.getElementById('networkChart').getContext('2d');
+        const networkData = generateTimeData();
+        new Chart(networkCtx, {
+            type: 'line',
+            data: {
+                labels: networkData.labels,
+                datasets: [{
+                    label: '下载速度 (MB/s)',
+                    data: networkData.data,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: '上传速度 (MB/s)',
+                    data: networkData.data.map(v => v * 0.4),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#3e4451'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: '#3e4451'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 应用图表
+        const appCtx = document.getElementById('appChart').getContext('2d');
+        const appData = generateTimeData();
+        new Chart(appCtx, {
+            type: 'area',
+            data: {
+                labels: appData.labels,
+                datasets: [{
+                    label: '下载速度 (MB/s)',
+                    data: appData.data.map(v => v * 0.5),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: '上传速度 (MB/s)',
+                    data: appData.data.map(v => v * 0.15),
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: '#3e4451'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: '#3e4451'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 刷新按钮功能
+        document.querySelector('.refresh-btn').addEventListener('click', function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loading"></div> 刷新中...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // 这里可以添加实际的数据刷新逻辑
+            }, 2000);
+        });
+
+        // 搜索功能
+        document.querySelectorAll('.search-box').forEach(searchBox => {
+            searchBox.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const items = this.closest('.sidebar').querySelectorAll('.app-item, .network-item');
+                
+                items.forEach(item => {
+                    const name = item.querySelector('.app-name').textContent.toLowerCase();
+                    if (name.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // 时间选择器变化事件
+        document.querySelector('.time-selector').addEventListener('change', function() {
+            // 这里可以添加根据时间范围重新加载数据的逻辑
+            console.log('时间范围已更改为:', this.value);
+        });
+    </script>
+</body>
+</html>

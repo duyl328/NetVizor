@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络数据分析 - NetVizor</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #16a34a;
+            --warning-color: #ea580c;
+            --danger-color: #dc2626;
+            --dark-bg: #1e293b;
+            --light-bg: #f8fafc;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar {
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            min-height: calc(100vh - 76px);
+            position: sticky;
+            top: 76px;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 8px;
+            margin: 2px 0;
+            padding: 12px 16px;
+            color: var(--secondary-color);
+            transition: all 0.3s ease;
+        }
+
+        .nav-pills .nav-link:hover {
+            background-color: #e2e8f0;
+            color: var(--primary-color);
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 2px solid #f1f5f9;
+            padding: 20px 24px;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-custom {
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        .table th {
+            font-weight: 600;
+            color: var(--secondary-color);
+            border-bottom: 2px solid #e2e8f0;
+            padding: 16px 12px;
+        }
+
+        .table td {
+            padding: 12px;
+            vertical-align: middle;
+        }
+
+        .badge-protocol {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .time-selector {
+            background-color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .btn-time {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 16px;
+            margin: 0 4px;
+            background-color: white;
+            color: var(--secondary-color);
+            transition: all 0.3s ease;
+        }
+
+        .btn-time.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .network-card-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            margin-bottom: 12px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .network-card-item:hover {
+            background-color: #e2e8f0;
+        }
+
+        .app-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fas fa-network-wired me-2"></i>
+                NetVizor 数据分析
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-clock me-1"></i>
+                    最后更新: {{ lastUpdated }}
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div id="app" class="container-fluid px-0">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <div class="col-md-2">
+                <div class="sidebar p-3">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" :class="{active: currentTab === 'overview'}" @click="currentTab = 'overview'" href="#overview">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                概览
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" :class="{active: currentTab === 'adapters'}" @click="currentTab = 'adapters'" href="#adapters">
+                                <i class="fas fa-ethernet me-2"></i>
+                                网卡分析
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" :class="{active: currentTab === 'applications'}" @click="currentTab = 'applications'" href="#applications">
+                                <i class="fas fa-desktop me-2"></i>
+                                应用分析
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" :class="{active: currentTab === 'connections'}" @click="currentTab = 'connections'" href="#connections">
+                                <i class="fas fa-plug me-2"></i>
+                                连接分析
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <div class="p-4">
+                    <!-- Time Range Selector -->
+                    <div class="time-selector">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>时间范围</h6>
+                            <div class="btn-group" role="group">
+                                <button v-for="range in timeRanges" 
+                                        :key="range.key"
+                                        :class="['btn-time', {active: selectedTimeRange === range.key}]"
+                                        @click="selectedTimeRange = range.key">
+                                    {{ range.label }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overview Tab -->
+                    <div v-if="currentTab === 'overview'" class="tab-content">
+                        <!-- Stats Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-primary">{{ formatBytes(totalTraffic.download + totalTraffic.upload) }}</div>
+                                    <div class="stat-label">总流量</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-success">{{ formatBytes(totalTraffic.download) }}</div>
+                                    <div class="stat-label">下载</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-warning">{{ formatBytes(totalTraffic.upload) }}</div>
+                                    <div class="stat-label">上传</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-info">{{ activeConnections }}</div>
+                                    <div class="stat-label">活跃连接</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Traffic Trend Chart -->
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>流量趋势</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="trafficChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>协议分布</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="protocolChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Applications -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>流量使用排行</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>应用程序</th>
+                                                <th>下载量</th>
+                                                <th>上传量</th>
+                                                <th>总流量</th>
+                                                <th>连接数</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="app in topApps" :key="app.id">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="app-icon" :style="{backgroundColor: app.color}">
+                                                            {{ app.name.substring(0, 2).toUpperCase() }}
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-semibold">{{ app.name }}</div>
+                                                            <small class="text-muted">{{ app.version }}</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{{ formatBytes(app.download) }}</td>
+                                                <td>{{ formatBytes(app.upload) }}</td>
+                                                <td>{{ formatBytes(app.download + app.upload) }}</td>
+                                                <td><span class="badge bg-primary">{{ app.connections }}</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network Adapters Tab -->
+                    <div v-if="currentTab === 'adapters'" class="tab-content">
+                        <div class="row mb-4">
+                            <div class="col-md-6" v-for="adapter in networkAdapters" :key="adapter.id">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-ethernet me-2"></i>
+                                            {{ adapter.name }}
+                                            <span class="badge ms-2" :class="adapter.status === 'active' ? 'bg-success' : 'bg-secondary'">
+                                                {{ adapter.status }}
+                                            </span>
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="network-card-item mb-3">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>下载速度</span>
+                                                    <span class="fw-bold text-success">{{ formatSpeed(adapter.downloadSpeed) }}</span>
+                                                </div>
+                                                <div class="progress progress-custom">
+                                                    <div class="progress-bar bg-success" :style="{width: (adapter.downloadSpeed / adapter.maxSpeed * 100) + '%'}"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="network-card-item">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>上传速度</span>
+                                                    <span class="fw-bold text-warning">{{ formatSpeed(adapter.uploadSpeed) }}</span>
+                                                </div>
+                                                <div class="progress progress-custom">
+                                                    <div class="progress-bar bg-warning" :style="{width: (adapter.uploadSpeed / adapter.maxSpeed * 100) + '%'}"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                总流量: {{ formatBytes(adapter.totalTraffic) }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Adapter Traffic Chart -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>网卡流量对比</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="height: 400px;">
+                                    <canvas id="adapterChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Applications Tab -->
+                    <div v-if="currentTab === 'applications'" class="tab-content">
+                        <!-- Application Search -->
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" placeholder="搜索应用程序..." v-model="appSearch">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <select class="form-select" v-model="appSortBy">
+                                            <option value="traffic">按流量排序</option>
+                                            <option value="connections">按连接数排序</option>
+                                            <option value="name">按名称排序</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Application List -->
+                        <div class="row">
+                            <div class="col-md-4" v-for="app in filteredApps" :key="app.id">
+                                <div class="card" @click="selectedApp = app" style="cursor: pointer;">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="app-icon" :style="{backgroundColor: app.color}">
+                                                {{ app.name.substring(0, 2).toUpperCase() }}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">{{ app.name }}</h6>
+                                                <small class="text-muted">{{ app.version }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="row text-center">
+                                            <div class="col-4">
+                                                <div class="text-primary fw-bold">{{ formatBytes(app.download) }}</div>
+                                                <small class="text-muted">下载</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-warning fw-bold">{{ formatBytes(app.upload) }}</div>
+                                                <small class="text-muted">上传</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-info fw-bold">{{ app.connections }}</div>
+                                                <small class="text-muted">连接</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected App Details Modal -->
+                        <div v-if="selectedApp" class="card mt-4">
+                            <div class="card-header d-flex justify-content-between">
+                                <h5 class="mb-0">{{ selectedApp.name }} - 详细信息</h5>
+                                <button class="btn btn-sm btn-outline-secondary" @click="selectedApp = null">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-8">
+                                        <div class="chart-container">
+                                            <canvas :id="'appChart_' + selectedApp.id"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>应用信息</h6>
+                                        <ul class="list-unstyled">
+                                            <li><strong>版本:</strong> {{ selectedApp.version }}</li>
+                                            <li><strong>路径:</strong> {{ selectedApp.path }}</li>
+                                            <li><strong>PID:</strong> {{ selectedApp.pid }}</li>
+                                            <li><strong>启动时间:</strong> {{ selectedApp.startTime }}</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <!-- Connections Table -->
+                                <h6>活跃连接</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>本地地址</th>
+                                                <th>远程地址</th>
+                                                <th>协议</th>
+                                                <th>状态</th>
+                                                <th>流量</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="conn in selectedApp.connections" :key="conn.id">
+                                                <td>{{ conn.localAddress }}:{{ conn.localPort }}</td>
+                                                <td>{{ conn.remoteAddress }}:{{ conn.remotePort }}</td>
+                                                <td><span class="badge-protocol" :class="'bg-' + getProtocolColor(conn.protocol)">{{ conn.protocol }}</span></td>
+                                                <td><span class="badge bg-success">{{ conn.state }}</span></td>
+                                                <td>
+                                                    <small>
+                                                        ↓{{ formatBytes(conn.download) }} 
+                                                        ↑{{ formatBytes(conn.upload) }}
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connections Tab -->
+                    <div v-if="currentTab === 'connections'" class="tab-content">
+                        <!-- Connection Stats -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-primary">{{ totalConnections }}</div>
+                                    <div class="stat-label">总连接数</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-success">{{ establishedConnections }}</div>
+                                    <div class="stat-label">已建立</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-warning">{{ listeningConnections }}</div>
+                                    <div class="stat-label">监听中</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card stat-card">
+                                    <div class="stat-value text-info">{{ uniqueIps }}</div>
+                                    <div class="stat-label">唯一IP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connections Table -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>连接详情</h5>
+                                    <div class="d-flex">
+                                        <input type="text" class="form-control form-control-sm me-2" placeholder="筛选连接..." v-model="connectionFilter">
+                                        <select class="form-select form-select-sm" v-model="protocolFilter">
+                                            <option value="">所有协议</option>
+                                            <option value="TCP">TCP</option>
+                                            <option value="UDP">UDP</option>
+                                            <option value="HTTP">HTTP</option>
+                                            <option value="HTTPS">HTTPS</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>应用程序</th>
+                                                <th>本地地址</th>
+                                                <th>远程地址</th>
+                                                <th>协议</th>
+                                                <th>状态</th>
+                                                <th>下载</th>
+                                                <th>上传</th>
+                                                <th>持续时间</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="conn in filteredConnections" :key="conn.id">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="app-icon me-2" :style="{backgroundColor: conn.appColor, width: '24px', height: '24px', fontSize: '10px'}">
+                                                            {{ conn.appName.substring(0, 2).toUpperCase() }}
+                                                        </div>
+                                                        {{ conn.appName }}
+                                                    </div>
+                                                </td>
+                                                <td><code>{{ conn.localAddress }}:{{ conn.localPort }}</code></td>
+                                                <td><code>{{ conn.remoteAddress }}:{{ conn.remotePort }}</code></td>
+                                                <td><span class="badge-protocol" :class="'bg-' + getProtocolColor(conn.protocol)">{{ conn.protocol }}</span></td>
+                                                <td><span class="badge bg-success">{{ conn.state }}</span></td>
+                                                <td>{{ formatBytes(conn.download) }}</td>
+                                                <td>{{ formatBytes(conn.upload) }}</td>
+                                                <td>{{ conn.duration }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentTab: 'overview',
+                    selectedTimeRange: 'hour',
+                    lastUpdated: new Date().toLocaleTimeString(),
+                    appSearch: '',
+                    appSortBy: 'traffic',
+                    selectedApp: null,
+                    connectionFilter: '',
+                    protocolFilter: '',
+                    
+                    timeRanges: [
+                        { key: 'hour', label: '最近1小时' },
+                        { key: 'day', label: '今天' },
+                        { key: 'week', label: '本周' },
+                        { key: 'month', label: '本月' }
+                    ],
+
+                    // Mock data
+                    totalTraffic: {
+                        download: 2.5 * 1024 * 1024 * 1024, // 2.5GB
+                        upload: 512 * 1024 * 1024 // 512MB
+                    },
+                    activeConnections: 127,
+
+                    networkAdapters: [
+                        {
+                            id: 1,
+                            name: 'Ethernet 以太网',
+                            status: 'active',
+                            downloadSpeed: 125 * 1024 * 1024, // 125MB/s
+                            uploadSpeed: 25 * 1024 * 1024, // 25MB/s
+                            maxSpeed: 1000 * 1024 * 1024, // 1GB/s
+                            totalTraffic: 15.5 * 1024 * 1024 * 1024 // 15.5GB
+                        },
+                        {
+                            id: 2,
+                            name: 'Wi-Fi 无线网络',
+                            status: 'active',
+                            downloadSpeed: 45 * 1024 * 1024,
+                            uploadSpeed: 12 * 1024 * 1024,
+                            maxSpeed: 300 * 1024 * 1024,
+                            totalTraffic: 8.2 * 1024 * 1024 * 1024
+                        }
+                    ],
+
+                    topApps: [
+                        {
+                            id: 1,
+                            name: 'Google Chrome',
+                            version: '118.0.5993.88',
+                            download: 1.2 * 1024 * 1024 * 1024,
+                            upload: 156 * 1024 * 1024,
+                            connections: 23,
+                            color: '#4285f4',
+                            path: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                            pid: 1234,
+                            startTime: '09:15:32'
+                        },
+                        {
+                            id: 2,
+                            name: 'Microsoft Teams',
+                            version: '1.6.00.4472',
+                            download: 845 * 1024 * 1024,
+                            upload: 234 * 1024 * 1024,
+                            connections: 8,
+                            color: '#6264a7',
+                            path: 'C:\\Users\\User\\AppData\\Local\\Microsoft\\Teams\\current\\Teams.exe',
+                            pid: 5678,
+                            startTime: '08:45:12'
+                        },
+                        {
+                            id: 3,
+                            name: 'Steam',
+                            version: '3.0.2.1',
+                            download: 567 * 1024 * 1024,
+                            upload: 45 * 1024 * 1024,
+                            connections: 5,
+                            color: '#1b2838',
+                            path: 'C:\\Program Files (x86)\\Steam\\steam.exe',
+                            pid: 9012,
+                            startTime: '10:20:45'
+                        }
+                    ],
+
+                    allConnections: []
+                }
+            },
+
+            computed: {
+                filteredApps() {
+                    let apps = [...this.topApps];
+                    
+                    // Search filter
+                    if (this.appSearch) {
+                        apps = apps.filter(app => 
+                            app.name.toLowerCase().includes(this.appSearch.toLowerCase())
+                        );
+                    }
+                    
+                    // Sort
+                    apps.sort((a, b) => {
+                        switch (this.appSortBy) {
+                            case 'traffic':
+                                return (b.download + b.upload) - (a.download + a.upload);
+                            case 'connections':
+                                return b.connections - a.connections;
+                            case 'name':
+                                return a.name.localeCompare(b.name);
+                            default:
+                                return 0;
+                        }
+                    });
+                    
+                    return apps;
+                },
+
+                filteredConnections() {
+                    let connections = [...this.allConnections];
+                    
+                    if (this.connectionFilter) {
+                        connections = connections.filter(conn =>
+                            conn.appName.toLowerCase().includes(this.connectionFilter.toLowerCase()) ||
+                            conn.remoteAddress.includes(this.connectionFilter) ||
+                            conn.localAddress.includes(this.connectionFilter)
+                        );
+                    }
+                    
+                    if (this.protocolFilter) {
+                        connections = connections.filter(conn =>
+                            conn.protocol === this.protocolFilter
+                        );
+                    }
+                    
+                    return connections;
+                },
+
+                totalConnections() {
+                    return this.allConnections.length;
+                },
+
+                establishedConnections() {
+                    return this.allConnections.filter(conn => conn.state === 'ESTABLISHED').length;
+                },
+
+                listeningConnections() {
+                    return this.allConnections.filter(conn => conn.state === 'LISTENING').length;
+                },
+
+                uniqueIps() {
+                    const ips = new Set(this.allConnections.map(conn => conn.remoteAddress));
+                    return ips.size;
+                }
+            },
+
+            methods: {
+                formatBytes(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                },
+
+                formatSpeed(bytesPerSecond) {
+                    return this.formatBytes(bytesPerSecond) + '/s';
+                },
+
+                getProtocolColor(protocol) {
+                    const colors = {
+                        'TCP': 'primary',
+                        'UDP': 'success',
+                        'HTTP': 'warning',
+                        'HTTPS': 'info'
+                    };
+                    return colors[protocol] || 'secondary';
+                },
+
+                initCharts() {
+                    this.$nextTick(() => {
+                        this.initTrafficChart();
+                        this.initProtocolChart();
+                        this.initAdapterChart();
+                    });
+                },
+
+                initTrafficChart() {
+                    const ctx = document.getElementById('trafficChart');
+                    if (!ctx) return;
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: Array.from({length: 12}, (_, i) => (11-i) + 'h前'),
+                            datasets: [{
+                                label: '下载',
+                                data: [45, 52, 61, 58, 67, 72, 68, 75, 82, 78, 85, 92],
+                                borderColor: 'rgb(34, 197, 94)',
+                                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                tension: 0.4
+                            }, {
+                                label: '上传',
+                                data: [12, 15, 18, 16, 22, 25, 23, 28, 32, 29, 35, 38],
+                                borderColor: 'rgb(251, 146, 60)',
+                                backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + ' MB/s';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                initProtocolChart() {
+                    const ctx = document.getElementById('protocolChart');
+                    if (!ctx) return;
+
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['TCP', 'UDP', 'HTTP', 'HTTPS'],
+                            datasets: [{
+                                data: [45, 25, 20, 10],
+                                backgroundColor: [
+                                    'rgb(37, 99, 235)',
+                                    'rgb(34, 197, 94)',
+                                    'rgb(251, 146, 60)',
+                                    'rgb(14, 165, 233)'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                },
+
+                initAdapterChart() {
+                    const ctx = document.getElementById('adapterChart');
+                    if (!ctx) return;
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: this.networkAdapters.map(adapter => adapter.name),
+                            datasets: [{
+                                label: '下载 (MB/s)',
+                                data: this.networkAdapters.map(adapter => adapter.downloadSpeed / (1024 * 1024)),
+                                backgroundColor: 'rgba(34, 197, 94, 0.8)'
+                            }, {
+                                label: '上传 (MB/s)',
+                                data: this.networkAdapters.map(adapter => adapter.uploadSpeed / (1024 * 1024)),
+                                backgroundColor: 'rgba(251, 146, 60, 0.8)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                },
+
+                generateMockConnections() {
+                    const apps = this.topApps;
+                    const protocols = ['TCP', 'UDP', 'HTTP', 'HTTPS'];
+                    const states = ['ESTABLISHED', 'LISTENING', 'CLOSE_WAIT'];
+                    const connections = [];
+
+                    for (let i = 0; i < 50; i++) {
+                        const app = apps[Math.floor(Math.random() * apps.length)];
+                        connections.push({
+                            id: i + 1,
+                            appName: app.name,
+                            appColor: app.color,
+                            localAddress: '192.168.1.' + (100 + Math.floor(Math.random() * 50)),
+                            localPort: 1000 + Math.floor(Math.random() * 64000),
+                            remoteAddress: Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
+                            remotePort: 80 + Math.floor(Math.random() * 8000),
+                            protocol: protocols[Math.floor(Math.random() * protocols.length)],
+                            state: states[Math.floor(Math.random() * states.length)],
+                            download: Math.floor(Math.random() * 100 * 1024 * 1024),
+                            upload: Math.floor(Math.random() * 50 * 1024 * 1024),
+                            duration: Math.floor(Math.random() * 3600) + 's'
+                        });
+                    }
+
+                    this.allConnections = connections;
+                }
+            },
+
+            mounted() {
+                this.generateMockConnections();
+                
+                // Add connections to apps
+                this.topApps.forEach(app => {
+                    app.connections = this.allConnections
+                        .filter(conn => conn.appName === app.name)
+                        .slice(0, 10)
+                        .map(conn => ({
+                            id: conn.id,
+                            localAddress: conn.localAddress,
+                            localPort: conn.localPort,
+                            remoteAddress: conn.remoteAddress,
+                            remotePort: conn.remotePort,
+                            protocol: conn.protocol,
+                            state: conn.state,
+                            download: conn.download,
+                            upload: conn.upload
+                        }));
+                });
+
+                this.initCharts();
+
+                // Update time every second
+                setInterval(() => {
+                    this.lastUpdated = new Date().toLocaleTimeString();
+                }, 1000);
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
