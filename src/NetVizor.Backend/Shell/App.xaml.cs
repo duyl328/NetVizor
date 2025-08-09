@@ -50,24 +50,17 @@ public partial class App : System.Windows.Application
         // 启动服务（如 WebSocket、HTTP、端口监听等）
         StartMyServer();
 
-        // 获取用户设置并应用到NetView窗口
+        // 创建 NetView 窗口 - 让它自己处理设置加载和应用
         try
         {
-            var userSettings = await DatabaseManager.GetUserSettingsAsync();
-            Log.Information($"读取用户设置: 位置({userSettings.WindowX}, {userSettings.WindowY})");
-
-            // NetView 网络监看 - 应用用户设置的位置
+            Log.Information("创建 NetView 窗口...");
             var netView = new NetView();
-            netView.Left = userSettings.WindowX;
-            netView.Top = userSettings.WindowY;
             netView.Show();
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "应用用户设置失败，使用默认设置");
-            // 使用默认设置创建窗口
-            var netView = new NetView();
-            netView.Show();
+            Log.Error(ex, "创建 NetView 窗口失败");
+            throw; // 重新抛出异常，因为这是关键组件
         }
 
         // Mouth();

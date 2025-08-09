@@ -93,7 +93,8 @@ public partial class SettingsWindow : Window
             0 => "Bytes",
             1 => "KB",
             2 => "MB",
-            _ => "Auto"
+            3 => "Auto",
+            _ => "Auto" // 默认为Auto
         };
         foreach (ComboBoxItem item in SpeedUnitComboBox.Items)
         {
@@ -424,13 +425,14 @@ public partial class SettingsWindow : Window
             _settings.ShowUnit = ShowUnitCheckBox.IsChecked == true;
 
             // 转换速度单位
-            var selectedUnit = ((ComboBoxItem)SpeedUnitComboBox.SelectedItem)?.Tag?.ToString() ?? "KB";
+            var selectedUnit = ((ComboBoxItem)SpeedUnitComboBox.SelectedItem)?.Tag?.ToString() ?? "Auto";
             _settings.SpeedUnit = selectedUnit switch
             {
                 "Bytes" => 0,
                 "KB" => 1,
                 "MB" => 2,
-                _ => 1 // 默认KB
+                "Auto" => 3,
+                _ => 3 // 默认Auto
             };
 
             // 转换布局方向
@@ -520,6 +522,7 @@ public partial class SettingsWindow : Window
                 0 => Shell.Models.SpeedUnit.Bytes,
                 1 => Shell.Models.SpeedUnit.KB,
                 2 => Shell.Models.SpeedUnit.MB,
+                3 => Shell.Models.SpeedUnit.Auto,
                 _ => Shell.Models.SpeedUnit.Auto
             };
             netViewSettings.DoubleClickAction = _settings.DoubleClickAction switch

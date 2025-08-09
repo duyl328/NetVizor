@@ -54,21 +54,21 @@ public class DataService : IDataService, IDisposable
 
         if (setting == null)
         {
-            // 创建默认设置
+            // 创建默认设置 - 与 SettingsWindow.xaml 中的默认值保持一致
             setting = new AppSetting
             {
-                WindowX = 100,
-                WindowY = 100,
+                WindowX = 0, // 0表示使用默认位置
+                WindowY = 0,
                 IsClickThrough = false,
                 IsPositionLocked = false,
                 SnapToScreen = false,
                 ShowDetailedInfo = false,
-                IsTopmost = false,
-                TextColor = "#FFFFFF",
-                BackgroundColor = "#000000",
-                Opacity = 100,
-                SpeedUnit = 1, // KB/s
-                LayoutDirection = 0, // 横向
+                IsTopmost = true, // 默认置顶
+                TextColor = "#333333", // 与SettingsWindow.xaml一致
+                BackgroundColor = "#F0FFFFFF", // 与SettingsWindow.xaml一致
+                Opacity = 94, // 与SettingsWindow.xaml一致
+                SpeedUnit = 3, // Auto - 与SettingsWindow.xaml一致
+                LayoutDirection = 1, // 纵向 - 与SettingsWindow.xaml一致
                 ShowUnit = true,
                 DoubleClickAction = 0, // None
                 RunAsAdmin = false,

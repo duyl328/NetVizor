@@ -33,12 +33,12 @@ public class AppSettingRepository : IAppSettingRepository
             INSERT INTO AppSetting (
                 WindowX, WindowY, IsClickThrough, IsPositionLocked, SnapToScreen, ShowDetailedInfo, 
                 IsTopmost, TextColor, BackgroundColor, Opacity, SpeedUnit, LayoutDirection, 
-                ShowUnit, DoubleClickAction, RunAsAdmin, AutoStart, UpdateTime
+                ShowUnit, DoubleClickAction, RunAsAdmin, AutoStart, ShowNetworkTopList, NetworkTopListCount, UpdateTime
             )
             VALUES (
                 @WindowX, @WindowY, @IsClickThrough, @IsPositionLocked, @SnapToScreen, @ShowDetailedInfo,
                 @IsTopmost, @TextColor, @BackgroundColor, @Opacity, @SpeedUnit, @LayoutDirection,
-                @ShowUnit, @DoubleClickAction, @RunAsAdmin, @AutoStart, @UpdateTime
+                @ShowUnit, @DoubleClickAction, @RunAsAdmin, @AutoStart, @ShowNetworkTopList, @NetworkTopListCount, @UpdateTime
             )";
 
         var result = await _context.Connection.ExecuteAsync(sql, setting);
@@ -63,7 +63,7 @@ public class AppSettingRepository : IAppSettingRepository
                 TextColor = @TextColor, BackgroundColor = @BackgroundColor, Opacity = @Opacity,
                 SpeedUnit = @SpeedUnit, LayoutDirection = @LayoutDirection, ShowUnit = @ShowUnit,
                 DoubleClickAction = @DoubleClickAction, RunAsAdmin = @RunAsAdmin, 
-                AutoStart = @AutoStart, UpdateTime = @UpdateTime
+                AutoStart = @AutoStart, ShowNetworkTopList = @ShowNetworkTopList, NetworkTopListCount = @NetworkTopListCount, UpdateTime = @UpdateTime
             WHERE Id = @Id";
 
         return await _context.Connection.ExecuteAsync(sql, setting);
