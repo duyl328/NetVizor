@@ -104,81 +104,6 @@
           </div>
         </div>
 
-        <!-- 协议分布饼图 -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3 class="chart-title">协议分布</h3>
-          </div>
-          <div class="chart-body">
-            <div class="pie-chart">
-              <div class="pie-center">
-                <svg viewBox="0 0 100 100" class="pie-svg">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="var(--accent-primary)"
-                    stroke-width="20"
-                    stroke-dasharray="75 125"
-                    transform="rotate(-90 50 50)"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="var(--accent-secondary)"
-                    stroke-width="20"
-                    stroke-dasharray="50 125"
-                    stroke-dashoffset="-75"
-                    transform="rotate(-90 50 50)"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="var(--accent-warning)"
-                    stroke-width="20"
-                    stroke-dasharray="35 125"
-                    stroke-dashoffset="-125"
-                    transform="rotate(-90 50 50)"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="var(--accent-error)"
-                    stroke-width="20"
-                    stroke-dasharray="40 125"
-                    stroke-dashoffset="-160"
-                    transform="rotate(-90 50 50)"
-                  />
-                </svg>
-              </div>
-              <div class="pie-legend">
-                <div class="legend-item">
-                  <span class="legend-dot" style="background: var(--accent-primary)"></span>
-                  <span>HTTPS (37.5%)</span>
-                </div>
-                <div class="legend-item">
-                  <span class="legend-dot" style="background: var(--accent-secondary)"></span>
-                  <span>HTTP (25%)</span>
-                </div>
-                <div class="legend-item">
-                  <span class="legend-dot" style="background: var(--accent-warning)"></span>
-                  <span>DNS (17.5%)</span>
-                </div>
-                <div class="legend-item">
-                  <span class="legend-dot" style="background: var(--accent-error)"></span>
-                  <span>其他 (20%)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <!-- Top应用流量图表 -->
         <div class="chart-card">
@@ -194,9 +119,9 @@
         </div>
       </div>
 
-      <!-- 底部软件流量分析区域 -->
-      <div class="bottom-analysis-area">
-        <div class="traffic-ranking-panel">
+      <!-- 软件流量分析区域 -->
+      <div class="software-analysis-area">
+        <div class="software-ranking-panel">
           <div class="panel-header">
             <h3 class="panel-title">软件流量TOP榜</h3>
             <div class="panel-controls">
@@ -216,48 +141,22 @@
             <SoftwareRankingList 
               :data="softwareRankingData"
               :time-range="selectedRankingRange"
-              :selected-software="selectedSoftware"
-              @select-software="onSelectSoftware"
+              @select-software="showSoftwareDetail"
             />
           </div>
         </div>
-        
-        <div class="software-detail-panel">
-          <div class="panel-header">
-            <h3 class="panel-title">
-              {{ selectedSoftware?.displayName || '选择软件查看详情' }}
-            </h3>
-          </div>
-          <div class="detail-content">
-            <div v-if="selectedSoftware" class="software-details">
-              <!-- 软件基本信息 -->
-              <div class="detail-section">
-                <h4 class="section-title">软件信息</h4>
-                <SoftwareInfoCard :software-info="selectedSoftwareInfo" />
-              </div>
-              
-              <!-- 网络连接关系图 -->
-              <div class="detail-section">
-                <h4 class="section-title">网络连接</h4>
-                <NetworkRelationChart 
-                  :data="networkRelationData"
-                  :software="selectedSoftware"
-                />
-              </div>
-              
-              <!-- 端口统计 -->
-              <div class="detail-section">
-                <h4 class="section-title">端口统计</h4>
-                <PortStatsTable :data="portStatsData" />
-              </div>
-            </div>
-            <div v-else class="empty-state">
-              <n-icon :component="ServerOutline" size="48" />
-              <p>请从左侧列表选择软件查看详情</p>
-            </div>
-          </div>
-        </div>
       </div>
+
+      <!-- 软件详情弹窗 -->
+      <SoftwareDetailModal
+        v-model:show="showDetailModal"
+        :software="selectedSoftware"
+        :software-info="selectedSoftwareInfo"
+        :network-relation-data="networkRelationData"
+        :port-stats-data="portStatsData"
+        :protocol-data="protocolData"
+        :time-range="selectedRankingRange"
+      />
     </div>
   </div>
 </template>
@@ -278,9 +177,7 @@ import {
 import TrafficTrendChart from './components/TrafficTrendChart.vue'
 import TopAppsChart from './components/TopAppsChart.vue'
 import SoftwareRankingList from './components/SoftwareRankingList.vue'
-import SoftwareInfoCard from './components/SoftwareInfoCard.vue'
-import NetworkRelationChart from './components/NetworkRelationChart.vue'
-import PortStatsTable from './components/PortStatsTable.vue'
+import SoftwareDetailModal from './components/SoftwareDetailModal.vue'
 
 // 时间范围选项
 const timeRanges = ref([
@@ -305,8 +202,9 @@ const selectedInterface = ref('all')
 const rankingTimeRanges = ref(['1小时', '1天', '7天', '30天'])
 const selectedRankingRange = ref('1天')
 
-// 选中的软件
+// 选中的软件和弹窗状态
 const selectedSoftware = ref<any>(null)
+const showDetailModal = ref(false)
 
 // Mock数据
 const trafficTrendData = ref([
@@ -380,9 +278,21 @@ const portStatsData = computed(() => {
   ]
 })
 
+// 协议分布数据（移到弹窗中使用）
+const protocolData = computed(() => {
+  if (!selectedSoftware.value) return []
+  return [
+    { protocol: 'HTTPS', bytes: 1610612736, percentage: 37.5, color: '#3b82f6' },
+    { protocol: 'HTTP', bytes: 1073741824, percentage: 25.0, color: '#10b981' },
+    { protocol: 'DNS', bytes: 751619276, percentage: 17.5, color: '#f59e0b' },
+    { protocol: '其他', bytes: 858993459, percentage: 20.0, color: '#ef4444' }
+  ]
+})
+
 // 事件处理
-const onSelectSoftware = (software: any) => {
+const showSoftwareDetail = (software: any) => {
   selectedSoftware.value = software
+  showDetailModal.value = true
 }
 
 const refreshData = () => {
@@ -400,10 +310,7 @@ watch(selectedInterface, () => {
 })
 
 onMounted(() => {
-  // 初始化时选择第一个软件
-  if (softwareRankingData.value.length > 0) {
-    selectedSoftware.value = softwareRankingData.value[0]
-  }
+  // 页面初始化，不再默认选择软件
 })
 </script>
 
@@ -550,7 +457,7 @@ onMounted(() => {
 /* 图表网格 */
 .charts-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -709,22 +616,18 @@ onMounted(() => {
   text-align: right;
 }
 
-/* 底部分析区域 */
-.bottom-analysis-area {
-  display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 20px;
+/* 软件分析区域 */
+.software-analysis-area {
   margin-top: 24px;
 }
 
-.traffic-ranking-panel,
-.software-detail-panel {
+.software-ranking-panel {
   background: var(--bg-card);
   backdrop-filter: var(--backdrop-blur);
   border: 1px solid var(--border-primary);
   border-radius: 12px;
   overflow: hidden;
-  height: 600px;
+  height: 500px;
   display: flex;
   flex-direction: column;
 }
@@ -750,74 +653,24 @@ onMounted(() => {
   gap: 8px;
 }
 
-.ranking-content,
-.detail-content {
+.ranking-content {
   flex: 1;
   overflow: hidden;
 }
 
-.software-details {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  height: 100%;
-  overflow-y: auto;
-}
-
-.detail-section {
-  flex-shrink: 0;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin: 0 0 12px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  gap: 16px;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 14px;
-}
-
 
 /* 响应式 */
-@media (max-width: 1400px) {
-  .bottom-analysis-area {
-    grid-template-columns: 350px 1fr;
-  }
-}
-
 @media (max-width: 1200px) {
   .charts-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .chart-card.large {
-    grid-column: span 2;
+    grid-column: span 1;
   }
   
-  .bottom-analysis-area {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .traffic-ranking-panel,
-  .software-detail-panel {
-    height: 500px;
+  .software-ranking-panel {
+    height: 450px;
   }
 }
 
