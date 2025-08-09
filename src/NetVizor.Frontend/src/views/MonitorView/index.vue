@@ -34,6 +34,7 @@
 defineOptions({
   name: 'MonitorView',
 })
+import { useApplicationStore } from '@/stores/application'
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MonitorSidebar from './MonitorSidebar.vue'
@@ -118,8 +119,15 @@ const resetLayout = () => {
   inspectorWidth.value = 350
 }
 
+// 注册消息监听
+const useApplicationStore1 = useApplicationStore()
+
 // 键盘快捷键
 onMounted(() => {
+  // 创建事件绑定
+  useApplicationStore1.subscribe()
+
+
   const handleKeydown = (event: KeyboardEvent) => {
     if (event.ctrlKey && event.key === 'r') {
       event.preventDefault()
@@ -135,6 +143,11 @@ onMounted(() => {
     document.removeEventListener('mouseup', stopResize)
   })
 })
+
+onUnmounted(() => {
+  useApplicationStore1.unsubscribe()
+})
+
 </script>
 
 <style scoped>

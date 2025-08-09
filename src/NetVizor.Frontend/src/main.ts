@@ -41,11 +41,6 @@ httpConfig.setConfig({
 
 // http 注册
 import httpPlugin from './plugins/http'
-import { useApplicationStore } from '@/stores/application'
-
-// 注册消息监听
-const useApplicationStore1 = useApplicationStore()
-useApplicationStore1.subscribe()
 
 // httpPlugin.install(app)
 

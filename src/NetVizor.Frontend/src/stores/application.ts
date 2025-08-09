@@ -3,6 +3,8 @@ import { defineStore, storeToRefs } from 'pinia'
 import { useWebSocketStore } from '@/stores/websocketStore'
 import { WebSocketResponse } from '@/types/websocket'
 import { ApplicationType } from '@/types/infoModel'
+import { httpClient } from '@/utils/http'
+import { ResponseModel, SubscriptionInfo } from '@/types/response'
 
 export const useApplicationStore = defineStore('applicationInfoSub', () => {
   const appInfos: Ref<ApplicationType[]> = ref([])
@@ -140,12 +142,27 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
     )
   }
 
+  function unsubscribe() {
+    const subAppInfo: SubscriptionInfo = {
+      subscriptionType: 'AppDetailInfo',
+      interval: 1,
+    }
+    httpClient
+    .post(`/unsubscribe`, JSON.stringify(subAppInfo))
+    .then((res: ResponseModel) => {
+      console.log('取消订阅应用详细信息成功:', res)
+    })
+    .catch((err) => {
+      console.error('取消订阅应用详细信息失败:', err)
+    })
+  }
+
   return {
     subscribe, // 状态
     appInfos,
     selectedApp,
     inspectingAppDetails,
-
+    unsubscribe,
     // 计算属性
     activeApps,
     inactiveApps,
