@@ -7,12 +7,13 @@ using Common.Logger;
 using Common.Utils;
 using Utils.ETW.Services;
 using Shell.Models;
+using Shell.UserControls;
 using Data;
 using Utils.ETW.Models;
 
 namespace Shell.ViewModel;
 
-public class NetworkMonitorViewModel : INotifyPropertyChanged
+public class NetworkMonitorViewModel : INotifyPropertyChanged, ISettingsAware
 {
     private readonly DispatcherTimer _updateTimer;
     private List<NetworkMonitorHelper.NetworkInterface> _interfaces;
@@ -636,6 +637,33 @@ public class NetworkMonitorViewModel : INotifyPropertyChanged
     #endregion
 
     #region IDisposable Implementation
+
+    /// <summary>
+    /// 实现ISettingsAware接口，应用设置到ViewModel
+    /// </summary>
+    /// <param name="settings">要应用的设置</param>
+    public void ApplySettings(NetViewSettings settings)
+    {
+        try
+        {
+            Log.Info("NetworkMonitorViewModel 开始应用设置");
+            
+            // 这里可以根据设置更新ViewModel的行为
+            // 例如更新速度单位显示格式、Top榜显示数量等
+            
+            // 触发属性更改通知，让UI重新渲染
+            OnPropertyChanged(nameof(DownloadSpeed));
+            OnPropertyChanged(nameof(UploadSpeed));
+            OnPropertyChanged(nameof(TotalSpeed));
+            OnPropertyChanged(nameof(TopProcesses));
+            
+            Log.Info("NetworkMonitorViewModel 设置应用完成");
+        }
+        catch (Exception ex)
+        {
+            Log.Error4Ctx($"NetworkMonitorViewModel 应用设置失败: {ex.Message}");
+        }
+    }
 
     public void Dispose()
     {

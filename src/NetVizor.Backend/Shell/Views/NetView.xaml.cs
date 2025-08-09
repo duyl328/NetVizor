@@ -110,6 +110,9 @@ public partial class NetView : Window
         this.Topmost = _appSettings.IsTopmost;
         SetClickThrough(_appSettings.IsClickThrough);
 
+        // 同步数据库设置到NetViewSettings实例
+        SyncDatabaseSettingsToNetViewSettings();
+
         // 更新菜单项的选中状态
         if (LockPositionMenuItem != null)
             LockPositionMenuItem.IsChecked = _appSettings.IsPositionLocked;
@@ -121,6 +124,60 @@ public partial class NetView : Window
             SnapToScreenMenuItem.IsChecked = _appSettings.SnapToScreen;
         if (DetailedInfoMenuItem != null)
             DetailedInfoMenuItem.IsChecked = _appSettings.ShowDetailedInfo;
+    }
+
+    private void SyncDatabaseSettingsToNetViewSettings()
+    {
+        try
+        {
+            var netViewSettings = Shell.Models.NetViewSettings.Instance;
+            
+            // 同步外观设置
+            netViewSettings.TextColor = _appSettings.TextColor;
+            netViewSettings.BackgroundColor = _appSettings.BackgroundColor;
+            netViewSettings.BackgroundOpacity = _appSettings.Opacity;
+            
+            // 同步显示设置
+            netViewSettings.SpeedUnit = _appSettings.SpeedUnit switch
+            {
+                0 => Shell.Models.SpeedUnit.Bytes,
+                1 => Shell.Models.SpeedUnit.KB,
+                2 => Shell.Models.SpeedUnit.MB,
+                3 => Shell.Models.SpeedUnit.Auto,
+                _ => Shell.Models.SpeedUnit.Auto
+            };
+            
+            netViewSettings.ShowUnit = _appSettings.ShowUnit;
+            netViewSettings.LayoutDirection = _appSettings.LayoutDirection == 0 
+                ? Shell.Models.LayoutDirection.Horizontal 
+                : Shell.Models.LayoutDirection.Vertical;
+            
+            // 同步网速Top榜设置
+            netViewSettings.ShowNetworkTopList = _appSettings.ShowNetworkTopList;
+            netViewSettings.NetworkTopListCount = _appSettings.NetworkTopListCount;
+            
+            // 同步交互设置
+            netViewSettings.DoubleClickAction = _appSettings.DoubleClickAction switch
+            {
+                0 => Shell.Models.DoubleClickAction.None,
+                1 => Shell.Models.DoubleClickAction.TrafficAnalysis,
+                2 => Shell.Models.DoubleClickAction.Settings,
+                _ => Shell.Models.DoubleClickAction.None
+            };
+            
+            // 同步窗口行为设置
+            netViewSettings.LockPosition = _appSettings.IsPositionLocked;
+            netViewSettings.ClickThrough = _appSettings.IsClickThrough;
+            netViewSettings.Topmost = _appSettings.IsTopmost;
+            netViewSettings.SnapToScreen = _appSettings.SnapToScreen;
+            netViewSettings.ShowDetailedInfo = _appSettings.ShowDetailedInfo;
+            
+            System.Diagnostics.Debug.WriteLine("已将数据库设置同步到NetViewSettings实例");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"同步数据库设置到NetViewSettings失败: {ex.Message}");
+        }
     }
 
     private async Task SaveSettingsToDatabase()
