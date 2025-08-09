@@ -1,20 +1,27 @@
 <template>
   <div class="analyse-view">
     <div class="analyse-container">
-      <!-- 顶部概览 -->
+      <!-- 顶部时间选择栏 -->
       <div class="analyse-header">
         <div class="header-info">
           <h2 class="view-title">流量分析</h2>
-          <p class="view-subtitle">深入分析网络流量模式和安全威胁</p>
+          <p class="view-subtitle">深入分析网络流量模式和应用程序使用情况</p>
         </div>
-        <div class="header-actions">
-          <n-date-picker
-            v-model:value="dateRange"
-            type="daterange"
-            clearable
-            size="medium"
-          />
-          <n-button type="primary" size="medium">
+        <div class="header-controls">
+          <div class="time-selector">
+            <n-button-group>
+              <n-button 
+                v-for="range in timeRanges" 
+                :key="range.type"
+                :type="selectedTimeRange === range.type ? 'primary' : 'default'"
+                :disabled="!range.available"
+                @click="selectedTimeRange = range.type"
+              >
+                {{ range.name }}
+              </n-button>
+            </n-button-group>
+          </div>
+          <n-button type="primary" size="medium" @click="refreshData">
             <template #icon>
               <n-icon :component="RefreshOutline" />
             </template>
@@ -81,37 +88,19 @@
           <div class="chart-header">
             <h3 class="chart-title">流量趋势</h3>
             <div class="chart-controls">
-              <n-button-group size="tiny">
-                <n-button>1小时</n-button>
-                <n-button type="primary">24小时</n-button>
-                <n-button>7天</n-button>
-                <n-button>30天</n-button>
-              </n-button-group>
+              <n-select 
+                v-model:value="selectedInterface" 
+                :options="interfaceOptions"
+                size="small"
+                style="min-width: 120px;"
+              />
             </div>
           </div>
           <div class="chart-body">
-            <div class="chart-placeholder">
-              <div class="chart-line"></div>
-              <svg viewBox="0 0 400 200" class="chart-svg">
-                <path
-                  d="M 0 180 Q 100 100 200 120 T 400 80"
-                  fill="none"
-                  stroke="var(--accent-primary)"
-                  stroke-width="2"
-                />
-                <path
-                  d="M 0 180 Q 100 100 200 120 T 400 80 L 400 200 L 0 200 Z"
-                  fill="url(#gradient)"
-                  opacity="0.2"
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style="stop-color:var(--accent-primary);stop-opacity:0.8" />
-                    <stop offset="100%" style="stop-color:var(--accent-primary);stop-opacity:0" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+            <TrafficTrendChart 
+              :data="trafficTrendData" 
+              :interface-id="selectedInterface"
+            />
           </div>
         </div>
 
@@ -191,65 +180,80 @@
           </div>
         </div>
 
-        <!-- Top 应用 -->
+        <!-- Top应用流量图表 -->
         <div class="chart-card">
           <div class="chart-header">
-            <h3 class="chart-title">Top 应用流量</h3>
+            <h3 class="chart-title">Top应用流量</h3>
           </div>
           <div class="chart-body">
-            <div class="app-list">
-              <div v-for="(app, index) in topApps" :key="index" class="app-item">
-                <div class="app-info">
-                  <span class="app-rank">{{ index + 1 }}</span>
-                  <span class="app-name">{{ app.name }}</span>
-                </div>
-                <div class="app-traffic">
-                  <div class="traffic-bar">
-                    <div
-                      class="traffic-fill"
-                      :style="{ width: app.percentage + '%' }"
-                    ></div>
-                  </div>
-                  <span class="traffic-text">{{ app.traffic }}</span>
-                </div>
-              </div>
-            </div>
+            <TopAppsChart 
+              :data="topAppsData"
+              :time-range="selectedTimeRange"
+            />
           </div>
         </div>
       </div>
 
-      <!-- 详细表格 -->
-      <div class="detail-panel">
-        <div class="panel-header">
-          <h3 class="panel-title">异常流量检测</h3>
-          <div class="panel-controls">
-            <n-tag type="error" size="small">
-              {{ anomalies.length }} 个异常
-            </n-tag>
+      <!-- 底部软件流量分析区域 -->
+      <div class="bottom-analysis-area">
+        <div class="traffic-ranking-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">软件流量TOP榜</h3>
+            <div class="panel-controls">
+              <n-button-group size="small">
+                <n-button 
+                  v-for="range in rankingTimeRanges" 
+                  :key="range"
+                  :type="selectedRankingRange === range ? 'primary' : 'default'"
+                  @click="selectedRankingRange = range"
+                >
+                  {{ range }}
+                </n-button>
+              </n-button-group>
+            </div>
+          </div>
+          <div class="ranking-content">
+            <SoftwareRankingList 
+              :data="softwareRankingData"
+              :time-range="selectedRankingRange"
+              :selected-software="selectedSoftware"
+              @select-software="onSelectSoftware"
+            />
           </div>
         </div>
-        <div class="anomaly-list">
-          <div v-for="anomaly in anomalies" :key="anomaly.id" class="anomaly-item">
-            <div class="anomaly-severity" :class="'severity-' + anomaly.severity">
-              <n-icon
-                :component="anomaly.severity === 'high' ? AlertOutline :
-                           anomaly.severity === 'medium' ? WarningOutline :
-                           InformationCircleOutline"
-                size="16"
-              />
-            </div>
-            <div class="anomaly-info">
-              <div class="anomaly-title">{{ anomaly.title }}</div>
-              <div class="anomaly-details">
-                <span>{{ anomaly.time }}</span>
-                <span>•</span>
-                <span>{{ anomaly.source }}</span>
-                <span>→</span>
-                <span>{{ anomaly.destination }}</span>
+        
+        <div class="software-detail-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">
+              {{ selectedSoftware?.displayName || '选择软件查看详情' }}
+            </h3>
+          </div>
+          <div class="detail-content">
+            <div v-if="selectedSoftware" class="software-details">
+              <!-- 软件基本信息 -->
+              <div class="detail-section">
+                <h4 class="section-title">软件信息</h4>
+                <SoftwareInfoCard :software-info="selectedSoftwareInfo" />
+              </div>
+              
+              <!-- 网络连接关系图 -->
+              <div class="detail-section">
+                <h4 class="section-title">网络连接</h4>
+                <NetworkRelationChart 
+                  :data="networkRelationData"
+                  :software="selectedSoftware"
+                />
+              </div>
+              
+              <!-- 端口统计 -->
+              <div class="detail-section">
+                <h4 class="section-title">端口统计</h4>
+                <PortStatsTable :data="portStatsData" />
               </div>
             </div>
-            <div class="anomaly-action">
-              <n-button size="tiny" quaternary>查看详情</n-button>
+            <div v-else class="empty-state">
+              <n-icon :component="ServerOutline" size="48" />
+              <p>请从左侧列表选择软件查看详情</p>
             </div>
           </div>
         </div>
@@ -259,57 +263,148 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NButton, NButtonGroup, NIcon, NDatePicker, NTag } from 'naive-ui'
+import { ref, computed, onMounted, watch } from 'vue'
+import { NButton, NButtonGroup, NIcon, NSelect } from 'naive-ui'
 import {
   RefreshOutline,
   TrendingUpOutline,
   WarningOutline,
   SpeedometerOutline,
   AlertCircleOutline,
-  AlertOutline,
-  InformationCircleOutline,
+  ServerOutline,
 } from '@vicons/ionicons5'
 
-// 日期范围
-const dateRange = ref<[number, number] | null>(null)
+// 导入组件
+import TrafficTrendChart from './components/TrafficTrendChart.vue'
+import TopAppsChart from './components/TopAppsChart.vue'
+import SoftwareRankingList from './components/SoftwareRankingList.vue'
+import SoftwareInfoCard from './components/SoftwareInfoCard.vue'
+import NetworkRelationChart from './components/NetworkRelationChart.vue'
+import PortStatsTable from './components/PortStatsTable.vue'
 
-// Top 应用数据
-const topApps = ref([
-  { name: 'Chrome', traffic: '523 GB', percentage: 85 },
-  { name: 'Microsoft Teams', traffic: '387 GB', percentage: 63 },
-  { name: 'Spotify', traffic: '256 GB', percentage: 42 },
-  { name: 'Visual Studio Code', traffic: '198 GB', percentage: 32 },
-  { name: 'Slack', traffic: '142 GB', percentage: 23 },
+// 时间范围选项
+const timeRanges = ref([
+  { type: '1hour', name: '1小时', available: true },
+  { type: '1day', name: '24小时', available: true },
+  { type: '7days', name: '7天', available: true },
+  { type: '30days', name: '30天', available: false },
 ])
 
-// 异常数据
-const anomalies = ref([
-  {
-    id: 1,
-    severity: 'high',
-    title: '异常大量数据传输',
-    time: '10:23:45',
-    source: '192.168.1.105',
-    destination: '104.21.58.93',
-  },
-  {
-    id: 2,
-    severity: 'medium',
-    title: '可疑端口扫描活动',
-    time: '10:15:32',
-    source: '10.0.0.158',
-    destination: '192.168.1.1',
-  },
-  {
-    id: 3,
-    severity: 'low',
-    title: '非标准协议使用',
-    time: '09:58:21',
-    source: '192.168.1.201',
-    destination: '172.16.0.1',
-  },
+const selectedTimeRange = ref('1day')
+
+// 网络接口选项
+const interfaceOptions = ref([
+  { label: '全部网卡', value: 'all' },
+  { label: '以太网', value: 'eth0' },
+  { label: 'WiFi', value: 'wifi0' },
 ])
+
+const selectedInterface = ref('all')
+
+// 软件排行时间范围
+const rankingTimeRanges = ref(['1小时', '1天', '7天', '30天'])
+const selectedRankingRange = ref('1天')
+
+// 选中的软件
+const selectedSoftware = ref<any>(null)
+
+// Mock数据
+const trafficTrendData = ref([
+  { timestamp: Date.now() - 3600000, uploadSpeed: 1024000, downloadSpeed: 5120000 },
+  { timestamp: Date.now() - 2400000, uploadSpeed: 2048000, downloadSpeed: 8192000 },
+  { timestamp: Date.now() - 1200000, uploadSpeed: 1536000, downloadSpeed: 6144000 },
+  { timestamp: Date.now(), uploadSpeed: 3072000, downloadSpeed: 12288000 },
+])
+
+const topAppsData = ref([
+  { processName: 'chrome.exe', displayName: 'Google Chrome', totalBytes: 1073741824, percentage: 45.2 },
+  { processName: 'teams.exe', displayName: 'Microsoft Teams', totalBytes: 536870912, percentage: 22.5 },
+  { processName: 'spotify.exe', displayName: 'Spotify', totalBytes: 268435456, percentage: 11.3 },
+  { processName: 'code.exe', displayName: 'VS Code', totalBytes: 134217728, percentage: 5.6 },
+  { processName: 'slack.exe', displayName: 'Slack', totalBytes: 67108864, percentage: 2.8 },
+])
+
+const softwareRankingData = ref([
+  { 
+    rank: 1, 
+    processName: 'chrome.exe', 
+    displayName: 'Google Chrome', 
+    totalBytes: 1073741824, 
+    percentage: 45.2,
+    connectionCount: 23 
+  },
+  { 
+    rank: 2, 
+    processName: 'teams.exe', 
+    displayName: 'Microsoft Teams', 
+    totalBytes: 536870912, 
+    percentage: 22.5,
+    connectionCount: 12 
+  },
+  // ... 更多数据
+])
+
+// 选中软件的详细信息
+const selectedSoftwareInfo = computed(() => {
+  if (!selectedSoftware.value) return null
+  return {
+    processName: 'chrome.exe',
+    displayName: 'Google Chrome',
+    version: '119.0.6045.160',
+    company: 'Google LLC',
+    processPath: 'C:\\Program Files\\Google\\Chrome\\chrome.exe',
+    fileSize: 2467840,
+  }
+})
+
+const networkRelationData = computed(() => {
+  if (!selectedSoftware.value) return { nodes: [], links: [] }
+  return {
+    nodes: [
+      { id: 'app_chrome', name: 'Chrome', type: 'application', size: 45.2, category: 0 },
+      { id: 'port_443', name: '443/TCP', type: 'port', size: 30.5, category: 1 },
+      { id: 'host_google', name: 'google.com', type: 'remote_host', size: 25.8, category: 2 },
+    ],
+    links: [
+      { source: 'app_chrome', target: 'port_443', value: 30.5, label: '30.5MB' },
+      { source: 'port_443', target: 'host_google', value: 25.8, label: '25.8MB' },
+    ]
+  }
+})
+
+const portStatsData = computed(() => {
+  if (!selectedSoftware.value) return []
+  return [
+    { port: 443, protocol: 'TCP', connectionCount: 15, totalBytes: 52428800, remoteHosts: ['142.251.42.227', '172.217.164.46'] },
+    { port: 80, protocol: 'TCP', connectionCount: 5, totalBytes: 10485760, remoteHosts: ['93.184.216.34'] },
+  ]
+})
+
+// 事件处理
+const onSelectSoftware = (software: any) => {
+  selectedSoftware.value = software
+}
+
+const refreshData = () => {
+  // 刷新数据的逻辑
+  console.log('Refreshing data...')
+}
+
+// 监听时间范围变化
+watch(selectedTimeRange, () => {
+  // 重新加载数据
+})
+
+watch(selectedInterface, () => {
+  // 重新加载趋势数据
+})
+
+onMounted(() => {
+  // 初始化时选择第一个软件
+  if (softwareRankingData.value.length > 0) {
+    selectedSoftware.value = softwareRankingData.value[0]
+  }
+})
 </script>
 
 <style scoped>
@@ -331,6 +426,10 @@ const anomalies = ref([
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-primary);
 }
 
 .header-info {
@@ -350,9 +449,14 @@ const anomalies = ref([
   margin: 4px 0 0 0;
 }
 
-.header-actions {
+.header-controls {
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  align-items: center;
+}
+
+.time-selector {
+  display: flex;
   align-items: center;
 }
 
@@ -605,98 +709,98 @@ const anomalies = ref([
   text-align: right;
 }
 
-/* 详细面板 */
-.detail-panel {
+/* 底部分析区域 */
+.bottom-analysis-area {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.traffic-ranking-panel,
+.software-detail-panel {
   background: var(--bg-card);
   backdrop-filter: var(--backdrop-blur);
   border: 1px solid var(--border-primary);
   border-radius: 12px;
   overflow: hidden;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-header {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .panel-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
 }
 
-/* 异常列表 */
-.anomaly-list {
-  padding: 12px;
-}
-
-.anomaly-item {
+.panel-controls {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  transition: var(--transition);
-}
-
-.anomaly-item:hover {
-  background: var(--bg-hover);
-}
-
-.anomaly-item:last-child {
-  margin-bottom: 0;
-}
-
-.anomaly-severity {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.severity-high {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--accent-error);
-}
-
-.severity-medium {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--accent-warning);
-}
-
-.severity-low {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--accent-primary);
-}
-
-.anomaly-info {
-  flex: 1;
-}
-
-.anomaly-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.anomaly-details {
-  font-size: 12px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
   gap: 8px;
 }
 
+.ranking-content,
+.detail-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.software-details {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.detail-section {
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  gap: 16px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+
 /* 响应式 */
+@media (max-width: 1400px) {
+  .bottom-analysis-area {
+    grid-template-columns: 350px 1fr;
+  }
+}
+
 @media (max-width: 1200px) {
   .charts-grid {
     grid-template-columns: 1fr 1fr;
@@ -704,6 +808,16 @@ const anomalies = ref([
 
   .chart-card.large {
     grid-column: span 2;
+  }
+  
+  .bottom-analysis-area {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .traffic-ranking-panel,
+  .software-detail-panel {
+    height: 500px;
   }
 }
 
@@ -714,9 +828,10 @@ const anomalies = ref([
     gap: 16px;
   }
 
-  .header-actions {
+  .header-controls {
     width: 100%;
     flex-wrap: wrap;
+    gap: 12px;
   }
 
   .metrics-grid {
