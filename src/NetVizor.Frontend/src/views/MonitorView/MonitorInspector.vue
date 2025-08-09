@@ -73,7 +73,7 @@
         </div>
 
         <!-- 流量统计 -->
-        <div class="detail-section">
+        <div class="detail-section" v-if="false">
           <h4 class="detail-section-title">流量概览</h4>
           <TrafficChart :data="trafficHistory" :max-data-points="60" />
         </div>
