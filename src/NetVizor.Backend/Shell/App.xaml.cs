@@ -924,19 +924,19 @@ public partial class App : System.Windows.Application
                             id = guid,
                             name = networkInfo.NetConnectionID ?? networkInfo.Name,
                             displayName = networkInfo.Description ?? networkInfo.Name,
-                            isActive = networkInfo.Status == "OK",
+                            isActive = true, // 因为在数据库中有流量数据，所以认为是可用的
                             macAddress = networkInfo.MACAddress
                         });
                     }
                     else
                     {
-                        // 如果无法获取网卡信息，使用基本信息
+                        // 如果无法获取网卡信息，但数据库中有流量数据，仍然认为是有效的
                         interfaces.Add(new
                         {
                             id = guid,
                             name = $"Network Interface {guid.Substring(0, 8)}",
                             displayName = $"Network Adapter {guid.Substring(0, 8)}",
-                            isActive = true,
+                            isActive = true, // 有流量数据就认为是可用的
                             macAddress = ""
                         });
                     }
