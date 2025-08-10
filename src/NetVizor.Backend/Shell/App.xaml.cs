@@ -1180,7 +1180,7 @@ public partial class App : System.Windows.Application
                     string displayName = app.AppName ?? "";
                     string iconBase64 = "";
                     
-                    if (string.IsNullOrEmpty(displayName) && !string.IsNullOrEmpty(app.AppId))
+                    if (!string.IsNullOrEmpty(displayName) && !string.IsNullOrEmpty(app.AppId))
                     {
                         // 如果JOIN没有获取到应用名称，尝试单独查询
                         var appInfo = await DatabaseManager.Instance.AppInfos.GetAppByAppIdAsync(app.AppId);
@@ -1271,8 +1271,12 @@ public partial class App : System.Windows.Application
                     string processName = System.IO.Path.GetFileName(app.AppPath ?? "");
                     string displayName = app.AppName ?? "";
                     string iconBase64 = "";
-                    
-                    if (string.IsNullOrEmpty(displayName) && !string.IsNullOrEmpty(app.AppId))
+                    string version = "";
+                    string company = "";
+
+                    var b = !string.IsNullOrEmpty(app.AppId);
+                    var isNullOrEmpty = !string.IsNullOrEmpty(displayName);
+                    if (isNullOrEmpty && b)
                     {
                         // 如果JOIN没有获取到应用名称，尝试单独查询
                         var appInfo = await DatabaseManager.Instance.AppInfos.GetAppByAppIdAsync(app.AppId);
@@ -1280,10 +1284,12 @@ public partial class App : System.Windows.Application
                         {
                             displayName = appInfo.Name ?? "";
                             iconBase64 = appInfo.Base64Icon ?? "";
+                            version = appInfo.Version ?? "";
+                            company = appInfo.Company ?? "";
                         }
                     }
                     
-                    if (string.IsNullOrEmpty(displayName))
+                    if (isNullOrEmpty)
                     {
                         displayName = processName.Replace(".exe", "") ?? "Unknown";
                     }
@@ -1295,6 +1301,8 @@ public partial class App : System.Windows.Application
                         displayName = displayName,
                         processPath = app.AppPath ?? "",
                         icon = iconBase64,
+                        version = version,
+                        company = company,
                         totalBytes = app.TotalTraffic,
                         uploadBytes = app.TotalUpload,
                         connectionCount = app.ConnectionCount

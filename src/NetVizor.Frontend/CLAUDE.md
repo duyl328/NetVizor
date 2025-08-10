@@ -2,6 +2,9 @@
 这是一个网络管理项目，它用的是Vue进行展示的，集成防火墙API，提供HTTP和WebSocket接口来实现数据的传递和接收。使用Vue作为前端并通过WebView2套壳实现主页面渲染
 我使用了 TS 和Vue，UI样式使用的 Naive UI
 
+\src\NetVizor.Frontend\.env.development 中有我前端的配置
+vue-virtual-scroller 中是我项目主要使用的虚拟列表组件
+
 我所有的环境并非全部在默认位置安装，比如部分环境如 Git 之类的在 D:\Env 下
 
 

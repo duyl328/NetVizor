@@ -51,7 +51,7 @@ public class NetworkDataCollectionService : IDisposable
 
         // 每小时检测清理并合并旧数据
         _dataCleanupTimer = new Timer(TriggerDataCleanupAndAggregation, null,
-            TimeSpan.FromHours(1), TimeSpan.FromHours(1));
+            TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
 
         Log.Information("网络数据收集服务已启动");
     }

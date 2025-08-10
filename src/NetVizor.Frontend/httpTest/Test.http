@@ -15,21 +15,13 @@ GET http://localhost:8268/api/statistics/interfaces?timeRange=week
 
 ###
 
-### Get network interfaces list - 1 month time range  
+### Get network interfaces list - 1 month time range
 GET http://localhost:8268/api/statistics/interfaces?timeRange=month
 
 ###
 
 ### Get available time ranges
 GET http://localhost:8268/api/statistics/available-ranges
-
-###
-
-### Clear network interface cache
-POST http://localhost:8268/api/statistics/clear-cache
-Content-Type: application/json
-
-{}
 
 ###
 

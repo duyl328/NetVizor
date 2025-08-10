@@ -10,8 +10,8 @@
         <div class="header-controls">
           <div class="time-selector">
             <n-button-group>
-              <n-button 
-                v-for="range in timeRanges" 
+              <n-button
+                v-for="range in timeRanges"
                 :key="range.type"
                 :type="selectedTimeRange === range.type ? 'primary' : 'default'"
                 :disabled="!range.available"
@@ -31,7 +31,7 @@
       </div>
 
       <!-- 关键指标卡片 -->
-      <div class="metrics-grid">
+      <div class="metrics-grid" v-if="false ">
         <div class="metric-card">
           <div class="metric-header">
             <span class="metric-title">总流量</span>
@@ -88,8 +88,8 @@
           <div class="chart-header">
             <h3 class="chart-title">流量趋势</h3>
             <div class="chart-controls">
-              <n-select 
-                v-model:value="selectedInterface" 
+              <n-select
+                v-model:value="selectedInterface"
                 :options="interfaceOptions"
                 size="small"
                 style="min-width: 120px;"
@@ -97,8 +97,8 @@
             </div>
           </div>
           <div class="chart-body">
-            <TrafficTrendChart 
-              :data="trafficTrendData" 
+            <TrafficTrendChart
+              :data="trafficTrendData"
               :interface-id="selectedInterface"
             />
           </div>
@@ -111,7 +111,7 @@
             <h3 class="chart-title">Top应用流量</h3>
           </div>
           <div class="chart-body">
-            <TopAppsChart 
+            <TopAppsChart
               :data="topAppsData"
               :time-range="selectedTimeRange"
             />
@@ -126,8 +126,8 @@
             <h3 class="panel-title">软件流量TOP榜</h3>
             <div class="panel-controls">
               <n-button-group size="small">
-                <n-button 
-                  v-for="range in rankingTimeRanges" 
+                <n-button
+                  v-for="range in rankingTimeRanges"
                   :key="range"
                   :type="selectedRankingRange === range ? 'primary' : 'default'"
                   @click="selectedRankingRange = range"
@@ -138,7 +138,7 @@
             </div>
           </div>
           <div class="ranking-content">
-            <SoftwareRankingList 
+            <SoftwareRankingList
               :data="softwareRankingData"
               :time-range="selectedRankingRange"
               @select-software="showSoftwareDetail"
@@ -223,21 +223,21 @@ const topAppsData = ref([
 ])
 
 const softwareRankingData = ref([
-  { 
-    rank: 1, 
-    processName: 'chrome.exe', 
-    displayName: 'Google Chrome', 
-    totalBytes: 1073741824, 
+  {
+    rank: 1,
+    processName: 'chrome.exe',
+    displayName: 'Google Chrome',
+    totalBytes: 1073741824,
     percentage: 45.2,
-    connectionCount: 23 
+    connectionCount: 23
   },
-  { 
-    rank: 2, 
-    processName: 'teams.exe', 
-    displayName: 'Microsoft Teams', 
-    totalBytes: 536870912, 
+  {
+    rank: 2,
+    processName: 'teams.exe',
+    displayName: 'Microsoft Teams',
+    totalBytes: 536870912,
     percentage: 22.5,
-    connectionCount: 12 
+    connectionCount: 12
   },
   // ... 更多数据
 ])
@@ -668,7 +668,7 @@ onMounted(() => {
   .chart-card.large {
     grid-column: span 1;
   }
-  
+
   .software-ranking-panel {
     height: 450px;
   }
