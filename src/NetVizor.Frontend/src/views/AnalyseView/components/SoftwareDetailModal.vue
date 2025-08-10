@@ -1,147 +1,161 @@
 <template>
-  <n-modal 
-    v-model:show="visible" 
+  <n-modal
+    v-model:show="visible"
     :mask-closable="false"
     preset="card"
-    style="width: 90%; max-width: 1000px;"
-    :title="software?.displayName || '软件详情'"
+    style="width: 90%; max-width: 1000px"
+    :title="softwareDetail?.displayName || '软件详情'"
     size="huge"
     :bordered="false"
     :segmented="false"
   >
-    <div v-if="software" class="software-detail-content">
-      <!-- 基本信息和统计 -->
-      <div class="detail-header">
-        <div class="software-icon">
-          <div class="icon-placeholder">
-            {{ software.displayName.charAt(0).toUpperCase() }}
+    <n-spin :show="loading" style="min-height: 400px">
+      <div v-if="softwareDetail" class="software-detail-content">
+        <!-- 基本信息和统计 -->
+        <div class="detail-header">
+          <div class="software-icon">
+            <img
+              v-if="softwareDetail.icon"
+              :src="`data:image/png;base64,${softwareDetail.icon}`"
+              class="app-icon"
+              :alt="softwareDetail.displayName"
+            />
+            <div v-else class="icon-placeholder">
+              {{ softwareDetail.displayName.charAt(0).toUpperCase() }}
+            </div>
+          </div>
+          <div class="software-summary">
+            <h2 class="software-name">{{ softwareDetail.displayName }}</h2>
+            <div class="software-meta">
+              <span class="process-name">{{ softwareDetail.processName }}</span>
+              <span class="traffic-info"
+                >{{ formatBytes(softwareDetail.totalBytes) }} ({{
+                  softwareDetail.percentage.toFixed(1)
+                }}%)</span
+              >
+              <span class="connection-info">{{ softwareDetail.connectionCount }} 个连接</span>
+            </div>
+          </div>
+          <div class="detail-stats">
+            <div class="stat-item">
+              <span class="stat-label">流量占比</span>
+              <span class="stat-value">{{ softwareDetail.percentage.toFixed(1) }}%</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">连接数</span>
+              <span class="stat-value">{{ softwareDetail.connectionCount }}</span>
+            </div>
           </div>
         </div>
-        <div class="software-summary">
-          <h2 class="software-name">{{ software.displayName }}</h2>
-          <div class="software-meta">
-            <span class="process-name">{{ software.processName }}</span>
-            <span class="traffic-info">{{ formatBytes(software.totalBytes) }} ({{ software.percentage.toFixed(1) }}%)</span>
-            <span class="connection-info">{{ software.connectionCount }} 个连接</span>
-          </div>
-        </div>
-        <div class="detail-stats">
-          <div class="stat-item">
-            <span class="stat-label">流量占比</span>
-            <span class="stat-value">{{ software.percentage.toFixed(1) }}%</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">连接数</span>
-            <span class="stat-value">{{ software.connectionCount }}</span>
-          </div>
+
+        <!-- 选项卡内容 -->
+        <div class="detail-tabs">
+          <n-tabs default-value="overview" type="line">
+            <!-- 概览 -->
+            <n-tab-pane name="overview" tab="概览">
+              <div class="tab-content">
+                <div class="overview-grid">
+                  <!-- 软件信息卡片 -->
+                  <div class="info-section">
+                    <h4 class="section-title">软件信息</h4>
+                    <SoftwareInfoCard :software-info="softwareInfo" />
+                  </div>
+
+                  <!-- 协议分布图 -->
+                  <div class="protocol-section">
+                    <h4 class="section-title">协议分布</h4>
+                    <ProtocolChart :data="protocolData" />
+                  </div>
+                </div>
+              </div>
+            </n-tab-pane>
+
+            <!-- 网络连接 -->
+            <n-tab-pane name="network" tab="网络连接">
+              <div class="tab-content">
+                <div class="network-grid">
+                  <!-- 连接关系图 -->
+                  <div class="relation-section">
+                    <h4 class="section-title">连接关系</h4>
+                    <NetworkRelationChart :data="networkRelationData" :software="softwareDetail" />
+                  </div>
+
+                  <!-- 端口统计表 -->
+                  <div class="ports-section">
+                    <h4 class="section-title">端口统计</h4>
+                    <PortStatsTable :data="portStatsData" />
+                  </div>
+                </div>
+              </div>
+            </n-tab-pane>
+
+            <!-- 流量详情 -->
+            <n-tab-pane name="traffic" tab="流量详情">
+              <div class="tab-content">
+                <div class="traffic-details">
+                  <div class="traffic-chart-section">
+                    <h4 class="section-title">流量趋势 ({{ timeRange }})</h4>
+                    <div class="traffic-chart-placeholder">
+                      <div class="placeholder-content">
+                        <n-icon :component="TrendingUpOutline" size="48" />
+                        <p>流量趋势图</p>
+                        <p class="placeholder-desc">展示该软件的上传/下载流量变化</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="traffic-stats-section">
+                    <h4 class="section-title">流量统计</h4>
+                    <div class="stats-grid">
+                      <div class="stat-card">
+                        <div class="stat-label">总流量</div>
+                        <div class="stat-value">{{ formatBytes(software.totalBytes || 0) }}</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-label">上传</div>
+                        <div class="stat-value">{{ formatBytes(software.uploadBytes || 0) }}</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-label">下载</div>
+                        <div class="stat-value">{{ formatBytes(software.downloadBytes || 0) }}</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-label">平均速度</div>
+                        <div class="stat-value">{{ formatSpeed(averageSpeed) }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </n-tab-pane>
+          </n-tabs>
         </div>
       </div>
 
-      <!-- 选项卡内容 -->
-      <div class="detail-tabs">
-        <n-tabs default-value="overview" type="line">
-          <!-- 概览 -->
-          <n-tab-pane name="overview" tab="概览">
-            <div class="tab-content">
-              <div class="overview-grid">
-                <!-- 软件信息卡片 -->
-                <div class="info-section">
-                  <h4 class="section-title">软件信息</h4>
-                  <SoftwareInfoCard :software-info="softwareInfo" />
-                </div>
-                
-                <!-- 协议分布图 -->
-                <div class="protocol-section">
-                  <h4 class="section-title">协议分布</h4>
-                  <ProtocolChart :data="protocolData" />
-                </div>
-              </div>
-            </div>
-          </n-tab-pane>
-          
-          <!-- 网络连接 -->
-          <n-tab-pane name="network" tab="网络连接">
-            <div class="tab-content">
-              <div class="network-grid">
-                <!-- 连接关系图 -->
-                <div class="relation-section">
-                  <h4 class="section-title">连接关系</h4>
-                  <NetworkRelationChart 
-                    :data="networkRelationData"
-                    :software="software"
-                  />
-                </div>
-                
-                <!-- 端口统计表 -->
-                <div class="ports-section">
-                  <h4 class="section-title">端口统计</h4>
-                  <PortStatsTable :data="portStatsData" />
-                </div>
-              </div>
-            </div>
-          </n-tab-pane>
-          
-          <!-- 流量详情 -->
-          <n-tab-pane name="traffic" tab="流量详情">
-            <div class="tab-content">
-              <div class="traffic-details">
-                <div class="traffic-chart-section">
-                  <h4 class="section-title">流量趋势 ({{ timeRange }})</h4>
-                  <div class="traffic-chart-placeholder">
-                    <div class="placeholder-content">
-                      <n-icon :component="TrendingUpOutline" size="48" />
-                      <p>流量趋势图</p>
-                      <p class="placeholder-desc">展示该软件的上传/下载流量变化</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="traffic-stats-section">
-                  <h4 class="section-title">流量统计</h4>
-                  <div class="stats-grid">
-                    <div class="stat-card">
-                      <div class="stat-label">总流量</div>
-                      <div class="stat-value">{{ formatBytes(software.totalBytes || 0) }}</div>
-                    </div>
-                    <div class="stat-card">
-                      <div class="stat-label">上传</div>
-                      <div class="stat-value">{{ formatBytes(software.uploadBytes || 0) }}</div>
-                    </div>
-                    <div class="stat-card">
-                      <div class="stat-label">下载</div>
-                      <div class="stat-value">{{ formatBytes(software.downloadBytes || 0) }}</div>
-                    </div>
-                    <div class="stat-card">
-                      <div class="stat-label">平均速度</div>
-                      <div class="stat-value">{{ formatSpeed(averageSpeed) }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </n-tab-pane>
-        </n-tabs>
+      <div v-else-if="!loading && !softwareDetail" class="no-data">
+        <div class="no-data-icon">📊</div>
+        <div class="no-data-text">暂无软件详情数据</div>
       </div>
-    </div>
-    
+    </n-spin>
+
     <template #action>
-      <div class="modal-actions">
-        <n-button @click="visible = false">关闭</n-button>
-        <n-button type="primary" @click="exportData">
-          <template #icon>
-            <n-icon :component="DownloadOutline" />
-          </template>
-          导出数据
-        </n-button>
-      </div>
+      <n-button @click="visible = false">关闭</n-button>
+      <n-button type="primary" @click="fetchAllData" :loading="loading">
+        <template #icon>
+          <n-icon :component="RefreshOutline" />
+        </template>
+        刷新数据
+      </n-button>
     </template>
   </n-modal>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { NModal, NTabs, NTabPane, NButton, NIcon } from 'naive-ui'
-import { TrendingUpOutline, DownloadOutline } from '@vicons/ionicons5'
+import { computed, ref, watch } from 'vue'
+import { NModal, NTabs, NTabPane, NButton, NIcon, NSpin } from 'naive-ui'
+import { TrendingUpOutline, DownloadOutline, RefreshOutline } from '@vicons/ionicons5'
+import { httpClient } from '@/utils/http'
+import type { ApiResponse } from '@/types/http'
 
 // 导入子组件
 import SoftwareInfoCard from './SoftwareInfoCard.vue'
@@ -149,14 +163,66 @@ import NetworkRelationChart from './NetworkRelationChart.vue'
 import PortStatsTable from './PortStatsTable.vue'
 import ProtocolChart from './ProtocolChart.vue'
 
+// 数据接口定义
+interface SoftwareDetail {
+  appId: string
+  processName: string
+  displayName: string
+  processPath: string
+  icon: string
+  version: string
+  company: string
+  totalBytes: number
+  uploadBytes: number
+  downloadBytes: number
+  connectionCount: number
+  percentage: number
+}
+
+interface SoftwareInfo {
+  processName: string
+  displayName: string
+  version: string
+  company: string
+  processPath: string
+  fileSize: number
+}
+
+interface NetworkRelationData {
+  nodes: Array<{
+    id: string
+    name: string
+    type: string
+    size: number
+    category: number
+  }>
+  links: Array<{
+    source: string
+    target: string
+    value: number
+    label: string
+  }>
+}
+
+interface PortStats {
+  port: number
+  protocol: string
+  connectionCount: number
+  totalBytes: number
+  remoteHosts: string[]
+}
+
+interface ProtocolData {
+  protocol: string
+  bytes: number
+  percentage: number
+  color: string
+}
+
 // Props定义
 const props = defineProps<{
   show: boolean
-  software?: any
-  softwareInfo?: any
-  networkRelationData?: any
-  portStatsData?: any[]
-  protocolData?: any[]
+  appId?: string | null
   timeRange?: string
 }>()
 
@@ -165,27 +231,173 @@ const emit = defineEmits<{
   'update:show': [value: boolean]
 }>()
 
+// 响应式数据
+const loading = ref(false)
+const softwareDetail = ref<SoftwareDetail | null>(null)
+const softwareInfo = ref<SoftwareInfo | null>(null)
+const networkRelationData = ref<NetworkRelationData>({ nodes: [], links: [] })
+const portStatsData = ref<PortStats[]>([])
+const protocolData = ref<ProtocolData[]>([])
+
 // 计算属性
 const visible = computed({
   get: () => props.show,
-  set: (value) => emit('update:show', value)
+  set: (value) => emit('update:show', value),
 })
 
 // 计算平均速度
 const averageSpeed = computed(() => {
-  if (!props.software?.totalBytes) return 0
+  if (!softwareDetail.value?.totalBytes) return 0
   // 模拟计算，实际应根据时间范围计算
-  return props.software.totalBytes / 3600 // 假设1小时的数据
+  return softwareDetail.value.totalBytes / 3600 // 假设1小时的数据
 })
+
+// API调用函数
+const getSoftwareDetail = async () => {
+  if (!props.appId) return
+
+  loading.value = true
+  try {
+    const params = {
+      timeRange: props.timeRange || '1hour',
+    }
+
+    const res: ApiResponse<SoftwareDetail> = await httpClient.get(
+      `/apps/${props.appId}/detail`,
+      params,
+    )
+    if (res.success && res.data) {
+      softwareDetail.value = res.data
+    }
+  } catch (error) {
+    console.error('获取软件详情失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const getSoftwareInfo = async () => {
+  if (!props.appId) return
+
+  try {
+    const res: ApiResponse<SoftwareInfo> = await httpClient.get(`/apps/${props.appId}/info`)
+    if (res.success && res.data) {
+      softwareInfo.value = res.data
+    }
+  } catch (error) {
+    console.error('获取软件信息失败:', error)
+  }
+}
+
+const getNetworkRelation = async () => {
+  if (!props.appId) return
+
+  try {
+    const params = {
+      timeRange: props.timeRange || '1hour',
+    }
+
+    const res: ApiResponse<NetworkRelationData> = await httpClient.get(
+      `/apps/${props.appId}/network-relation`,
+      params,
+    )
+    if (res.success && res.data) {
+      networkRelationData.value = res.data
+    }
+  } catch (error) {
+    console.error('获取网络关系数据失败:', error)
+  }
+}
+
+const getPortStats = async () => {
+  if (!props.appId) return
+
+  try {
+    const params = {
+      timeRange: props.timeRange || '1hour',
+    }
+
+    const res: ApiResponse<PortStats[]> = await httpClient.get(
+      `/apps/${props.appId}/port-stats`,
+      params,
+    )
+    if (res.success && res.data) {
+      portStatsData.value = res.data
+    }
+  } catch (error) {
+    console.error('获取端口统计失败:', error)
+  }
+}
+
+const getProtocolData = async () => {
+  if (!props.appId) return
+
+  try {
+    const params = {
+      timeRange: props.timeRange || '1hour',
+    }
+
+    const res: ApiResponse<ProtocolData[]> = await httpClient.get(
+      `/apps/${props.appId}/protocols`,
+      params,
+    )
+    if (res.success && res.data) {
+      protocolData.value = res.data
+    }
+  } catch (error) {
+    console.error('获取协议数据失败:', error)
+  }
+}
+
+// 获取所有数据
+const fetchAllData = async () => {
+  if (!props.appId) return
+
+  await Promise.all([
+    getSoftwareDetail(),
+    getSoftwareInfo(),
+    getNetworkRelation(),
+    getPortStats(),
+    getProtocolData(),
+  ])
+}
+
+// 监听AppId和时间范围变化
+watch(
+  [() => props.appId, () => props.timeRange],
+  () => {
+    if (props.show && props.appId) {
+      fetchAllData()
+    }
+  },
+  { immediate: true },
+)
+
+// 监听弹窗显示状态
+watch(
+  () => props.show,
+  (newVal) => {
+    if (newVal && props.appId) {
+      fetchAllData()
+    } else if (!newVal) {
+      // 关闭弹窗时清理数据
+      softwareDetail.value = null
+      softwareInfo.value = null
+      networkRelationData.value = { nodes: [], links: [] }
+      portStatsData.value = []
+      protocolData.value = []
+    }
+  },
+)
 
 // 格式化字节数
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B'
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
@@ -402,6 +614,36 @@ const exportData = () => {
   justify-content: flex-end;
 }
 
+/* 无数据状态 */
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--text-muted);
+}
+
+.no-data-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.no-data-text {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+/* 应用图标 */
+.app-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .detail-header {
@@ -409,16 +651,16 @@ const exportData = () => {
     align-items: center;
     text-align: center;
   }
-  
+
   .detail-stats {
     justify-content: center;
   }
-  
+
   .overview-grid,
   .network-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }

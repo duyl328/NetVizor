@@ -138,11 +138,7 @@
       <!-- 软件详情弹窗 -->
       <SoftwareDetailModal
         v-model:show="showDetailModal"
-        :software="selectedSoftware"
-        :software-info="selectedSoftwareInfo"
-        :network-relation-data="networkRelationData"
-        :port-stats-data="portStatsData"
-        :protocol-data="protocolData"
+        :app-id="selectedAppId"
         :time-range="selectedTimeRange"
       />
     </div>
@@ -204,6 +200,7 @@ interface TopApp {
 
 interface TopTrafficApp {
   rank: number
+  appId: string
   processName: string
   displayName: string
   processPath: string
@@ -402,6 +399,7 @@ const getSoftwareRanking = async () => {
       // 转换数据格式适配组件
       softwareRankingData.value = res.data.items.map(app => ({
         rank: app.rank,
+        appId: app.appId,
         processName: app.processName,
         displayName: app.displayName,
         processPath: app.processPath,
@@ -419,56 +417,14 @@ const getSoftwareRanking = async () => {
   }
 }
 
-// 选中软件的详细信息
-const selectedSoftwareInfo = computed(() => {
-  if (!selectedSoftware.value) return null
-  return {
-    processName: 'chrome.exe',
-    displayName: 'Google Chrome',
-    version: '119.0.6045.160',
-    company: 'Google LLC',
-    processPath: 'C:\\Program Files\\Google\\Chrome\\chrome.exe',
-    fileSize: 2467840,
-  }
-})
 
-const networkRelationData = computed(() => {
-  if (!selectedSoftware.value) return { nodes: [], links: [] }
-  return {
-    nodes: [
-      { id: 'app_chrome', name: 'Chrome', type: 'application', size: 45.2, category: 0 },
-      { id: 'port_443', name: '443/TCP', type: 'port', size: 30.5, category: 1 },
-      { id: 'host_google', name: 'google.com', type: 'remote_host', size: 25.8, category: 2 },
-    ],
-    links: [
-      { source: 'app_chrome', target: 'port_443', value: 30.5, label: '30.5MB' },
-      { source: 'port_443', target: 'host_google', value: 25.8, label: '25.8MB' },
-    ]
-  }
-})
-
-const portStatsData = computed(() => {
-  if (!selectedSoftware.value) return []
-  return [
-    { port: 443, protocol: 'TCP', connectionCount: 15, totalBytes: 52428800, remoteHosts: ['142.251.42.227', '172.217.164.46'] },
-    { port: 80, protocol: 'TCP', connectionCount: 5, totalBytes: 10485760, remoteHosts: ['93.184.216.34'] },
-  ]
-})
-
-// 协议分布数据（移到弹窗中使用）
-const protocolData = computed(() => {
-  if (!selectedSoftware.value) return []
-  return [
-    { protocol: 'HTTPS', bytes: 1610612736, percentage: 37.5, color: '#3b82f6' },
-    { protocol: 'HTTP', bytes: 1073741824, percentage: 25.0, color: '#10b981' },
-    { protocol: 'DNS', bytes: 751619276, percentage: 17.5, color: '#f59e0b' },
-    { protocol: '其他', bytes: 858993459, percentage: 20.0, color: '#ef4444' }
-  ]
-})
+// 选中的AppId
+const selectedAppId = ref<string | null>(null)
 
 // 事件处理
 const showSoftwareDetail = (software: any) => {
-  selectedSoftware.value = software
+  selectedAppId.value = software.appId
+  selectedSoftware.value = software // 保留用于兼容性
   showDetailModal.value = true
 }
 
