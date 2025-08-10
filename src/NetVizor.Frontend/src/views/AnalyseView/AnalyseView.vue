@@ -92,7 +92,7 @@
                 v-model:value="selectedInterface"
                 :options="interfaceOptions"
                 size="small"
-                style="min-width: 120px;"
+                :style="{ minWidth: interfaceSelectWidth }"
               />
             </div>
           </div>
@@ -121,26 +121,14 @@
 
       <!-- 软件流量分析区域 -->
       <div class="software-analysis-area">
-        <div class="software-ranking-panel">
+        <div class="software-ranking-panel" :class="{ 'large-screen': isLargeScreen }">
           <div class="panel-header">
             <h3 class="panel-title">软件流量TOP榜</h3>
-            <div class="panel-controls">
-              <n-button-group size="small">
-                <n-button
-                  v-for="range in rankingTimeRanges"
-                  :key="range"
-                  :type="selectedRankingRange === range ? 'primary' : 'default'"
-                  @click="selectedRankingRange = range"
-                >
-                  {{ range }}
-                </n-button>
-              </n-button-group>
-            </div>
           </div>
           <div class="ranking-content">
             <SoftwareRankingList
               :data="softwareRankingData"
-              :time-range="selectedRankingRange"
+              :time-range="selectedTimeRange"
               @select-software="showSoftwareDetail"
             />
           </div>
@@ -155,7 +143,7 @@
         :network-relation-data="networkRelationData"
         :port-stats-data="portStatsData"
         :protocol-data="protocolData"
-        :time-range="selectedRankingRange"
+        :time-range="selectedTimeRange"
       />
     </div>
   </div>
@@ -172,6 +160,8 @@ import {
   AlertCircleOutline,
   ServerOutline,
 } from '@vicons/ionicons5'
+import { httpClient } from '@/utils/http'
+import type { ApiResponse } from '@/types/http'
 
 // 导入组件
 import TrafficTrendChart from './components/TrafficTrendChart.vue'
@@ -179,68 +169,255 @@ import TopAppsChart from './components/TopAppsChart.vue'
 import SoftwareRankingList from './components/SoftwareRankingList.vue'
 import SoftwareDetailModal from './components/SoftwareDetailModal.vue'
 
+// API 接口类型定义
+interface TimeRange {
+  type: string
+  name: string
+  available: boolean
+  startTime?: string
+}
+
+interface NetworkInterface {
+  id: string
+  name: string
+  displayName: string
+  isActive: boolean
+  macAddress: string
+}
+
+interface TrafficTrend {
+  interface: string
+  timeRange: string
+  points: {
+    timestamp: string
+    uploadSpeed: number
+    downloadSpeed: number
+  }[]
+}
+
+interface TopApp {
+  processName: string
+  displayName: string
+  icon: string
+  totalBytes: number
+}
+
+interface TopTrafficApp {
+  rank: number
+  processName: string
+  displayName: string
+  processPath: string
+  icon: string
+  version: string
+  company: string
+  totalBytes: number
+  uploadBytes: number
+  connectionCount: number
+}
+
 // 时间范围选项
-const timeRanges = ref([
+const timeRanges = ref<TimeRange[]>([
   { type: '1hour', name: '1小时', available: true },
   { type: '1day', name: '24小时', available: true },
   { type: '7days', name: '7天', available: true },
   { type: '30days', name: '30天', available: false },
 ])
 
-const selectedTimeRange = ref('1day')
+// API 调用函数
+const getAvailableRanges = async () => {
+  try {
+    const res: ApiResponse<TimeRange[]> = await httpClient.get('/statistics/available-ranges')
+    if (res.success && res.data) {
+      // 根据 API 返回的数据更新时间范围选项
+      const ranges = Array.isArray(res.data) ? res.data : [res.data]
+      const rangeMap: Record<string, string> = {
+        'hour': '1hour',
+        'day': '1day',
+        'week': '7days',
+        'month': '30days'
+      }
+
+      // 更新时间范围的可用状态
+      timeRanges.value.forEach(range => {
+        const matchedRange = ranges.find(r => rangeMap[r.type] === range.type)
+        if (matchedRange) {
+          range.available = matchedRange.available
+        } else {
+          range.available = false
+        }
+      })
+    }
+  } catch (error) {
+    console.error('获取可用时间范围失败:', error)
+  }
+}
+
+const selectedTimeRange = ref('1hour') // 默认选择1小时，暂不支持10分钟选项
 
 // 网络接口选项
 const interfaceOptions = ref([
   { label: '全部网卡', value: 'all' },
-  { label: '以太网', value: 'eth0' },
-  { label: 'WiFi', value: 'wifi0' },
 ])
+
+// 计算网卡选择框的最小宽度
+const interfaceSelectWidth = computed(() => {
+  if (interfaceOptions.value.length === 0) return '120px'
+  
+  const maxLength = Math.max(
+    ...interfaceOptions.value.map(option => option.label.length)
+  )
+  
+  // 根据字符长度计算宽度，中文字符按2倍宽度计算
+  const estimatedWidth = maxLength * 8 + 60 // 基础60px + 字符宽度
+  return Math.max(estimatedWidth, 120) + 'px' // 最小120px
+})
+
+const getNetworkInterfaces = async () => {
+  try {
+    const params: Record<string, any> = {
+      timeRange: selectedTimeRange.value
+    }
+    
+    const res: ApiResponse<NetworkInterface[]> = await httpClient.get('/statistics/interfaces', params)
+    if (res.success && res.data) {
+      // 清空现有选项（保留全部网卡选项）
+      interfaceOptions.value = [{ label: '全部网卡', value: 'all' }]
+
+      // 添加从 API 获取的网络接口
+      res.data.forEach(iface => {
+        if (iface.isActive) {
+          interfaceOptions.value.push({
+            label: iface.displayName,
+            value: iface.id
+          })
+        }
+      })
+    }
+  } catch (error) {
+    console.error('获取网络接口失败:', error)
+  }
+}
 
 const selectedInterface = ref('all')
 
-// 软件排行时间范围
-const rankingTimeRanges = ref(['1小时', '1天', '7天', '30天'])
-const selectedRankingRange = ref('1天')
+// 大屏幕检测
+const isLargeScreen = computed(() => {
+  if (typeof window === 'undefined') return false
+  return window.innerHeight >= 900 // 高度大于900px认为是大屏幕
+})
+
+// 移除单独的软件排行时间范围，使用顶部统一的时间选择
 
 // 选中的软件和弹窗状态
 const selectedSoftware = ref<any>(null)
 const showDetailModal = ref(false)
 
-// Mock数据
-const trafficTrendData = ref([
-  { timestamp: Date.now() - 3600000, uploadSpeed: 1024000, downloadSpeed: 5120000 },
-  { timestamp: Date.now() - 2400000, uploadSpeed: 2048000, downloadSpeed: 8192000 },
-  { timestamp: Date.now() - 1200000, uploadSpeed: 1536000, downloadSpeed: 6144000 },
-  { timestamp: Date.now(), uploadSpeed: 3072000, downloadSpeed: 12288000 },
-])
+// 流量趋势数据
+const trafficTrendData = ref<any[]>([])
 
-const topAppsData = ref([
-  { processName: 'chrome.exe', displayName: 'Google Chrome', totalBytes: 1073741824, percentage: 45.2 },
-  { processName: 'teams.exe', displayName: 'Microsoft Teams', totalBytes: 536870912, percentage: 22.5 },
-  { processName: 'spotify.exe', displayName: 'Spotify', totalBytes: 268435456, percentage: 11.3 },
-  { processName: 'code.exe', displayName: 'VS Code', totalBytes: 134217728, percentage: 5.6 },
-  { processName: 'slack.exe', displayName: 'Slack', totalBytes: 67108864, percentage: 2.8 },
-])
+const getTrafficTrends = async () => {
+  try {
+    const params: Record<string, any> = {
+      timeRange: selectedTimeRange.value,
+      interfaceId: selectedInterface.value
+    }
 
-const softwareRankingData = ref([
-  {
-    rank: 1,
-    processName: 'chrome.exe',
-    displayName: 'Google Chrome',
-    totalBytes: 1073741824,
-    percentage: 45.2,
-    connectionCount: 23
-  },
-  {
-    rank: 2,
-    processName: 'teams.exe',
-    displayName: 'Microsoft Teams',
-    totalBytes: 536870912,
-    percentage: 22.5,
-    connectionCount: 12
-  },
-  // ... 更多数据
-])
+    const res: ApiResponse<TrafficTrend> = await httpClient.get('/traffic/trends', params)
+    if (res.success && res.data) {
+      // 转换 API 数据为图表需要的格式并按时间排序（最新时间在右侧）
+      let processedData = res.data.points
+        .map(point => ({
+          timestamp: parseInt(point.timestamp) * 1000, // 转换为毫秒时间戳
+          uploadSpeed: point.uploadSpeed,
+          downloadSpeed: point.downloadSpeed
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp) // 按时间升序排列，最新时间在右侧
+      
+      // 限制显示的数据点数量，避免图表过于密集
+      const maxPoints = 250 // 最多显示250个点
+      if (processedData.length > maxPoints) {
+        // 等间隔采样数据点
+        const step = Math.floor(processedData.length / maxPoints)
+        processedData = processedData.filter((_, index) => index % step === 0)
+      }
+      
+      trafficTrendData.value = processedData
+    }
+  } catch (error) {
+    console.error('获取流量趋势失败:', error)
+  }
+}
+
+// Top 应用流量数据
+const topAppsData = ref<any[]>([])
+
+const getTopApps = async () => {
+  try {
+    const params: Record<string, any> = {
+      timeRange: selectedTimeRange.value,
+      limit: 10
+    }
+
+    const res: ApiResponse<TopApp[]> = await httpClient.get('/traffic/top-apps', params)
+    if (res.success && res.data) {
+      // 计算总流量用于计算百分比
+      const totalBytes = res.data.reduce((sum, app) => sum + app.totalBytes, 0)
+
+      // 转换数据格式
+      topAppsData.value = res.data.map(app => ({
+        processName: app.processName,
+        displayName: app.displayName,
+        icon: app.icon,
+        totalBytes: app.totalBytes,
+        percentage: totalBytes > 0 ? (app.totalBytes / totalBytes * 100) : 0
+      }))
+    }
+  } catch (error) {
+    console.error('获取Top应用流量失败:', error)
+  }
+}
+
+// 软件流量排行数据
+const softwareRankingData = ref<any[]>([])
+
+const getSoftwareRanking = async () => {
+  try {
+    const params: Record<string, any> = {
+      timeRange: selectedTimeRange.value,
+      page: 1,
+      pageSize: 100
+    }
+
+    const res: ApiResponse<{
+      total: number
+      page: number
+      pageSize: number
+      items: TopTrafficApp[]
+    }> = await httpClient.get('/apps/top-traffic', params)
+
+    if (res.success && res.data) {
+      // 计算总流量用于计算百分比
+      const totalBytes = res.data.items.reduce((sum, app) => sum + app.totalBytes, 0)
+
+      // 转换数据格式适配组件
+      softwareRankingData.value = res.data.items.map(app => ({
+        rank: app.rank,
+        processName: app.processName,
+        displayName: app.displayName,
+        processPath: app.processPath,
+        icon: app.icon,
+        version: app.version,
+        company: app.company,
+        totalBytes: app.totalBytes,
+        uploadBytes: app.uploadBytes,
+        connectionCount: app.connectionCount,
+        percentage: totalBytes > 0 ? (app.totalBytes / totalBytes * 100) : 0
+      }))
+    }
+  } catch (error) {
+    console.error('获取软件流量排行失败:', error)
+  }
+}
 
 // 选中软件的详细信息
 const selectedSoftwareInfo = computed(() => {
@@ -295,22 +472,35 @@ const showSoftwareDetail = (software: any) => {
   showDetailModal.value = true
 }
 
-const refreshData = () => {
-  // 刷新数据的逻辑
+const refreshData = async () => {
+  // 刷新所有数据
   console.log('Refreshing data...')
+  await Promise.all([
+    getAvailableRanges(),
+    getNetworkInterfaces(),
+    getTrafficTrends(),
+    getTopApps(),
+    getSoftwareRanking()
+  ])
 }
 
 // 监听时间范围变化
 watch(selectedTimeRange, () => {
-  // 重新加载数据
+  // 重新加载相关数据
+  getTrafficTrends()
+  getTopApps()
+  getSoftwareRanking()
 })
 
 watch(selectedInterface, () => {
   // 重新加载趋势数据
+  getTrafficTrends()
 })
 
-onMounted(() => {
-  // 页面初始化，不再默认选择软件
+
+onMounted(async () => {
+  // 页面初始化，加载所有数据
+  await refreshData()
 })
 </script>
 
@@ -630,6 +820,11 @@ onMounted(() => {
   height: 500px;
   display: flex;
   flex-direction: column;
+}
+
+.software-ranking-panel.large-screen {
+  height: calc(100vh - 400px); /* 大屏幕下使用更多高度 */
+  min-height: 600px;
 }
 
 .panel-header {
