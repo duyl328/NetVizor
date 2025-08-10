@@ -48,8 +48,8 @@ public class AppInfoRepository : IAppInfoRepository
         app.DeleteTime = 0;
 
         const string sql = @"
-            INSERT INTO AppInfo (AppId, Name, Path, Version, Company, Base64Icon, Hash, InsertTime, UpdateTime, DeleteTime)
-            VALUES (@AppId, @Name, @Path, @Version, @Company, @Base64Icon, @Hash, @InsertTime, @UpdateTime, @DeleteTime)";
+            INSERT INTO AppInfo (AppId, OriginalAppId, Name, Path, Version, Company, Base64Icon, Hash, InsertTime, UpdateTime, DeleteTime)
+            VALUES (@AppId, @OriginalAppId, @Name, @Path, @Version, @Company, @Base64Icon, @Hash, @InsertTime, @UpdateTime, @DeleteTime)";
 
         var result = await _context.Connection.ExecuteAsync(sql, app);
 
@@ -67,7 +67,7 @@ public class AppInfoRepository : IAppInfoRepository
 
         const string sql = @"
             UPDATE AppInfo 
-            SET AppId = @AppId, Name = @Name, Path = @Path, Version = @Version, Company = @Company, 
+            SET AppId = @AppId, OriginalAppId = @OriginalAppId, Name = @Name, Path = @Path, Version = @Version, Company = @Company, 
                 Base64Icon = @Base64Icon, Hash = @Hash, UpdateTime = @UpdateTime
             WHERE Id = @Id";
 

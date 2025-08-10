@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using Application.Utils;
 using Common.Logger;
 using Common.Utils;
@@ -29,8 +31,8 @@ public class NetworkDataCollectionService : IDisposable
     // ETW数据缓存（只保留最活跃的前100条）
     private readonly ConcurrentDictionary<string, AppNetworkData> _activeConnections = new();
 
-    // AppId生成工具
-    private readonly ConcurrentDictionary<int, string> _processAppIdCache = new();
+    // AppId生成工具 - 缓存原始AppId
+    private readonly ConcurrentDictionary<int, string> _processOriginalAppIdCache = new();
 
     public NetworkDataCollectionService(DatabaseWriteManager writeManager)
     {
@@ -133,7 +135,7 @@ public class NetworkDataCollectionService : IDisposable
                 try
                 {
                     // 生成或获取AppId
-                    var appId = await GetOrGenerateAppIdAsync(app.ProcessId, app.ProgramInfo);
+                    var (appId, originalAppId) = await GetOrGenerateAppIdAsync(app.ProcessId, app.ProgramInfo);
 
                     if (string.IsNullOrEmpty(appId))
                     {
@@ -151,6 +153,7 @@ public class NetworkDataCollectionService : IDisposable
                             var appInfo = new AppInfo
                             {
                                 AppId = appId,
+                                OriginalAppId = originalAppId,
                                 Name = app.ProgramInfo.ProcessName ?? "Unknown",
                                 Path = app.ProgramInfo.MainModulePath ?? "",
                                 Version = app.ProgramInfo.Version ?? "",
@@ -236,12 +239,14 @@ public class NetworkDataCollectionService : IDisposable
     /// <summary>
     /// 获取或生成应用程序ID
     /// </summary>
-    private async Task<string> GetOrGenerateAppIdAsync(int processId, Infrastructure.Models.ProgramInfo programInfo)
+    /// <returns>返回元组(HashAppId, OriginalAppId)</returns>
+    private async Task<(string appId, string originalAppId)> GetOrGenerateAppIdAsync(int processId, Infrastructure.Models.ProgramInfo programInfo)
     {
         // 先检查缓存
-        if (_processAppIdCache.TryGetValue(processId, out var cachedAppId))
+        if (_processOriginalAppIdCache.TryGetValue(processId, out var cachedOriginalAppId))
         {
-            return cachedAppId;
+            var cachedHashAppId = GenerateHashAppId(cachedOriginalAppId);
+            return (cachedHashAppId, cachedOriginalAppId);
         }
 
         try
@@ -255,25 +260,30 @@ public class NetworkDataCollectionService : IDisposable
             if (programInfo == null)
             {
                 Log.Warning($"无法获取进程 {processId} 的信息");
-                return null;
+                return (null, null);
             }
 
-            // 生成AppId: 路径 + 文件签名发布者 + 进程名
+            // 生成原始AppId: 路径 + 文件签名发布者 + 进程名
             var path = programInfo.MainModulePath ?? "";
             var publisher = programInfo.CompanyName ?? "";
             var processName = programInfo.ProcessName ?? "Unknown";
 
-            var appId = $"{path}|{publisher}|{processName}";
+            var originalAppId = $"{path}|{publisher}|{processName}";
+            
+            // 生成Hash版本的AppId（SHA256前16位）
+            var hashAppId = GenerateHashAppId(originalAppId);
 
-            // 缓存AppId
-            _processAppIdCache.TryAdd(processId, appId);
+            // 缓存原始AppId
+            _processOriginalAppIdCache.TryAdd(processId, originalAppId);
 
-            return appId;
+            Log.Debug($"生成AppId: {hashAppId} (原始: {originalAppId.Substring(0, Math.Min(50, originalAppId.Length))}...)");
+            
+            return (hashAppId, originalAppId);
         }
         catch (Exception ex)
         {
             Log.Warning($"生成进程 {processId} 的AppId时出错", ex);
-            return null;
+            return (null, null);
         }
     }
 
@@ -286,7 +296,7 @@ public class NetworkDataCollectionService : IDisposable
         {
             ActiveNetworkInterfaces = _networkInterfaces.Count,
             LastNetworkInterfaceUpdate = _lastNetworkInterfaceUpdate,
-            CachedProcessCount = _processAppIdCache.Count,
+            CachedProcessCount = _processOriginalAppIdCache.Count,
             ActiveConnectionsCount = _activeConnections.Count
         };
     }
@@ -330,6 +340,35 @@ public class NetworkDataCollectionService : IDisposable
         catch (Exception ex)
         {
             Log.Error(ex, "定时数据清理和聚合任务执行时发生错误");
+        }
+    }
+
+    /// <summary>
+    /// 生成Hash版本的AppId
+    /// </summary>
+    /// <param name="originalAppId">原始AppId</param>
+    /// <returns>Hash版本的AppId（SHA256前16位）</returns>
+    private static string GenerateHashAppId(string originalAppId)
+    {
+        if (string.IsNullOrEmpty(originalAppId))
+        {
+            return "unknown";
+        }
+
+        try
+        {
+            using var sha256 = SHA256.Create();
+            var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(originalAppId));
+            
+            // 取前8字节（16位十六进制字符）
+            var hashHex = Convert.ToHexString(hashBytes[..8]).ToLowerInvariant();
+            
+            return hashHex;
+        }
+        catch
+        {
+            // 如果Hash生成失败，使用原始AppId的哈希码
+            return Math.Abs(originalAppId.GetHashCode()).ToString("x8");
         }
     }
 

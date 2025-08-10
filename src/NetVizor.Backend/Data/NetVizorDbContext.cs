@@ -51,6 +51,7 @@ public class NetVizorDbContext : IDisposable
             CREATE TABLE IF NOT EXISTS AppInfo (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 AppId TEXT NOT NULL,
+                OriginalAppId TEXT,
                 Name TEXT NOT NULL,
                 Path TEXT NOT NULL,
                 Version TEXT,
@@ -340,10 +341,43 @@ public class NetVizorDbContext : IDisposable
 
                 Log.Information($"AppSetting表迁移完成，恢复了 {existingSettings.Count()} 条记录");
             }
+
+            // 检查并迁移AppInfo表 - 添加OriginalAppId字段
+            await MigrateAppInfoTableAsync();
         }
         catch (Exception ex)
         {
             Log.Warning("数据库迁移过程中发生错误，继续使用现有结构", ex);
+        }
+    }
+
+    private async Task MigrateAppInfoTableAsync()
+    {
+        try
+        {
+            var connection = Connection;
+            var columns = await GetTableColumnsAsync("AppInfo");
+            
+            // 检查是否需要添加OriginalAppId字段
+            if (!columns.Contains("OriginalAppId"))
+            {
+                Log.Information("检测到AppInfo表缺少OriginalAppId字段，开始迁移...");
+                
+                // 添加OriginalAppId字段
+                await connection.ExecuteAsync("ALTER TABLE AppInfo ADD COLUMN OriginalAppId TEXT");
+                
+                // 为现有数据生成OriginalAppId（使用AppId作为默认值）
+                await connection.ExecuteAsync(@"
+                    UPDATE AppInfo 
+                    SET OriginalAppId = COALESCE(Path || '|' || COALESCE(Company, '') || '|' || Name, AppId)
+                    WHERE OriginalAppId IS NULL OR OriginalAppId = ''");
+                
+                Log.Information("AppInfo表OriginalAppId字段添加完成");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("迁移AppInfo表时出错，将继续使用现有结构", ex);
         }
     }
 

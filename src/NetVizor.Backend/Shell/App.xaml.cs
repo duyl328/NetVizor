@@ -1572,6 +1572,178 @@ public partial class App : System.Windows.Application
 
         #endregion
 
+        #region 应用详细网络分析API
+
+        // 获取应用详细网络分析数据
+        server.Get("/api/apps/network-analysis", async (context) =>
+        {
+            try
+            {
+                var appId = context.QueryParams["appId"];
+                var timeRange = context.QueryParams["timeRange"] ?? "1day";
+                
+                if (string.IsNullOrEmpty(appId))
+                {
+                    context.Response.StatusCode = 400;
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = false,
+                        Message = "缺少必需参数 appId"
+                    });
+                    return;
+                }
+
+                // 计算时间范围
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                long startTime = timeRange switch
+                {
+                    "1hour" => DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds(),
+                    "1day" => DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
+                    "7days" => DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds(),
+                    "30days" => DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds(),
+                    _ => DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds()
+                };
+
+                // 获取应用基本信息
+                var appInfo = await DatabaseManager.Instance.AppInfos.GetAppByAppIdAsync(appId);
+                
+                // 获取网络数据
+                var networkData = await DatabaseManager.Instance.Networks.GetAppNetworkByTimeRangeAsync(appId, startTime, now);
+                var networkList = networkData.ToList();
+
+                // 计算基本统计
+                var totalUpload = networkList.Sum(x => x.UploadBytes);
+                var totalDownload = networkList.Sum(x => x.DownloadBytes);
+                var totalConnections = networkList.Count;
+
+                // 获取前30个流量最高的连接
+                var topConnections = networkList
+                    .Where(x => x.UploadBytes + x.DownloadBytes > 0) // 只统计有流量的连接
+                    .GroupBy(x => new { x.LocalIP, x.LocalPort, x.RemoteIP, x.RemotePort, x.Protocol })
+                    .Select(g => new
+                    {
+                        localIP = g.Key.LocalIP,
+                        localPort = g.Key.LocalPort,
+                        remoteIP = g.Key.RemoteIP,
+                        remotePort = g.Key.RemotePort,
+                        protocol = g.Key.Protocol,
+                        totalUpload = g.Sum(x => x.UploadBytes),
+                        totalDownload = g.Sum(x => x.DownloadBytes),
+                        totalTraffic = g.Sum(x => x.UploadBytes + x.DownloadBytes),
+                        connectionCount = g.Count(),
+                        firstSeen = DateTimeOffset.FromUnixTimeSeconds(g.Min(x => x.Timestamp)).ToString("yyyy-MM-dd HH:mm:ss"),
+                        lastSeen = DateTimeOffset.FromUnixTimeSeconds(g.Max(x => x.Timestamp)).ToString("yyyy-MM-dd HH:mm:ss")
+                    })
+                    .OrderByDescending(x => x.totalTraffic)
+                    .Take(30)
+                    .ToList();
+
+                // 计算协议占比
+                var protocolStats = networkList
+                    .Where(x => x.UploadBytes + x.DownloadBytes > 0)
+                    .GroupBy(x => x.Protocol.ToUpper())
+                    .Select(g => new
+                    {
+                        protocol = g.Key,
+                        connectionCount = g.Count(),
+                        totalTraffic = g.Sum(x => x.UploadBytes + x.DownloadBytes),
+                        percentage = Math.Round((double)g.Count() / networkList.Where(x => x.UploadBytes + x.DownloadBytes > 0).Count() * 100, 2)
+                    })
+                    .OrderByDescending(x => x.totalTraffic)
+                    .ToList();
+
+                // 获取时间趋势数据（按小时分组）
+                var timeTrends = networkList
+                    .GroupBy(x => x.Timestamp / 3600 * 3600) // 按小时分组
+                    .Select(g => new
+                    {
+                        timestamp = g.Key,
+                        timeStr = DateTimeOffset.FromUnixTimeSeconds(g.Key).ToString("yyyy-MM-dd HH:mm"),
+                        upload = g.Sum(x => x.UploadBytes),
+                        download = g.Sum(x => x.DownloadBytes),
+                        connections = g.Count()
+                    })
+                    .OrderBy(x => x.timestamp)
+                    .ToList();
+
+                // 端口分析
+                var portAnalysis = networkList
+                    .Where(x => x.UploadBytes + x.DownloadBytes > 0)
+                    .GroupBy(x => x.RemotePort)
+                    .Select(g => new
+                    {
+                        port = g.Key,
+                        serviceName = GetPortServiceName(g.Key),
+                        connectionCount = g.Count(),
+                        totalTraffic = g.Sum(x => x.UploadBytes + x.DownloadBytes),
+                        protocols = g.Select(x => x.Protocol).Distinct().ToList()
+                    })
+                    .OrderByDescending(x => x.totalTraffic)
+                    .Take(20)
+                    .ToList();
+
+                // 构建返回数据
+                var result = new
+                {
+                    // 应用基本信息
+                    appInfo = new
+                    {
+                        appId = appId,
+                        name = appInfo?.Name ?? "Unknown Application",
+                        company = appInfo?.Company ?? "",
+                        version = appInfo?.Version ?? "",
+                        path = appInfo?.Path ?? "",
+                        icon = appInfo?.Base64Icon ?? "",
+                        hash = appInfo?.Hash ?? ""
+                    },
+                    
+                    // 统计摘要
+                    summary = new
+                    {
+                        timeRange = timeRange,
+                        startTime = DateTimeOffset.FromUnixTimeSeconds(startTime).ToString("yyyy-MM-dd HH:mm:ss"),
+                        endTime = DateTimeOffset.FromUnixTimeSeconds(now).ToString("yyyy-MM-dd HH:mm:ss"),
+                        totalUpload = totalUpload,
+                        totalDownload = totalDownload,
+                        totalTraffic = totalUpload + totalDownload,
+                        totalConnections = totalConnections,
+                        uniqueRemoteIPs = networkList.Select(x => x.RemoteIP).Distinct().Count(),
+                        uniqueRemotePorts = networkList.Select(x => x.RemotePort).Distinct().Count()
+                    },
+                    
+                    // 前30个流量最高的连接
+                    topConnections = topConnections,
+                    
+                    // 协议占比统计
+                    protocolStats = protocolStats,
+                    
+                    // 时间趋势
+                    timeTrends = timeTrends,
+                    
+                    // 端口分析
+                    portAnalysis = portAnalysis
+                };
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = result,
+                    Message = "获取应用网络分析数据成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取应用网络分析数据失败: {ex.Message}"
+                });
+            }
+        });
+
+        #endregion
+
         // 启动服务器
         try
         {
@@ -1753,6 +1925,41 @@ public partial class App : System.Windows.Application
         }
         
         return points;
+    }
+
+    /// <summary>
+    /// 根据端口号获取服务名称
+    /// </summary>
+    /// <param name="port">端口号</param>
+    /// <returns>服务名称</returns>
+    private static string GetPortServiceName(int port)
+    {
+        return port switch
+        {
+            21 => "FTP",
+            22 => "SSH",
+            23 => "Telnet",
+            25 => "SMTP",
+            53 => "DNS",
+            80 => "HTTP",
+            110 => "POP3",
+            123 => "NTP",
+            143 => "IMAP",
+            443 => "HTTPS",
+            993 => "IMAPS",
+            995 => "POP3S",
+            1433 => "SQL Server",
+            3306 => "MySQL",
+            3389 => "RDP",
+            5432 => "PostgreSQL",
+            6379 => "Redis",
+            8080 => "HTTP-Alt",
+            8443 => "HTTPS-Alt",
+            _ when port >= 1024 && port <= 5000 => "User Port",
+            _ when port > 5000 && port < 32768 => "Service Port", 
+            _ when port >= 32768 => "Dynamic Port",
+            _ => "Unknown"
+        };
     }
 }
 

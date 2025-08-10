@@ -1,3 +1,4 @@
+using System.Data;
 using Data.Models;
 using Dapper;
 
@@ -122,13 +123,27 @@ public class NetworkRepository : INetworkRepository
 
     public async Task<IEnumerable<AppNetwork>> GetAppNetworkByTimeRangeAsync(string appId, long startTime, long endTime)
     {
+        // 清理 appId，去掉多余的空白和引号
+        if (!string.IsNullOrEmpty(appId))
+        {
+            appId = appId.Trim().Trim('"');
+        }
         const string sql = @"
-            SELECT * FROM AppNetwork 
-            WHERE AppId = @AppId AND Timestamp >= @StartTime AND Timestamp <= @EndTime
-            ORDER BY Timestamp DESC";
+        SELECT * FROM AppNetwork 
+        WHERE AppId = @AppId
+          AND CAST(Timestamp AS INTEGER) >= @StartTime
+          AND CAST(Timestamp AS INTEGER) <= @EndTime
+        ORDER BY CAST(Timestamp AS INTEGER) DESC";
 
-        return await _context.Connection.QueryAsync<AppNetwork>(sql,
-            new { AppId = appId, StartTime = startTime, EndTime = endTime });
+        var parameters = new DynamicParameters();
+        parameters.Add("@AppId", appId, DbType.String);  // 强制 TEXT 匹配
+        parameters.Add("@StartTime", startTime, DbType.Int64);
+        parameters.Add("@EndTime", endTime, DbType.Int64);
+
+        var appNetworks = await _context.Connection.QueryAsync<AppNetwork>(sql, parameters);
+
+        Console.WriteLine($"[Result] Found {appNetworks.Count()} rows.");
+        return appNetworks;
     }
 
     #endregion
@@ -141,7 +156,7 @@ public class NetworkRepository : INetworkRepository
 
         string sql;
         object parameters;
-        
+
         if (string.IsNullOrEmpty(networkCardGuid))
         {
             // 获取所有网卡数据
@@ -169,7 +184,7 @@ public class NetworkRepository : INetworkRepository
     {
         string sql;
         object parameters;
-        
+
         if (string.IsNullOrEmpty(networkCardGuid))
         {
             // 获取所有网卡数据
@@ -339,7 +354,7 @@ public class NetworkRepository : INetworkRepository
 
         string sql;
         object parameters;
-        
+
         if (string.IsNullOrEmpty(networkCardGuid))
         {
             // 获取所有网卡数据
@@ -387,7 +402,7 @@ public class NetworkRepository : INetworkRepository
 
         string sql;
         object parameters;
-        
+
         if (string.IsNullOrEmpty(networkCardGuid))
         {
             // 获取所有网卡数据
@@ -435,7 +450,7 @@ public class NetworkRepository : INetworkRepository
 
         string sql;
         object parameters;
-        
+
         if (string.IsNullOrEmpty(networkCardGuid))
         {
             // 获取所有网卡数据
