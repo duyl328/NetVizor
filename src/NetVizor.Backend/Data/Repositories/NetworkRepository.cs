@@ -139,25 +139,57 @@ public class NetworkRepository : INetworkRepository
     {
         var startTime = DateTimeOffset.UtcNow.AddHours(-hours).ToUnixTimeSeconds();
 
-        const string sql = @"
-            SELECT * FROM GlobalNetwork 
-            WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
-            ORDER BY Timestep DESC";
+        string sql;
+        object parameters;
+        
+        if (string.IsNullOrEmpty(networkCardGuid))
+        {
+            // 获取所有网卡数据
+            sql = @"
+                SELECT * FROM GlobalNetwork 
+                WHERE Timestep >= @StartTime
+                ORDER BY Timestep DESC";
+            parameters = new { StartTime = startTime };
+        }
+        else
+        {
+            // 获取指定网卡数据
+            sql = @"
+                SELECT * FROM GlobalNetwork 
+                WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
+                ORDER BY Timestep DESC";
+            parameters = new { NetworkCardGuid = networkCardGuid, StartTime = startTime };
+        }
 
-        return await _context.Connection.QueryAsync<GlobalNetwork>(sql,
-            new { NetworkCardGuid = networkCardGuid, StartTime = startTime });
+        return await _context.Connection.QueryAsync<GlobalNetwork>(sql, parameters);
     }
 
     public async Task<IEnumerable<GlobalNetwork>> GetGlobalNetworkByTimeRangeAsync(string networkCardGuid,
         long startTime, long endTime)
     {
-        const string sql = @"
-            SELECT * FROM GlobalNetwork 
-            WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime AND Timestep <= @EndTime
-            ORDER BY Timestep DESC";
+        string sql;
+        object parameters;
+        
+        if (string.IsNullOrEmpty(networkCardGuid))
+        {
+            // 获取所有网卡数据
+            sql = @"
+                SELECT * FROM GlobalNetwork 
+                WHERE Timestep >= @StartTime AND Timestep <= @EndTime
+                ORDER BY Timestep DESC";
+            parameters = new { StartTime = startTime, EndTime = endTime };
+        }
+        else
+        {
+            // 获取指定网卡数据
+            sql = @"
+                SELECT * FROM GlobalNetwork 
+                WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime AND Timestep <= @EndTime
+                ORDER BY Timestep DESC";
+            parameters = new { NetworkCardGuid = networkCardGuid, StartTime = startTime, EndTime = endTime };
+        }
 
-        return await _context.Connection.QueryAsync<GlobalNetwork>(sql,
-            new { NetworkCardGuid = networkCardGuid, StartTime = startTime, EndTime = endTime });
+        return await _context.Connection.QueryAsync<GlobalNetwork>(sql, parameters);
     }
 
     #endregion
@@ -305,22 +337,47 @@ public class NetworkRepository : INetworkRepository
     {
         var startTime = DateTimeOffset.UtcNow.AddHours(-hours).ToUnixTimeSeconds();
 
-        const string sql = @"
-            SELECT 
-                (Timestep / 3600) * 3600 as HourTimestamp,
-                SUM(Upload) as TotalUpload,
-                SUM(Download) as TotalDownload,
-                AVG(Upload) as AvgUpload,
-                AVG(Download) as AvgDownload,
-                MAX(Upload) as MaxUpload,
-                MAX(Download) as MaxDownload
-            FROM GlobalNetwork 
-            WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
-            GROUP BY (Timestep / 3600)
-            ORDER BY HourTimestamp DESC";
+        string sql;
+        object parameters;
+        
+        if (string.IsNullOrEmpty(networkCardGuid))
+        {
+            // 获取所有网卡数据
+            sql = @"
+                SELECT 
+                    (Timestep / 3600) * 3600 as HourTimestamp,
+                    SUM(Upload) as TotalUpload,
+                    SUM(Download) as TotalDownload,
+                    AVG(Upload) as AvgUpload,
+                    AVG(Download) as AvgDownload,
+                    MAX(Upload) as MaxUpload,
+                    MAX(Download) as MaxDownload
+                FROM GlobalNetwork 
+                WHERE Timestep >= @StartTime
+                GROUP BY (Timestep / 3600)
+                ORDER BY HourTimestamp DESC";
+            parameters = new { StartTime = startTime };
+        }
+        else
+        {
+            // 获取指定网卡数据
+            sql = @"
+                SELECT 
+                    (Timestep / 3600) * 3600 as HourTimestamp,
+                    SUM(Upload) as TotalUpload,
+                    SUM(Download) as TotalDownload,
+                    AVG(Upload) as AvgUpload,
+                    AVG(Download) as AvgDownload,
+                    MAX(Upload) as MaxUpload,
+                    MAX(Download) as MaxDownload
+                FROM GlobalNetwork 
+                WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
+                GROUP BY (Timestep / 3600)
+                ORDER BY HourTimestamp DESC";
+            parameters = new { NetworkCardGuid = networkCardGuid, StartTime = startTime };
+        }
 
-        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql,
-            new { NetworkCardGuid = networkCardGuid, StartTime = startTime });
+        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql, parameters);
     }
 
     public async Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByDayAsync(string networkCardGuid,
@@ -328,22 +385,47 @@ public class NetworkRepository : INetworkRepository
     {
         var startTime = DateTimeOffset.UtcNow.AddDays(-days).ToUnixTimeSeconds();
 
-        const string sql = @"
-            SELECT 
-                (Timestep / 86400) * 86400 as DayTimestamp,
-                SUM(Upload) as TotalUpload,
-                SUM(Download) as TotalDownload,
-                AVG(Upload) as AvgUpload,
-                AVG(Download) as AvgDownload,
-                MAX(Upload) as MaxUpload,
-                MAX(Download) as MaxDownload
-            FROM GlobalNetwork 
-            WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
-            GROUP BY (Timestep / 86400)
-            ORDER BY DayTimestamp DESC";
+        string sql;
+        object parameters;
+        
+        if (string.IsNullOrEmpty(networkCardGuid))
+        {
+            // 获取所有网卡数据
+            sql = @"
+                SELECT 
+                    (Timestep / 86400) * 86400 as DayTimestamp,
+                    SUM(Upload) as TotalUpload,
+                    SUM(Download) as TotalDownload,
+                    AVG(Upload) as AvgUpload,
+                    AVG(Download) as AvgDownload,
+                    MAX(Upload) as MaxUpload,
+                    MAX(Download) as MaxDownload
+                FROM GlobalNetwork 
+                WHERE Timestep >= @StartTime
+                GROUP BY (Timestep / 86400)
+                ORDER BY DayTimestamp DESC";
+            parameters = new { StartTime = startTime };
+        }
+        else
+        {
+            // 获取指定网卡数据
+            sql = @"
+                SELECT 
+                    (Timestep / 86400) * 86400 as DayTimestamp,
+                    SUM(Upload) as TotalUpload,
+                    SUM(Download) as TotalDownload,
+                    AVG(Upload) as AvgUpload,
+                    AVG(Download) as AvgDownload,
+                    MAX(Upload) as MaxUpload,
+                    MAX(Download) as MaxDownload
+                FROM GlobalNetwork 
+                WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
+                GROUP BY (Timestep / 86400)
+                ORDER BY DayTimestamp DESC";
+            parameters = new { NetworkCardGuid = networkCardGuid, StartTime = startTime };
+        }
 
-        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql,
-            new { NetworkCardGuid = networkCardGuid, StartTime = startTime });
+        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql, parameters);
     }
 
     public async Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByMonthAsync(string networkCardGuid,
@@ -351,22 +433,47 @@ public class NetworkRepository : INetworkRepository
     {
         var startTime = DateTimeOffset.UtcNow.AddMonths(-months).ToUnixTimeSeconds();
 
-        const string sql = @"
-            SELECT 
-                (Timestep / 2592000) * 2592000 as MonthTimestamp,
-                SUM(Upload) as TotalUpload,
-                SUM(Download) as TotalDownload,
-                AVG(Upload) as AvgUpload,
-                AVG(Download) as AvgDownload,
-                MAX(Upload) as MaxUpload,
-                MAX(Download) as MaxDownload
-            FROM GlobalNetwork 
-            WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
-            GROUP BY (Timestep / 2592000)
-            ORDER BY MonthTimestamp DESC";
+        string sql;
+        object parameters;
+        
+        if (string.IsNullOrEmpty(networkCardGuid))
+        {
+            // 获取所有网卡数据
+            sql = @"
+                SELECT 
+                    (Timestep / 2592000) * 2592000 as MonthTimestamp,
+                    SUM(Upload) as TotalUpload,
+                    SUM(Download) as TotalDownload,
+                    AVG(Upload) as AvgUpload,
+                    AVG(Download) as AvgDownload,
+                    MAX(Upload) as MaxUpload,
+                    MAX(Download) as MaxDownload
+                FROM GlobalNetwork 
+                WHERE Timestep >= @StartTime
+                GROUP BY (Timestep / 2592000)
+                ORDER BY MonthTimestamp DESC";
+            parameters = new { StartTime = startTime };
+        }
+        else
+        {
+            // 获取指定网卡数据
+            sql = @"
+                SELECT 
+                    (Timestep / 2592000) * 2592000 as MonthTimestamp,
+                    SUM(Upload) as TotalUpload,
+                    SUM(Download) as TotalDownload,
+                    AVG(Upload) as AvgUpload,
+                    AVG(Download) as AvgDownload,
+                    MAX(Upload) as MaxUpload,
+                    MAX(Download) as MaxDownload
+                FROM GlobalNetwork 
+                WHERE NetworkCardGuid = @NetworkCardGuid AND Timestep >= @StartTime
+                GROUP BY (Timestep / 2592000)
+                ORDER BY MonthTimestamp DESC";
+            parameters = new { NetworkCardGuid = networkCardGuid, StartTime = startTime };
+        }
 
-        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql,
-            new { NetworkCardGuid = networkCardGuid, StartTime = startTime });
+        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql, parameters);
     }
 
     #endregion

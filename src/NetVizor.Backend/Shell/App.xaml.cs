@@ -11,9 +11,13 @@ using Common.Net.Models;
 using Common.Net.WebSocketConn;
 using Common.Utils;
 using Data;
+using Data.Models;
+using Data.Core;
+using Data.Repositories;
 using Shell.Views;
 using Utils.ETW.Etw;
 using Utils.Firewall;
+using Dapper;
 using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace Shell;
@@ -208,6 +212,11 @@ public partial class App : System.Windows.Application
         var _networkManager = new EnhancedEtwNetworkManager();
         _networkManager.StartMonitoring();
     }
+
+    // 网络接口缓存
+    private static readonly Dictionary<string, object> _networkInterfaceCache = new Dictionary<string, object>();
+    private static DateTime _cacheLastUpdateTime = DateTime.MinValue;
+    private static readonly TimeSpan _cacheExpireTime = TimeSpan.FromMinutes(5); // 缓存5分钟
 
     private static async Task StartHttpServer()
     {
@@ -827,6 +836,497 @@ public partial class App : System.Windows.Application
 
         #endregion
 
+        #region 网络统计API
+
+        // 获取网络接口列表
+        server.Get("/api/statistics/interfaces", async (context) =>
+        {
+            try
+            {
+                var timeRange = context.QueryParams["timeRange"] ?? "hour";
+                
+                // 检查缓存是否有效
+                var cacheKey = $"interfaces_{timeRange}";
+                var now = DateTime.Now;
+                
+                if (_networkInterfaceCache.ContainsKey(cacheKey) && 
+                    (now - _cacheLastUpdateTime) < _cacheExpireTime)
+                {
+                    // 使用缓存数据
+                    await context.Response.WriteJsonAsync(new ResponseModel<object>
+                    {
+                        Success = true,
+                        Data = _networkInterfaceCache[cacheKey],
+                        Message = "获取网络接口列表成功（缓存）"
+                    });
+                    return;
+                }
+
+                // 缓存已过期或不存在，重新获取数据
+                var networkCardGuids = new HashSet<string>();
+
+                // 根据时间范围从不同数据表获取网卡ID
+                switch (timeRange.ToLower())
+                {
+                    case "hour":
+                        // 从 GlobalNetwork 表获取最近1小时的数据
+                        var hourData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
+                            DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds(), 
+                            DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                        foreach (var item in hourData)
+                            networkCardGuids.Add(item.NetworkCardGuid);
+                        break;
+                    case "day":
+                        // 从 GlobalNetwork 表获取最近1天的数据
+                        var dayData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
+                            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(), 
+                            DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                        foreach (var item in dayData)
+                            networkCardGuids.Add(item.NetworkCardGuid);
+                        break;
+                    case "week":
+                        // 从 GlobalNetwork 表获取最近7天的数据
+                        var weekData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
+                            DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds(), 
+                            DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                        foreach (var item in weekData)
+                            networkCardGuids.Add(item.NetworkCardGuid);
+                        break;
+                    case "month":
+                        // 从 GlobalNetwork 表获取最近30天的数据
+                        var monthData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
+                            DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds(), 
+                            DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                        foreach (var item in monthData)
+                            networkCardGuids.Add(item.NetworkCardGuid);
+                        break;
+                }
+
+                // 如果没有找到任何网卡数据，使用当前连接的网卡
+                if (!networkCardGuids.Any())
+                {
+                    var connectedInterfaces = BasicNetworkMonitor.GetConnectedNetworkInterfaces();
+                    foreach (var iface in connectedInterfaces)
+                    {
+                        networkCardGuids.Add(iface.Id);
+                    }
+                }
+
+                // 获取每个网卡的详细信息
+                var interfaces = new List<object>();
+                foreach (var guid in networkCardGuids)
+                {
+                    var networkInfo = NetworkAdapterHelper.GetNetworkInfoByGuid(guid);
+                    if (networkInfo != null)
+                    {
+                        interfaces.Add(new
+                        {
+                            id = guid,
+                            name = networkInfo.NetConnectionID ?? networkInfo.Name,
+                            displayName = networkInfo.Description ?? networkInfo.Name,
+                            isActive = networkInfo.Status == "OK",
+                            macAddress = networkInfo.MACAddress
+                        });
+                    }
+                    else
+                    {
+                        // 如果无法获取网卡信息，使用基本信息
+                        interfaces.Add(new
+                        {
+                            id = guid,
+                            name = $"Network Interface {guid.Substring(0, 8)}",
+                            displayName = $"Network Adapter {guid.Substring(0, 8)}",
+                            isActive = true,
+                            macAddress = ""
+                        });
+                    }
+                }
+
+                // 更新缓存
+                _networkInterfaceCache[cacheKey] = interfaces;
+                _cacheLastUpdateTime = now;
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = interfaces,
+                    Message = "获取网络接口列表成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取网络接口列表失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取可用时间范围
+        server.Get("/api/statistics/available-ranges", async (context) =>
+        {
+            try
+            {
+                var availableRanges = new List<object>();
+                var now = DateTimeOffset.UtcNow;
+
+                // 检查是否有小时数据 (GlobalNetworkHourly)
+                var hasHourlyData = await HasNetworkDataInTimeRangeAsync("hourly", now.AddHours(-1).ToUnixTimeSeconds());
+                if (hasHourlyData)
+                {
+                    availableRanges.Add(new
+                    {
+                        type = "hour",
+                        name = "1小时",
+                        available = true,
+                        startTime = now.AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    });
+                }
+
+                // 检查是否有天数据 (GlobalNetworkDaily)
+                var hasDailyData = await HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-1).ToUnixTimeSeconds());
+                if (hasDailyData)
+                {
+                    availableRanges.Add(new
+                    {
+                        type = "day",
+                        name = "1天",
+                        available = true,
+                        startTime = now.AddDays(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    });
+                }
+
+                // 检查是否有周数据
+                var hasWeeklyData = await HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-7).ToUnixTimeSeconds());
+                if (hasWeeklyData)
+                {
+                    availableRanges.Add(new
+                    {
+                        type = "week",
+                        name = "1周",
+                        available = true,
+                        startTime = now.AddDays(-7).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    });
+                }
+
+                // 检查是否有月数据
+                var hasMonthlyData = await HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-30).ToUnixTimeSeconds());
+                if (hasMonthlyData)
+                {
+                    availableRanges.Add(new
+                    {
+                        type = "month",
+                        name = "1个月",
+                        available = true,
+                        startTime = now.AddDays(-30).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    });
+                }
+
+                // 如果没有任何数据，至少返回hour（用户刚安装）
+                if (!availableRanges.Any())
+                {
+                    availableRanges.Add(new
+                    {
+                        type = "hour",
+                        name = "1小时",
+                        available = true,
+                        startTime = now.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    });
+                }
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = availableRanges.First(),
+                    Message = "获取可用时间范围成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取可用时间范围失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 清理网络接口缓存
+        server.Post("/api/statistics/clear-cache", async (context) =>
+        {
+            try
+            {
+                _networkInterfaceCache.Clear();
+                _cacheLastUpdateTime = DateTime.MinValue;
+                
+                await context.Response.WriteJsonAsync(new ResponseModel<string>
+                {
+                    Success = true,
+                    Data = "缓存已清理",
+                    Message = "网络接口缓存清理成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"清理缓存失败: {ex.Message}"
+                });
+            }
+        });
+
+        #endregion
+
+        #region 流量数据API
+
+        // 获取流量趋势数据
+        server.Get("/api/traffic/trends", async (context) =>
+        {
+            try
+            {
+                var timeRange = context.QueryParams["timeRange"] ?? "1hour";
+                var interfaceId = context.QueryParams["interfaceId"] ?? "all";
+                
+                var points = new List<object>();
+                var now = DateTimeOffset.UtcNow;
+
+                switch (timeRange)
+                {
+                    case "1hour":
+                        // 从 GlobalNetwork 表获取最近1小时数据，按5秒间隔
+                        var hourData = await GetTrafficTrendsAsync("hour", interfaceId, now.AddHours(-1).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        points = hourData;
+                        break;
+                    case "1day":
+                        // 从 GlobalNetworkHourly 表获取最近1天数据，按小时间隔
+                        var dayData = await GetTrafficTrendsAsync("day", interfaceId, now.AddDays(-1).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        points = dayData;
+                        break;
+                    case "7days":
+                        // 从 GlobalNetworkDaily 表获取最近7天数据，按天间隔
+                        var weekData = await GetTrafficTrendsAsync("week", interfaceId, now.AddDays(-7).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        points = weekData;
+                        break;
+                    case "30days":
+                        // 从 GlobalNetworkDaily 表获取最近30天数据，按天间隔
+                        var monthData = await GetTrafficTrendsAsync("month", interfaceId, now.AddDays(-30).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        points = monthData;
+                        break;
+                }
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = new
+                    {
+                        @interface = interfaceId,
+                        timeRange = timeRange,
+                        points = points
+                    },
+                    Message = "获取流量趋势数据成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取流量趋势数据失败: {ex.Message}"
+                });
+            }
+        });
+
+        // 获取Top应用流量数据
+        server.Get("/api/traffic/top-apps", async (context) =>
+        {
+            try
+            {
+                var timeRange = context.QueryParams["timeRange"] ?? "1hour";
+                var limit = int.Parse(context.QueryParams["limit"] ?? "10");
+                
+                // 根据时间范围计算天数，对于1hour特殊处理
+                IEnumerable<AppNetworkTopInfo> topApps;
+                
+                if (timeRange == "1hour")
+                {
+                    // 对于1小时数据，我们需要特殊处理，因为GetTopAppsByTrafficAsync不支持小时查询
+                    // 使用1天的数据作为替代，实际应用中可能需要创建专门的小时查询方法
+                    topApps = await DatabaseManager.Instance.Networks.GetTopAppsByTrafficAsync(limit, 1);
+                }
+                else
+                {
+                    int days = timeRange switch
+                    {
+                        "1day" => 1,
+                        "7days" => 7,
+                        "30days" => 30,
+                        _ => 1
+                    };
+                    topApps = await DatabaseManager.Instance.Networks.GetTopAppsByTrafficAsync(limit, days);
+                }
+                var result = new List<object>();
+
+                foreach (var app in topApps)
+                {
+                    // GetTopAppsByTrafficAsync 已经通过 LEFT JOIN 获取了应用信息
+                    // 只有当JOIN没有获取到信息时才额外查询AppInfo表
+                    string processName = System.IO.Path.GetFileName(app.AppPath ?? "");
+                    string displayName = app.AppName ?? "";
+                    string iconBase64 = "";
+                    
+                    if (string.IsNullOrEmpty(displayName) && !string.IsNullOrEmpty(app.AppId))
+                    {
+                        // 如果JOIN没有获取到应用名称，尝试单独查询
+                        var appInfo = await DatabaseManager.Instance.AppInfos.GetAppByAppIdAsync(app.AppId);
+                        if (appInfo != null)
+                        {
+                            displayName = appInfo.Name ?? "";
+                            iconBase64 = appInfo.Base64Icon ?? "";
+                        }
+                    }
+                    
+                    if (string.IsNullOrEmpty(displayName))
+                    {
+                        displayName = processName.Replace(".exe", "") ?? "Unknown";
+                    }
+
+                    result.Add(new
+                    {
+                        processName = processName,
+                        displayName = displayName,
+                        icon = iconBase64,
+                        totalBytes = app.TotalTraffic
+                    });
+                }
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = result,
+                    Message = "获取Top应用流量数据成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取Top应用流量数据失败: {ex.Message}"
+                });
+            }
+        });
+
+        #endregion
+
+        #region 软件排行榜API
+
+        // 获取软件流量TOP100排行
+        server.Get("/api/apps/top-traffic", async (context) =>
+        {
+            try
+            {
+                var timeRange = context.QueryParams["timeRange"] ?? "1hour";
+                var page = int.Parse(context.QueryParams["page"] ?? "1");
+                var pageSize = int.Parse(context.QueryParams["pageSize"] ?? "100");
+                
+                // 根据时间范围计算天数，对于1hour特殊处理
+                IEnumerable<AppNetworkTopInfo> allApps;
+                
+                if (timeRange == "1hour")
+                {
+                    // 对于1小时数据，我们需要特殊处理，因为GetTopAppsByTrafficAsync不支持小时查询
+                    // 使用1天的数据作为替代，实际应用中可能需要创建专门的小时查询方法
+                    allApps = await DatabaseManager.Instance.Networks.GetTopAppsByTrafficAsync(pageSize * page, 1);
+                }
+                else
+                {
+                    int days = timeRange switch
+                    {
+                        "1day" => 1,
+                        "7days" => 7,
+                        "30days" => 30,
+                        _ => 1
+                    };
+                    // 获取总数据（限制较大数量用于分页）
+                    allApps = await DatabaseManager.Instance.Networks.GetTopAppsByTrafficAsync(pageSize * page, days);
+                }
+                var totalCount = allApps.Count();
+                
+                // 分页处理
+                var pagedApps = allApps.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+                var items = new List<object>();
+                int rank = (page - 1) * pageSize + 1;
+
+                foreach (var app in pagedApps)
+                {
+                    // GetTopAppsByTrafficAsync 已经通过 LEFT JOIN 获取了应用信息
+                    // 只有当JOIN没有获取到信息时才额外查询AppInfo表
+                    string processName = System.IO.Path.GetFileName(app.AppPath ?? "");
+                    string displayName = app.AppName ?? "";
+                    string iconBase64 = "";
+                    
+                    if (string.IsNullOrEmpty(displayName) && !string.IsNullOrEmpty(app.AppId))
+                    {
+                        // 如果JOIN没有获取到应用名称，尝试单独查询
+                        var appInfo = await DatabaseManager.Instance.AppInfos.GetAppByAppIdAsync(app.AppId);
+                        if (appInfo != null)
+                        {
+                            displayName = appInfo.Name ?? "";
+                            iconBase64 = appInfo.Base64Icon ?? "";
+                        }
+                    }
+                    
+                    if (string.IsNullOrEmpty(displayName))
+                    {
+                        displayName = processName.Replace(".exe", "") ?? "Unknown";
+                    }
+
+                    items.Add(new
+                    {
+                        rank = rank++,
+                        processName = processName,
+                        displayName = displayName,
+                        processPath = app.AppPath ?? "",
+                        icon = iconBase64,
+                        totalBytes = app.TotalTraffic,
+                        uploadBytes = app.TotalUpload,
+                        connectionCount = app.ConnectionCount
+                    });
+                }
+
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = new
+                    {
+                        total = totalCount,
+                        page = page,
+                        pageSize = pageSize,
+                        items = items
+                    },
+                    Message = "获取软件流量排行成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 500;
+                await context.Response.WriteJsonAsync(new ResponseModel<object>
+                {
+                    Success = false,
+                    Message = $"获取软件流量排行失败: {ex.Message}"
+                });
+            }
+        });
+
+        #endregion
+
         #region 取消订阅
 
         server.Post("/api/unsubscribe", async (context) =>
@@ -1073,6 +1573,178 @@ public partial class App : System.Windows.Application
         {
             Console.WriteLine($"Server error: {ex.Message}");
         }
+    }
+
+    // 辅助方法：获取所有网卡的小时数据
+    private static async Task<List<GlobalNetworkAggregatedBase>> GetAllNetworkCardsHourlyDataAsync(int hours)
+    {
+        var result = new List<GlobalNetworkAggregatedBase>();
+        var startTime = DateTimeOffset.UtcNow.AddHours(-hours).ToUnixTimeSeconds();
+        
+        // 使用现有的方法来获取所有网卡的小时数据
+        // 先获取所有存在的网卡GUID
+        try 
+        {
+            var allHourlyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByHourAsync("", hours);
+            var networkGuids = allHourlyData.Select(x => "").Distinct(); // 这里需要从实际数据中提取
+            
+            foreach (var guid in networkGuids)
+            {
+                if (!string.IsNullOrEmpty(guid))
+                    result.Add(new GlobalNetworkHourly { NetworkCardGuid = guid });
+            }
+        }
+        catch
+        {
+            // 如果出错，返回空列表
+        }
+        
+        return result;
+    }
+
+    // 辅助方法：获取所有网卡的日数据  
+    private static async Task<List<GlobalNetworkAggregatedBase>> GetAllNetworkCardsDailyDataAsync(int days)
+    {
+        var result = new List<GlobalNetworkAggregatedBase>();
+        
+        try 
+        {
+            var allDailyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByDayAsync("", days);
+            var networkGuids = allDailyData.Select(x => "").Distinct(); // 这里需要从实际数据中提取
+            
+            foreach (var guid in networkGuids)
+            {
+                if (!string.IsNullOrEmpty(guid))
+                    result.Add(new GlobalNetworkDaily { NetworkCardGuid = guid });
+            }
+        }
+        catch
+        {
+            // 如果出错，返回空列表
+        }
+        
+        return result;
+    }
+
+    // 辅助方法：检查指定时间范围内是否有网络数据
+    private static async Task<bool> HasNetworkDataInTimeRangeAsync(string dataType, long startTime)
+    {
+        try
+        {
+            // 使用现有方法检查数据
+            switch (dataType)
+            {
+                case "hourly":
+                    var hourlyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByHourAsync("", 1);
+                    return hourlyData.Any();
+                case "daily":  
+                    var dailyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByDayAsync("", 1);
+                    return dailyData.Any();
+                default:
+                    var networkData = await DatabaseManager.Instance.Networks.GetGlobalNetworkHistoryAsync("", 1);
+                    return networkData.Any();
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // 辅助方法：获取流量趋势数据
+    private static async Task<List<object>> GetTrafficTrendsAsync(string timeRange, string interfaceId, long startTime, long endTime)
+    {
+        var points = new List<object>();
+        
+        try
+        {
+            if (timeRange == "hour")
+            {
+                // 从 GlobalNetwork 表查询
+                if (interfaceId == "all")
+                {
+                    // 获取所有网卡数据并聚合
+                    var allData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", startTime, endTime);
+                    var groupedData = allData.GroupBy(d => d.Timestep).Select(g => new
+                    {
+                        timestamp = g.Key.ToString(),
+                        uploadSpeed = g.Sum(x => x.Upload),
+                        downloadSpeed = g.Sum(x => x.Download)
+                    });
+                    
+                    points.AddRange(groupedData);
+                }
+                else
+                {
+                    var data = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync(interfaceId, startTime, endTime);
+                    points.AddRange(data.Select(d => new
+                    {
+                        timestamp = d.Timestep.ToString(),
+                        uploadSpeed = d.Upload,
+                        downloadSpeed = d.Download
+                    }));
+                }
+            }
+            else if (timeRange == "day")
+            {
+                // 从小时数据聚合
+                if (interfaceId == "all")
+                {
+                    var allData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByHourAsync("", 24);
+                    var groupedData = allData.GroupBy(d => d.HourTimestamp).Select(g => new
+                    {
+                        timestamp = g.Key.ToString(),
+                        uploadSpeed = g.Sum(x => x.AvgUpload),
+                        downloadSpeed = g.Sum(x => x.AvgDownload)
+                    });
+                    
+                    points.AddRange(groupedData);
+                }
+                else
+                {
+                    var data = await DatabaseManager.Instance.Networks.GetGlobalNetworkByHourAsync(interfaceId, 24);
+                    points.AddRange(data.Select(d => new
+                    {
+                        timestamp = d.HourTimestamp.ToString(),
+                        uploadSpeed = d.AvgUpload,
+                        downloadSpeed = d.AvgDownload
+                    }));
+                }
+            }
+            else
+            {
+                // 从日数据聚合
+                int days = timeRange == "week" ? 7 : 30;
+                if (interfaceId == "all")
+                {
+                    var allData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByDayAsync("", days);
+                    var groupedData = allData.GroupBy(d => d.DayTimestamp).Select(g => new
+                    {
+                        timestamp = g.Key.ToString(),
+                        uploadSpeed = g.Sum(x => x.AvgUpload),
+                        downloadSpeed = g.Sum(x => x.AvgDownload)
+                    });
+                    
+                    points.AddRange(groupedData);
+                }
+                else
+                {
+                    var data = await DatabaseManager.Instance.Networks.GetGlobalNetworkByDayAsync(interfaceId, days);
+                    points.AddRange(data.Select(d => new
+                    {
+                        timestamp = d.DayTimestamp.ToString(),
+                        uploadSpeed = d.AvgUpload,
+                        downloadSpeed = d.AvgDownload
+                    }));
+                }
+            }
+        }
+        catch
+        {
+            // 如果出错，返回空数据
+        }
+        
+        return points;
     }
 }
 
