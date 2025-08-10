@@ -1300,6 +1300,7 @@ public partial class App : System.Windows.Application
                         processName = processName,
                         displayName = displayName,
                         processPath = app.AppPath ?? "",
+                        appId = app.AppId ?? "",
                         icon = iconBase64,
                         version = version,
                         company = company,
