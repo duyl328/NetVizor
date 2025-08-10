@@ -259,11 +259,11 @@ const interfaceOptions = ref([
 // 计算网卡选择框的最小宽度
 const interfaceSelectWidth = computed(() => {
   if (interfaceOptions.value.length === 0) return '120px'
-  
+
   const maxLength = Math.max(
     ...interfaceOptions.value.map(option => option.label.length)
   )
-  
+
   // 根据字符长度计算宽度，中文字符按2倍宽度计算
   const estimatedWidth = maxLength * 8 + 60 // 基础60px + 字符宽度
   return Math.max(estimatedWidth, 120) + 'px' // 最小120px
@@ -274,7 +274,7 @@ const getNetworkInterfaces = async () => {
     const params: Record<string, any> = {
       timeRange: selectedTimeRange.value
     }
-    
+
     const res: ApiResponse<NetworkInterface[]> = await httpClient.get('/statistics/interfaces', params)
     if (res.success && res.data) {
       // 清空现有选项（保留全部网卡选项）
@@ -329,7 +329,7 @@ const getTrafficTrends = async () => {
           downloadSpeed: point.downloadSpeed
         }))
         .sort((a, b) => a.timestamp - b.timestamp) // 按时间升序排列，最新时间在右侧
-      
+
       // 限制显示的数据点数量，避免图表过于密集
       const maxPoints = 250 // 最多显示250个点
       if (processedData.length > maxPoints) {
@@ -337,7 +337,7 @@ const getTrafficTrends = async () => {
         const step = Math.floor(processedData.length / maxPoints)
         processedData = processedData.filter((_, index) => index % step === 0)
       }
-      
+
       trafficTrendData.value = processedData
     }
   } catch (error) {
@@ -423,9 +423,11 @@ const selectedAppId = ref<string | null>(null)
 
 // 事件处理
 const showSoftwareDetail = (software: any) => {
+  console.log(software);
   selectedAppId.value = software.appId
   selectedSoftware.value = software // 保留用于兼容性
   showDetailModal.value = true
+  console.log(selectedAppId.value,selectedSoftware.value,showDetailModal.value);
 }
 
 const refreshData = async () => {

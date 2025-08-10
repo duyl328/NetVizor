@@ -1,396 +1,353 @@
 <template>
-  <n-modal
-    v-model:show="visible"
-    :mask-closable="false"
-    preset="card"
-    style="width: 90%; max-width: 1000px"
-    :title="softwareDetail?.displayName || '软件详情'"
-    size="huge"
-    :bordered="false"
-    :segmented="false"
-  >
-    <n-spin :show="loading" style="min-height: 400px">
-      <div v-if="softwareDetail" class="software-detail-content">
-        <!-- 基本信息和统计 -->
-        <div class="detail-header">
-          <div class="software-icon">
-            <img
-              v-if="softwareDetail.icon"
-              :src="`data:image/png;base64,${softwareDetail.icon}`"
-              class="app-icon"
-              :alt="softwareDetail.displayName"
-            />
-            <div v-else class="icon-placeholder">
-              {{ softwareDetail.displayName.charAt(0).toUpperCase() }}
+  <n-modal v-model:show="showModal" class="software-detail-modal">
+    <div class="modal-card">
+      <!-- 弹窗头部 -->
+      <div class="modal-header">
+        <div class="header-left">
+          <img
+            v-if="analysisData?.appInfo.icon"
+            :src="'data:image/png;base64,' + analysisData.appInfo.icon"
+            class="app-icon"
+            @error="handleIconError"
+          />
+          <n-icon v-else :component="DesktopOutline" class="app-icon-fallback" />
+
+          <div class="header-info">
+            <h3 class="app-name">{{ analysisData?.appInfo.name || 'Unknown Application' }}</h3>
+            <p class="app-details">
+              {{ analysisData?.appInfo.company || 'Unknown Company' }}
+              <span v-if="analysisData?.appInfo.version">• v{{ analysisData.appInfo.version }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <n-button quaternary circle @click="refreshData">
+            <template #icon>
+              <n-icon :component="RefreshOutline" />
+            </template>
+          </n-button>
+          <n-button quaternary circle @click="closeModal">
+            <template #icon>
+              <n-icon :component="CloseOutline" />
+            </template>
+          </n-button>
+        </div>
+      </div>
+
+      <!-- 统计概览卡片 -->
+      <div class="stats-overview">
+        <div class="stat-card">
+          <div class="stat-value">{{ formatBytes(analysisData?.summary.totalTraffic || 0) }}</div>
+          <div class="stat-label">总流量</div>
+          <div class="stat-trend">
+            <span class="upload">↑ {{ formatBytes(analysisData?.summary.totalUpload || 0) }}</span>
+            <span class="download">↓ {{ formatBytes(analysisData?.summary.totalDownload || 0) }}</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">{{ analysisData?.summary.totalConnections || 0 }}</div>
+          <div class="stat-label">总连接数</div>
+          <div class="stat-extra">{{ analysisData?.summary.uniqueRemoteIPs || 0 }} 个远程IP</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">{{ analysisData?.summary.uniqueRemotePorts || 0 }}</div>
+          <div class="stat-label">使用端口</div>
+          <div class="stat-extra">{{ timeRangeText }}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-value">{{ analysisData?.portAnalysis.length || 0 }}</div>
+          <div class="stat-label">活跃端口</div>
+          <div class="stat-extra">多协议通信</div>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- 主要内容区域 -->
+        <div class="content-grid">
+          <!-- 网络关系图 - 主图表 -->
+          <div class="chart-section main-chart">
+            <div class="section-header">
+              <h4 class="section-title">
+                <n-icon :component="GitNetworkOutline" class="section-icon" />
+                网络连接拓扑
+              </h4>
+              <div class="section-extra">
+                <span class="connection-count">{{ analysisData?.topConnections.length || 0 }} 个连接</span>
+              </div>
+            </div>
+            <div class="chart-container">
+              <NetworkAnalysisChart
+                v-if="analysisData"
+                :data="analysisData"
+                :loading="loading"
+              />
             </div>
           </div>
-          <div class="software-summary">
-            <h2 class="software-name">{{ softwareDetail.displayName }}</h2>
-            <div class="software-meta">
-              <span class="process-name">{{ softwareDetail.processName }}</span>
-              <span class="traffic-info"
-                >{{ formatBytes(softwareDetail.totalBytes) }} ({{
-                  softwareDetail.percentage.toFixed(1)
-                }}%)</span
-              >
-              <span class="connection-info">{{ softwareDetail.connectionCount }} 个连接</span>
+
+          <!-- 协议分布图 -->
+          <div class="chart-section protocol-chart">
+            <div class="section-header">
+              <h4 class="section-title">
+                <n-icon :component="StatsChartOutline" class="section-icon" />
+                协议分布
+              </h4>
+            </div>
+            <div class="chart-container">
+              <ProtocolChart v-if="protocolChartData.length > 0" :data="protocolChartData" />
+              <div v-else class="empty-chart">
+                <n-icon :component="PieChartOutline" size="32" />
+                <span>暂无协议数据</span>
+              </div>
             </div>
           </div>
-          <div class="detail-stats">
-            <div class="stat-item">
-              <span class="stat-label">流量占比</span>
-              <span class="stat-value">{{ softwareDetail.percentage.toFixed(1) }}%</span>
+
+          <!-- 时间趋势图 -->
+          <div class="chart-section trend-chart">
+            <div class="section-header">
+              <h4 class="section-title">
+                <n-icon :component="TrendingUpOutline" class="section-icon" />
+                流量趋势
+              </h4>
             </div>
-            <div class="stat-item">
-              <span class="stat-label">连接数</span>
-              <span class="stat-value">{{ softwareDetail.connectionCount }}</span>
+            <div class="chart-container">
+              <TimeTrendChart v-if="timeTrendData.length > 0" :data="timeTrendData" />
+              <div v-else class="empty-chart">
+                <n-icon :component="BarChartOutline" size="32" />
+                <span>暂无趋势数据</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 选项卡内容 -->
-        <div class="detail-tabs">
-          <n-tabs default-value="overview" type="line">
-            <!-- 概览 -->
-            <n-tab-pane name="overview" tab="概览">
-              <div class="tab-content">
-                <div class="overview-grid">
-                  <!-- 软件信息卡片 -->
-                  <div class="info-section">
-                    <h4 class="section-title">软件信息</h4>
-                    <SoftwareInfoCard :software-info="softwareInfo" />
-                  </div>
-
-                  <!-- 协议分布图 -->
-                  <div class="protocol-section">
-                    <h4 class="section-title">协议分布</h4>
-                    <ProtocolChart :data="protocolData" />
-                  </div>
-                </div>
-              </div>
-            </n-tab-pane>
-
-            <!-- 网络连接 -->
-            <n-tab-pane name="network" tab="网络连接">
-              <div class="tab-content">
-                <div class="network-grid">
-                  <!-- 连接关系图 -->
-                  <div class="relation-section">
-                    <h4 class="section-title">连接关系</h4>
-                    <NetworkRelationChart :data="networkRelationData" :software="softwareDetail" />
-                  </div>
-
-                  <!-- 端口统计表 -->
-                  <div class="ports-section">
-                    <h4 class="section-title">端口统计</h4>
-                    <PortStatsTable :data="portStatsData" />
-                  </div>
-                </div>
-              </div>
-            </n-tab-pane>
-
-            <!-- 流量详情 -->
-            <n-tab-pane name="traffic" tab="流量详情">
-              <div class="tab-content">
-                <div class="traffic-details">
-                  <div class="traffic-chart-section">
-                    <h4 class="section-title">流量趋势 ({{ timeRange }})</h4>
-                    <div class="traffic-chart-placeholder">
-                      <div class="placeholder-content">
-                        <n-icon :component="TrendingUpOutline" size="48" />
-                        <p>流量趋势图</p>
-                        <p class="placeholder-desc">展示该软件的上传/下载流量变化</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="traffic-stats-section">
-                    <h4 class="section-title">流量统计</h4>
-                    <div class="stats-grid">
-                      <div class="stat-card">
-                        <div class="stat-label">总流量</div>
-                        <div class="stat-value">{{ formatBytes(software.totalBytes || 0) }}</div>
-                      </div>
-                      <div class="stat-card">
-                        <div class="stat-label">上传</div>
-                        <div class="stat-value">{{ formatBytes(software.uploadBytes || 0) }}</div>
-                      </div>
-                      <div class="stat-card">
-                        <div class="stat-label">下载</div>
-                        <div class="stat-value">{{ formatBytes(software.downloadBytes || 0) }}</div>
-                      </div>
-                      <div class="stat-card">
-                        <div class="stat-label">平均速度</div>
-                        <div class="stat-value">{{ formatSpeed(averageSpeed) }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </n-tab-pane>
-          </n-tabs>
+        <!-- 详细数据表格 -->
+        <div class="data-tables">
+          <div class="table-tabs">
+            <n-tabs v-model:value="activeTab" type="line" animated>
+              <n-tab-pane name="connections" tab="连接详情">
+                <ConnectionsTable :data="analysisData?.topConnections || []" />
+              </n-tab-pane>
+              <n-tab-pane name="ports" tab="端口统计">
+                <PortStatsTable :data="portStatsData" />
+              </n-tab-pane>
+              <n-tab-pane name="timeline" tab="时间线">
+                <TimelineView :data="analysisData?.timeTrends || []" />
+              </n-tab-pane>
+            </n-tabs>
+          </div>
         </div>
       </div>
-
-      <div v-else-if="!loading && !softwareDetail" class="no-data">
-        <div class="no-data-icon">📊</div>
-        <div class="no-data-text">暂无软件详情数据</div>
-      </div>
-    </n-spin>
-
-    <template #action>
-      <n-button @click="visible = false">关闭</n-button>
-      <n-button type="primary" @click="fetchAllData" :loading="loading">
-        <template #icon>
-          <n-icon :component="RefreshOutline" />
-        </template>
-        刷新数据
-      </n-button>
-    </template>
+    </div>
   </n-modal>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { NModal, NTabs, NTabPane, NButton, NIcon, NSpin } from 'naive-ui'
-import { TrendingUpOutline, DownloadOutline, RefreshOutline } from '@vicons/ionicons5'
+import { ref, computed, watch, nextTick } from 'vue'
+import { NModal, NButton, NIcon, NTabs, NTabPane } from 'naive-ui'
+import {
+  DesktopOutline,
+  RefreshOutline,
+  CloseOutline,
+  GitNetworkOutline,
+  StatsChartOutline,
+  TrendingUpOutline,
+  PieChartOutline,
+  BarChartOutline
+} from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http'
 import type { ApiResponse } from '@/types/http'
 
 // 导入子组件
-import SoftwareInfoCard from './SoftwareInfoCard.vue'
-import NetworkRelationChart from './NetworkRelationChart.vue'
-import PortStatsTable from './PortStatsTable.vue'
+import NetworkAnalysisChart from './NetworkAnalysisChart.vue'
 import ProtocolChart from './ProtocolChart.vue'
+import TimeTrendChart from './TimeTrendChart.vue'
+import ConnectionsTable from './ConnectionsTable.vue'
+import PortStatsTable from './PortStatsTable.vue'
+import TimelineView from './TimelineView.vue'
 
-// 数据接口定义
-interface SoftwareDetail {
-  appId: string
-  processName: string
-  displayName: string
-  processPath: string
-  icon: string
-  version: string
-  company: string
-  totalBytes: number
-  uploadBytes: number
-  downloadBytes: number
+// 接口定义
+interface TopConnection {
+  localIP: string
+  localPort: number
+  remoteIP: string
+  remotePort: number
+  protocol: 'TCP' | 'UDP'
+  totalUpload: number
+  totalDownload: number
+  totalTraffic: number
   connectionCount: number
-  percentage: number
+  firstSeen: string
+  lastSeen: string
 }
 
-interface SoftwareInfo {
-  processName: string
-  displayName: string
-  version: string
-  company: string
-  processPath: string
-  fileSize: number
-}
-
-interface NetworkRelationData {
-  nodes: Array<{
-    id: string
+interface NetworkAnalysisData {
+  appInfo: {
+    appId: string
     name: string
-    type: string
-    size: number
-    category: number
+    company?: string
+    version?: string
+    path?: string
+    icon?: string
+    hash?: string
+  }
+  summary: {
+    timeRange: string
+    startTime: string
+    endTime: string
+    totalUpload: number
+    totalDownload: number
+    totalTraffic: number
+    totalConnections: number
+    uniqueRemoteIPs: number
+    uniqueRemotePorts: number
+  }
+  topConnections: TopConnection[]
+  protocolStats: Array<{
+    protocol: string
+    connectionCount: number
+    totalTraffic: number
+    percentage: number
   }>
-  links: Array<{
-    source: string
-    target: string
-    value: number
-    label: string
+  timeTrends: Array<{
+    timestamp: number
+    timeStr: string
+    upload: number
+    download: number
+    connections: number
+  }>
+  portAnalysis: Array<{
+    port: number
+    serviceName: string
+    connectionCount: number
+    totalTraffic: number
+    protocols: string[]
   }>
 }
 
-interface PortStats {
-  port: number
-  protocol: string
-  connectionCount: number
-  totalBytes: number
-  remoteHosts: string[]
-}
-
-interface ProtocolData {
-  protocol: string
-  bytes: number
-  percentage: number
-  color: string
-}
-
-// Props定义
-const props = defineProps<{
+// Props和Emits
+interface Props {
   show: boolean
-  appId?: string | null
-  timeRange?: string
-}>()
+  appId: string | null
+  timeRange: string
+}
 
-// Emits
+const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:show': [value: boolean]
 }>()
 
 // 响应式数据
+const showModal = computed({
+  get: () => props.show,
+  set: (value) => emit('update:show', value)
+})
+
+const analysisData = ref<NetworkAnalysisData | null>(null)
 const loading = ref(false)
-const softwareDetail = ref<SoftwareDetail | null>(null)
-const softwareInfo = ref<SoftwareInfo | null>(null)
-const networkRelationData = ref<NetworkRelationData>({ nodes: [], links: [] })
-const portStatsData = ref<PortStats[]>([])
-const protocolData = ref<ProtocolData[]>([])
+const activeTab = ref('connections')
 
 // 计算属性
-const visible = computed({
-  get: () => props.show,
-  set: (value) => emit('update:show', value),
+const timeRangeText = computed(() => {
+  const rangeMap: Record<string, string> = {
+    '1hour': '1小时',
+    '1day': '24小时',
+    '7days': '7天',
+    '30days': '30天'
+  }
+  return rangeMap[props.timeRange] || props.timeRange
 })
 
-// 计算平均速度
-const averageSpeed = computed(() => {
-  if (!softwareDetail.value?.totalBytes) return 0
-  // 模拟计算，实际应根据时间范围计算
-  return softwareDetail.value.totalBytes / 3600 // 假设1小时的数据
+const protocolChartData = computed(() => {
+  if (!analysisData.value?.protocolStats) return []
+
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+  return analysisData.value.protocolStats.map((stat, index) => ({
+    protocol: stat.protocol,
+    bytes: stat.totalTraffic,
+    percentage: stat.percentage,
+    color: colors[index % colors.length]
+  }))
 })
 
-// API调用函数
-const getSoftwareDetail = async () => {
+const timeTrendData = computed(() => {
+  if (!analysisData.value?.timeTrends) return []
+
+  return analysisData.value.timeTrends.map(trend => ({
+    timestamp: trend.timestamp * 1000, // 转换为毫秒
+    timeStr: trend.timeStr,
+    upload: trend.upload,
+    download: trend.download,
+    connections: trend.connections
+  }))
+})
+
+const portStatsData = computed(() => {
+  if (!analysisData.value?.portAnalysis || !analysisData.value?.topConnections) return []
+
+  return analysisData.value.portAnalysis.map(port => {
+    // 从连接数据中获取使用该端口的远程主机
+    const connectionsForPort = analysisData.value!.topConnections.filter(
+      conn => conn.remotePort === port.port
+    )
+
+    return {
+      port: port.port,
+      protocol: port.protocols[0] || 'TCP', // 取第一个协议
+      connectionCount: port.connectionCount,
+      totalBytes: port.totalTraffic,
+      remoteHosts: [...new Set(connectionsForPort.map(conn => conn.remoteIP))]
+    }
+  })
+})
+
+// API调用
+const fetchAnalysisData = async () => {
   if (!props.appId) return
 
   loading.value = true
   try {
     const params = {
-      timeRange: props.timeRange || '1hour',
+      appId: props.appId,
+      timeRange: props.timeRange
     }
 
-    const res: ApiResponse<SoftwareDetail> = await httpClient.get(
-      `/apps/${props.appId}/detail`,
-      params,
+    const response: ApiResponse<NetworkAnalysisData> = await httpClient.get(
+      '/apps/network-analysis',
+      params
     )
-    if (res.success && res.data) {
-      softwareDetail.value = res.data
+
+    if (response.success && response.data) {
+      analysisData.value = response.data
+    } else {
+      console.error('获取网络分析数据失败:', response.message)
+      analysisData.value = null
     }
   } catch (error) {
-    console.error('获取软件详情失败:', error)
+    console.error('获取网络分析数据异常:', error)
+    analysisData.value = null
   } finally {
     loading.value = false
   }
 }
 
-const getSoftwareInfo = async () => {
-  if (!props.appId) return
-
-  try {
-    const res: ApiResponse<SoftwareInfo> = await httpClient.get(`/apps/${props.appId}/info`)
-    if (res.success && res.data) {
-      softwareInfo.value = res.data
-    }
-  } catch (error) {
-    console.error('获取软件信息失败:', error)
-  }
+// 事件处理
+const refreshData = () => {
+  fetchAnalysisData()
 }
 
-const getNetworkRelation = async () => {
-  if (!props.appId) return
-
-  try {
-    const params = {
-      timeRange: props.timeRange || '1hour',
-    }
-
-    const res: ApiResponse<NetworkRelationData> = await httpClient.get(
-      `/apps/${props.appId}/network-relation`,
-      params,
-    )
-    if (res.success && res.data) {
-      networkRelationData.value = res.data
-    }
-  } catch (error) {
-    console.error('获取网络关系数据失败:', error)
-  }
+const closeModal = () => {
+  showModal.value = false
 }
 
-const getPortStats = async () => {
-  if (!props.appId) return
-
-  try {
-    const params = {
-      timeRange: props.timeRange || '1hour',
-    }
-
-    const res: ApiResponse<PortStats[]> = await httpClient.get(
-      `/apps/${props.appId}/port-stats`,
-      params,
-    )
-    if (res.success && res.data) {
-      portStatsData.value = res.data
-    }
-  } catch (error) {
-    console.error('获取端口统计失败:', error)
-  }
+const handleIconError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  target.style.display = 'none'
 }
 
-const getProtocolData = async () => {
-  if (!props.appId) return
-
-  try {
-    const params = {
-      timeRange: props.timeRange || '1hour',
-    }
-
-    const res: ApiResponse<ProtocolData[]> = await httpClient.get(
-      `/apps/${props.appId}/protocols`,
-      params,
-    )
-    if (res.success && res.data) {
-      protocolData.value = res.data
-    }
-  } catch (error) {
-    console.error('获取协议数据失败:', error)
-  }
-}
-
-// 获取所有数据
-const fetchAllData = async () => {
-  if (!props.appId) return
-
-  await Promise.all([
-    getSoftwareDetail(),
-    getSoftwareInfo(),
-    getNetworkRelation(),
-    getPortStats(),
-    getProtocolData(),
-  ])
-}
-
-// 监听AppId和时间范围变化
-watch(
-  [() => props.appId, () => props.timeRange],
-  () => {
-    if (props.show && props.appId) {
-      fetchAllData()
-    }
-  },
-  { immediate: true },
-)
-
-// 监听弹窗显示状态
-watch(
-  () => props.show,
-  (newVal) => {
-    if (newVal && props.appId) {
-      fetchAllData()
-    } else if (!newVal) {
-      // 关闭弹窗时清理数据
-      softwareDetail.value = null
-      softwareInfo.value = null
-      networkRelationData.value = { nodes: [], links: [] }
-      portStatsData.value = []
-      protocolData.value = []
-    }
-  },
-)
-
-// 格式化字节数
+// 工具函数
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B'
 
@@ -401,279 +358,337 @@ const formatBytes = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
-// 格式化速度
-const formatSpeed = (bytesPerSecond: number): string => {
-  return formatBytes(bytesPerSecond) + '/s'
-}
+// 监听器
+watch(() => props.show, (newShow) => {
+  if (newShow && props.appId) {
+    nextTick(() => {
+      fetchAnalysisData()
+    })
+  }
+})
 
-// 导出数据
-const exportData = () => {
-  // 实现数据导出功能
-  console.log('Export data for:', props.software?.processName)
-}
+watch(() => [props.appId, props.timeRange], () => {
+  if (props.show && props.appId) {
+    fetchAnalysisData()
+  }
+})
 </script>
 
 <style scoped>
-.software-detail-content {
-  max-height: 70vh;
-  overflow-y: auto;
+/* 弹窗基础样式 */
+.software-detail-modal :deep(.n-modal) {
+  max-width: 90vw;
+  max-height: 90vh;
 }
 
-/* 详情头部 */
-.detail-header {
+.modal-card {
+  width: 1200px;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: var(--bg-card);
+  border-radius: 16px;
+  overflow: hidden;
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-secondary);
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-.software-icon .icon-placeholder {
+/* 弹窗头部 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-primary);
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-icon {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.app-icon-fallback {
+  width: 48px;
+  height: 48px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 18px;
+  font-size: 24px;
 }
 
-.software-summary {
-  flex: 1;
-}
-
-.software-name {
+.header-info h3 {
+  margin: 0;
   font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.software-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-}
-
-.process-name {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  color: var(--accent-primary);
-  font-weight: 500;
-}
-
-.traffic-info {
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.connection-info {
-  color: var(--text-muted);
-}
-
-.detail-stats {
-  display: flex;
-  gap: 24px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.stat-value {
-  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-/* 选项卡内容 */
-.detail-tabs {
-  margin-top: 8px;
+.header-info p {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
-.tab-content {
-  padding: 16px 0;
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
-/* 概览页面 */
-.overview-grid {
+/* 统计概览 */
+.stats-overview {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 24px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border-primary);
+}
+
+.stat-card {
+  background: var(--bg-card);
+  padding: 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-trend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.stat-trend .upload {
+  color: var(--accent-error);
+}
+
+.stat-trend .download {
+  color: var(--accent-success);
+}
+
+.stat-extra {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* 弹窗主体 */
+.modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 内容网格 */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  height: 400px;
+  background: var(--border-primary);
+  margin-bottom: 1px;
+}
+
+.chart-section {
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main-chart {
+  grid-row: span 2;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-secondary);
+  flex-shrink: 0;
 }
 
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-secondary);
-  margin: 0 0 12px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.protocol-section {
+  color: var(--text-primary);
+  margin: 0;
   display: flex;
-  flex-direction: column;
-}
-
-/* 网络连接页面 */
-.network-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.relation-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.ports-section {
-  display: flex;
-  flex-direction: column;
-}
-
-/* 流量详情页面 */
-.traffic-details {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.traffic-chart-placeholder {
-  height: 200px;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed var(--border-secondary);
-}
-
-.placeholder-content {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+
+.section-icon {
+  color: var(--accent-primary);
+}
+
+.section-extra {
+  font-size: 12px;
   color: var(--text-muted);
 }
 
-.placeholder-desc {
-  font-size: 12px;
-  margin: 0;
+.connection-count {
+  background: var(--accent-primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.stat-card {
-  background: var(--bg-tertiary);
+.chart-container {
+  flex: 1;
   padding: 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border-secondary);
-  text-align: center;
+  overflow: hidden;
 }
 
-.stat-card .stat-label {
-  display: block;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.stat-card .stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-}
-
-/* 模态框操作 */
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-/* 无数据状态 */
-.no-data {
+.empty-chart {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
+  height: 100%;
   color: var(--text-muted);
+  gap: 12px;
 }
 
-.no-data-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-  opacity: 0.6;
+.empty-chart span {
+  font-size: 13px;
 }
 
-.no-data-text {
-  font-size: 16px;
-  color: var(--text-secondary);
+/* 数据表格 */
+.data-tables {
+  flex: 1;
+  background: var(--bg-card);
+  overflow: hidden;
 }
 
-/* 应用图标 */
-.app-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  object-fit: contain;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.table-tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .detail-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .detail-stats {
-    justify-content: center;
-  }
-
-  .overview-grid,
-  .network-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.table-tabs :deep(.n-tabs) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Naive UI 覆盖样式 */
-:deep(.n-tabs .n-tab-pane) {
+.table-tabs :deep(.n-tabs-nav) {
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.table-tabs :deep(.n-tabs-content) {
+  flex: 1;
+  overflow: hidden;
+}
+
+.table-tabs :deep(.n-tab-pane) {
+  height: 100%;
   padding: 0;
 }
 
-:deep(.n-tabs .n-tabs-nav) {
-  --n-tab-color-hover: var(--bg-hover);
-  --n-tab-text-color-active: var(--accent-primary);
-  --n-bar-color: var(--accent-primary);
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .modal-card {
+    width: 95vw;
+    max-height: 95vh;
+  }
+
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 200px 150px 150px;
+    height: auto;
+  }
+
+  .main-chart {
+    grid-row: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-card {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  .header-info h3 {
+    font-size: 18px;
+  }
+
+  .app-icon, .app-icon-fallback {
+    width: 40px;
+    height: 40px;
+  }
+
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .content-grid {
+    height: auto;
+    grid-template-rows: 180px 120px 120px;
+  }
+}
+
+/* 暗色主题适配 */
+@media (prefers-color-scheme: dark) {
+  .modal-card {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  }
 }
 </style>
