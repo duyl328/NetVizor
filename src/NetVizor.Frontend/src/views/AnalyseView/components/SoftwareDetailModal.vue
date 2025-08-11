@@ -16,7 +16,9 @@
             <h3 class="app-name">{{ analysisData?.appInfo.name || 'Unknown Application' }}</h3>
             <p class="app-details">
               {{ analysisData?.appInfo.company || 'Unknown Company' }}
-              <span v-if="analysisData?.appInfo.version">• v{{ analysisData.appInfo.version }}</span>
+              <span v-if="analysisData?.appInfo.version"
+                >• v{{ analysisData.appInfo.version }}</span
+              >
             </p>
           </div>
         </div>
@@ -42,7 +44,9 @@
           <div class="stat-label">总流量</div>
           <div class="stat-trend">
             <span class="upload">↑ {{ formatBytes(analysisData?.summary.totalUpload || 0) }}</span>
-            <span class="download">↓ {{ formatBytes(analysisData?.summary.totalDownload || 0) }}</span>
+            <span class="download"
+              >↓ {{ formatBytes(analysisData?.summary.totalDownload || 0) }}</span
+            >
           </div>
         </div>
 
@@ -67,11 +71,10 @@
 
       <div class="modal-body">
         <!-- 主要Tab内容区域 -->
-        <n-tabs 
-          v-model:value="activeMainTab" 
-          type="card" 
-          size="large" 
-          class="detail-tabs" 
+        <n-tabs
+          v-model:value="activeMainTab"
+          type="card"
+          class="detail-tabs"
           animated
           :tab-style="{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }"
         >
@@ -86,7 +89,9 @@
                       网络连接拓扑
                     </h4>
                     <div class="section-controls">
-                      <span class="connection-count">{{ analysisData?.topConnections.length || 0 }} 个连接</span>
+                      <span class="connection-count"
+                        >{{ analysisData?.topConnections.length || 0 }} 个连接</span
+                      >
                       <n-button size="small" @click="refreshData">
                         <template #icon>
                           <n-icon :component="RefreshOutline" />
@@ -126,10 +131,10 @@
                       </h4>
                     </div>
                     <div class="chart-container large">
-                      <ProtocolChart 
+                      <ProtocolChart
                         ref="protocolChartRef"
-                        v-if="protocolChartData.length > 0" 
-                        :data="protocolChartData" 
+                        v-if="protocolChartData.length > 0"
+                        :data="protocolChartData"
                       />
                       <div v-else class="empty-chart">
                         <n-icon :component="PieChartOutline" size="32" />
@@ -147,10 +152,10 @@
                       </h4>
                     </div>
                     <div class="chart-container large">
-                      <TimeTrendChart 
+                      <TimeTrendChart
                         ref="trendChartRef"
-                        v-if="timeTrendData.length > 0" 
-                        :data="timeTrendData" 
+                        v-if="timeTrendData.length > 0"
+                        :data="timeTrendData"
                       />
                       <div v-else class="empty-chart">
                         <n-icon :component="BarChartOutline" size="32" />
@@ -174,7 +179,9 @@
                       连接详情
                     </h4>
                     <div class="section-controls">
-                      <span class="data-count">共 {{ analysisData?.topConnections.length || 0 }} 条记录</span>
+                      <span class="data-count"
+                        >共 {{ analysisData?.topConnections.length || 0 }} 条记录</span
+                      >
                       <n-button size="small" @click="refreshData">
                         <template #icon>
                           <n-icon :component="RefreshOutline" />
@@ -263,7 +270,7 @@ import {
   StatsChartOutline,
   TrendingUpOutline,
   PieChartOutline,
-  BarChartOutline
+  BarChartOutline,
 } from '@vicons/ionicons5'
 import { httpClient } from '@/utils/http'
 import type { ApiResponse } from '@/types/http'
@@ -350,7 +357,7 @@ const emit = defineEmits<{
 // 响应式数据
 const showModal = computed({
   get: () => props.show,
-  set: (value) => emit('update:show', value)
+  set: (value) => emit('update:show', value),
 })
 
 const analysisData = ref<NetworkAnalysisData | null>(null)
@@ -366,20 +373,65 @@ const trendChartRef = ref()
 // 刷新所有图表尺寸
 const resizeAllCharts = async () => {
   await nextTick()
+
+  // 延迟执行，确保DOM已完全渲染
   setTimeout(() => {
-    // 刷新网络图表
-    if (networkChartRef.value && networkChartRef.value.$refs?.chartRef?.chart) {
-      networkChartRef.value.$refs.chartRef.chart.resize()
+    try {
+      // 刷新网络图表 - 使用新的resize方法
+      if (networkChartRef.value && typeof networkChartRef.value.resize === 'function') {
+        networkChartRef.value.resize()
+      }
+      // 刷新协议图表
+      if (
+        protocolChartRef.value &&
+        protocolChartRef.value.chartRef &&
+        protocolChartRef.value.chartRef.chart
+      ) {
+        const chart = protocolChartRef.value.chartRef.chart
+        if (chart && typeof chart.resize === 'function') {
+          chart.resize()
+        }
+      }
+      // 刷新趋势图表
+      if (
+        trendChartRef.value &&
+        trendChartRef.value.chartRef &&
+        trendChartRef.value.chartRef.chart
+      ) {
+        const chart = trendChartRef.value.chartRef.chart
+        if (chart && typeof chart.resize === 'function') {
+          chart.resize()
+        }
+      }
+    } catch (error) {
+      console.warn('图表 resize 失败:', error)
     }
-    // 刷新协议图表
-    if (protocolChartRef.value && protocolChartRef.value.$refs?.chartRef?.chart) {
-      protocolChartRef.value.$refs.chartRef.chart.resize()
+  }, 300)
+
+  // 再次延迟执行，确保图表完全就绪
+  setTimeout(() => {
+    try {
+      if (networkChartRef.value && typeof networkChartRef.value.resize === 'function') {
+        networkChartRef.value.resize()
+      }
+      if (
+        protocolChartRef.value &&
+        protocolChartRef.value.chartRef &&
+        protocolChartRef.value.chartRef.chart
+      ) {
+        protocolChartRef.value.chartRef.chart.resize()
+      }
+      if (
+        trendChartRef.value &&
+        trendChartRef.value.chartRef &&
+        trendChartRef.value.chartRef.chart
+      ) {
+        trendChartRef.value.chartRef.chart.resize()
+      }
+    } catch (error) {
+      console.warn('图表二次 resize 失败:', error)
     }
-    // 刷新趋势图表
-    if (trendChartRef.value && trendChartRef.value.$refs?.chartRef?.chart) {
-      trendChartRef.value.$refs.chartRef.chart.resize()
-    }
-  }, 150)
+  }, 600)
 }
 
 // 监听Tab切换，刷新图表
@@ -388,13 +440,16 @@ watch(activeMainTab, () => {
 })
 
 // 监听弹窗显示状态
-watch(() => props.show, (newShow) => {
-  if (newShow) {
-    nextTick(() => {
-      resizeAllCharts()
-    })
-  }
-})
+watch(
+  () => props.show,
+  (newShow) => {
+    if (newShow) {
+      nextTick(() => {
+        resizeAllCharts()
+      })
+    }
+  },
+)
 
 // 计算属性
 const timeRangeText = computed(() => {
@@ -402,7 +457,7 @@ const timeRangeText = computed(() => {
     '1hour': '1小时',
     '1day': '24小时',
     '7days': '7天',
-    '30days': '30天'
+    '30days': '30天',
   }
   return rangeMap[props.timeRange] || props.timeRange
 })
@@ -415,29 +470,29 @@ const protocolChartData = computed(() => {
     protocol: stat.protocol,
     bytes: stat.totalTraffic,
     percentage: stat.percentage,
-    color: colors[index % colors.length]
+    color: colors[index % colors.length],
   }))
 })
 
 const timeTrendData = computed(() => {
   if (!analysisData.value?.timeTrends) return []
 
-  return analysisData.value.timeTrends.map(trend => ({
+  return analysisData.value.timeTrends.map((trend) => ({
     timestamp: trend.timestamp * 1000, // 转换为毫秒
     timeStr: trend.timeStr,
     upload: trend.upload,
     download: trend.download,
-    connections: trend.connections
+    connections: trend.connections,
   }))
 })
 
 const portStatsData = computed(() => {
   if (!analysisData.value?.portAnalysis || !analysisData.value?.topConnections) return []
 
-  return analysisData.value.portAnalysis.map(port => {
+  return analysisData.value.portAnalysis.map((port) => {
     // 从连接数据中获取使用该端口的远程主机
     const connectionsForPort = analysisData.value!.topConnections.filter(
-      conn => conn.remotePort === port.port
+      (conn) => conn.remotePort === port.port,
     )
 
     return {
@@ -445,7 +500,7 @@ const portStatsData = computed(() => {
       protocol: port.protocols[0] || 'TCP', // 取第一个协议
       connectionCount: port.connectionCount,
       totalBytes: port.totalTraffic,
-      remoteHosts: [...new Set(connectionsForPort.map(conn => conn.remoteIP))]
+      remoteHosts: [...new Set(connectionsForPort.map((conn) => conn.remoteIP))],
     }
   })
 })
@@ -458,12 +513,12 @@ const fetchAnalysisData = async () => {
   try {
     const params = {
       appId: props.appId,
-      timeRange: props.timeRange
+      timeRange: props.timeRange,
     }
 
     const response: ApiResponse<NetworkAnalysisData> = await httpClient.get(
       '/apps/network-analysis',
-      params
+      params,
     )
 
     if (response.success && response.data) {
@@ -505,17 +560,24 @@ const formatBytes = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
-
-watch(() => [props.appId, props.timeRange], () => {
-  if (props.show && props.appId) {
-    fetchAnalysisData()
-  }
-}, { flush: 'post' })
+watch(
+  () => [props.appId, props.timeRange],
+  () => {
+    if (props.show && props.appId) {
+      fetchAnalysisData()
+    }
+  },
+  { flush: 'post' },
+)
 
 // 监听数据变化，刷新图表
-watch(analysisData, () => {
-  resizeAllCharts()
-}, { flush: 'post' })
+watch(
+  analysisData,
+  () => {
+    resizeAllCharts()
+  },
+  { flush: 'post' },
+)
 </script>
 
 <style scoped>
@@ -526,15 +588,17 @@ watch(analysisData, () => {
 }
 
 .modal-card {
-  width: 1200px;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 1400px;
+  max-width: 95vw;
+  max-height: 95vh;
   background: var(--bg-card);
   border-radius: 16px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* 弹窗头部 */
@@ -678,7 +742,14 @@ watch(analysisData, () => {
   flex-shrink: 0;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-secondary);
-  padding: 8px 20px;
+  padding: 12px 20px;
+  position: relative;
+  z-index: 5;
+  min-height: 60px;
+}
+
+:deep(.detail-tabs .n-tabs-tab-wrapper) {
+  margin: 6px 4px;
 }
 
 :deep(.detail-tabs .n-tabs-tab) {
@@ -711,6 +782,13 @@ watch(analysisData, () => {
   color: white;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  border-top: 3px solid var(--accent-primary);
+  border-left: 1px solid var(--accent-primary);
+  border-right: 1px solid var(--accent-primary);
+  border-bottom: none;
+  margin-bottom: -1px;
+  z-index: 10;
+  position: relative;
 }
 
 :deep(.detail-tabs .n-tabs-tab:hover:not(.n-tabs-tab--active)) {
@@ -834,6 +912,7 @@ watch(analysisData, () => {
 .chart-section.full-height {
   margin: 20px;
   height: calc(100% - 40px);
+  min-height: 650px;
 }
 
 .table-section {
@@ -915,7 +994,7 @@ watch(analysisData, () => {
 
 .chart-container.extra-large {
   height: 100%;
-  min-height: 400px;
+  min-height: 600px;
 }
 
 .table-container {
@@ -1004,7 +1083,8 @@ watch(analysisData, () => {
     font-size: 18px;
   }
 
-  .app-icon, .app-icon-fallback {
+  .app-icon,
+  .app-icon-fallback {
     width: 40px;
     height: 40px;
   }
@@ -1058,7 +1138,9 @@ watch(analysisData, () => {
 /* 暗色主题适配 */
 @media (prefers-color-scheme: dark) {
   .modal-card {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.4),
+      0 10px 10px -5px rgba(0, 0, 0, 0.2);
   }
 }
 </style>

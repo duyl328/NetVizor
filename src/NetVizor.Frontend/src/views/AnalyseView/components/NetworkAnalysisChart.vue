@@ -1,16 +1,24 @@
 <template>
-  <div class="network-analysis-chart">
-    <v-chart 
+  <div class="network-analysis-chart" ref="containerRef">
+    <div v-if="!isContainerReady" class="loading-placeholder">
+      <n-spin size="large" />
+      <span>正在初始化图表...</span>
+    </div>
+    <v-chart
+      v-else
       ref="chartRef"
       class="chart"
       :option="chartOption"
       :autoresize="true"
+      :init-options="{ width: containerWidth, height: containerHeight }"
+      @finished="handleChartReady"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { NSpin } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -89,6 +97,113 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
+// 响应式数据
+const chartRef = ref()
+const containerRef = ref<HTMLElement>()
+const isContainerReady = ref(false)
+const containerWidth = ref(400)
+const containerHeight = ref(600)
+
+// 检查容器尺寸
+const checkContainerSize = async () => {
+  if (!containerRef.value) return false
+
+  await nextTick()
+
+  const rect = containerRef.value.getBoundingClientRect()
+  const width = rect.width || containerRef.value.clientWidth || containerRef.value.offsetWidth
+  const height = rect.height || containerRef.value.clientHeight || containerRef.value.offsetHeight
+
+  if (width > 0 && height > 0) {
+    containerWidth.value = width
+    containerHeight.value = height
+    return true
+  }
+
+  return false
+}
+
+// 等待容器准备就绪
+const waitForContainer = async (maxAttempts = 10) => {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (await checkContainerSize()) {
+      isContainerReady.value = true
+      return true
+    }
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+
+  // 如果还是无法获取尺寸，使用默认值
+  console.warn('无法获取容器尺寸，使用默认值')
+  containerWidth.value = 600
+  containerHeight.value = 600
+  isContainerReady.value = true
+  return false
+}
+
+// ResizeObserver 监听容器尺寸变化
+let resizeObserver: ResizeObserver | null = null
+
+const setupResizeObserver = () => {
+  if (typeof ResizeObserver !== 'undefined' && containerRef.value) {
+    resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (entry && entry.contentRect) {
+        const { width, height } = entry.contentRect
+        if (width > 0 && height > 0) {
+          containerWidth.value = width
+          containerHeight.value = height
+
+          // 如果图表已经存在，刷新尺寸
+          if (chartRef.value && chartRef.value.chart) {
+            setTimeout(() => {
+              chartRef.value.chart.resize({
+                width: width,
+                height: height
+              })
+            }, 100)
+          }
+        }
+      }
+    })
+
+    resizeObserver.observe(containerRef.value)
+  }
+}
+
+// 图表就绪回调
+const handleChartReady = () => {
+  console.log('图表渲染完成')
+}
+
+// 生命周期钩子
+onMounted(async () => {
+  await waitForContainer()
+  setupResizeObserver()
+})
+
+onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+})
+
+// 暴露给父组件的方法
+defineExpose({
+  chartRef,
+  resize: () => {
+    if (chartRef.value && chartRef.value.chart) {
+      checkContainerSize().then(() => {
+        chartRef.value.chart.resize({
+          width: containerWidth.value,
+          height: containerHeight.value
+        })
+      })
+    }
+  }
+})
+
 // 计算图表配置
 const chartOption = computed<EChartsOption>(() => {
   if (!props.data || props.loading) {
@@ -129,7 +244,12 @@ const chartOption = computed<EChartsOption>(() => {
       formatter: '{b}',
       fontSize: 12,
       fontWeight: 'bold',
-      color: '#ffffff'
+      color: '#000000',
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+      padding: [4, 8],
+      borderRadius: 4,
+      borderColor: '#cccccc',
+      borderWidth: 1
     }
   })
   nodeSet.add(appNodeId)
@@ -138,13 +258,13 @@ const chartOption = computed<EChartsOption>(() => {
   topConnections.slice(0, 20).forEach((conn, index) => {
     const isLocalhost = conn.remoteIP === '127.0.0.1'
     const isMulticast = conn.remoteIP.startsWith('224.') || conn.remoteIP.startsWith('239.')
-    
+
     // 创建远程IP节点
     const remoteIpNodeId = `ip_${conn.remoteIP}`
     if (!nodeSet.has(remoteIpNodeId)) {
       let ipCategory = 1 // 远程IP
       let ipColor = '#10b981' // 绿色
-      
+
       if (isLocalhost) {
         ipCategory = 3 // 本地回环
         ipColor = '#f59e0b' // 橙色
@@ -152,7 +272,7 @@ const chartOption = computed<EChartsOption>(() => {
         ipCategory = 4 // 组播地址
         ipColor = '#8b5cf6' // 紫色
       }
-      
+
       nodes.push({
         id: remoteIpNodeId,
         name: conn.remoteIP,
@@ -262,7 +382,7 @@ const chartOption = computed<EChartsOption>(() => {
             case 3: typeText = '本地回环'; break
             case 4: typeText = '组播地址'; break
           }
-          
+
           return `
             <div style="margin-bottom: 4px; font-weight: bold;">${node.name}</div>
             <div>类型: ${typeText}</div>
@@ -335,11 +455,11 @@ const chartOption = computed<EChartsOption>(() => {
 // 格式化字节数
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B'
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 </script>
@@ -350,11 +470,25 @@ const formatBytes = (bytes: number): string => {
   height: 100%;
   min-height: 400px;
   position: relative;
+  overflow: hidden;
 }
 
 .chart {
+  min-height: 500px;
   width: 100%;
   height: 100%;
+}
+
+.loading-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+  gap: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 /* 加载状态样式 */

@@ -141,6 +141,7 @@ const formatDuration = (firstSeen: string, lastSeen: string): string => {
 .table-container {
   height: 100%;
   overflow-y: auto;
+  padding-bottom: 20px;
 }
 
 .stats-table {
