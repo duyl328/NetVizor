@@ -8,7 +8,7 @@ import { ref, onMounted, provide } from 'vue'
 import { NButton } from 'naive-ui'
 import { NConfigProvider, NGlobalStyle, NMessageProvider, NLoadingBarProvider, NDialogProvider } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
-import NetworkConnectionPanel1 from '@/components/NetworkConnectionPanel1.vue'
+import NetworkConnectionPanel2 from '@/components/NetworkConnectionPanel2.vue'
 import MainLayout from './layouts/MainLayout.vue'
 
 const router = useRouter()
@@ -30,7 +30,7 @@ const route = useRoute()
 // 子路由列表
 const subRouteLists: subRouteList = []
 // 遍历路由page列表进行路由渲染
-Object.keys(routes).map((path) => {
+Object.keys(routes).map((path: string) => {
   if ('.vue' === PathUtils.extname(path).trim()) {
     const fileName = PathUtils.basename(path).split('.')[0]
     const s = StringUtils.toCustomCase(fileName).toLowerCase().split('-')[0]
@@ -88,12 +88,13 @@ const navPosition = ref({ x: 10, y: 10 }) // 默认位置
 const dragOffset = ref({ x: 0, y: 0 })
 
 // 拖拽相关函数
-function startDrag(event) {
+function startDrag(event: MouseEvent) {
   if (event.target.closest('.drag-handle')) {
     isDragging.value = true
 
     // 计算鼠标与元素左上角的偏移量
     const navElement = navRef.value
+    if (!navElement) return
     const rect = navElement.getBoundingClientRect()
     dragOffset.value = {
       x: event.clientX - rect.left,
@@ -105,7 +106,7 @@ function startDrag(event) {
   }
 }
 
-function onDrag(event) {
+function onDrag(event: MouseEvent) {
   if (isDragging.value) {
     // 计算新位置
     navPosition.value = {

@@ -20,6 +20,7 @@ export interface FirewallRuleShow {
   protocol: string
   port: string
   profiles: string[]
+  grouping?: string
 }
 
 export interface FirewallRuleResponse {

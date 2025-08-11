@@ -17,11 +17,11 @@ const bridge = CSharpBridgeV2.getBridge()
 
 const useWebSocket = useWebSocketStore()
 
-const newVar = (data) => {
-  logN.warning('后端返回的参数', module.name, data)
-  module.result = JSON.stringify(data, null, 2)
+const newVar = (data: any) => {
+  logN.warning('后端返回的参数', modules.value[0]?.name, data)
+  modules.value[0].result = JSON.stringify(data, null, 2)
 
-  useWebSocket.unsubscribe(module.name)
+  useWebSocket.unsubscribe(modules.value[0]?.name)
 }
 /**
  * 指令触发
@@ -36,12 +36,12 @@ const invokeCommand = async (module: CommandType) => {
     useWebSocket.send(module.name)
   } else {
     try {
-      bridge.send(module.name, params, (data) => {
+      bridge?.send(module.name, params, (data: any) => {
         logN.warning('后端返回的参数', module.name, data)
         module.result = JSON.stringify(data, null, 2)
       })
     } catch (error) {
-      console.error(err)
+      console.error(error)
       module.result = `Error: ${error}`
     }
   }

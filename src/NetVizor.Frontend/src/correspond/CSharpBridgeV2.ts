@@ -1,8 +1,8 @@
-import { MessagePayload } from '@/correspond/IBridge'
-import CSharpBridge from '@/correspond/CSharpBridge'
-import TauriBridge from '@/correspond/TauriBridge'
+import type { MessagePayload } from '@/correspond/IBridge'
+import { CSharpBridge } from '@/correspond/CSharpBridge'
+import { TauriBridge } from '@/correspond/TauriBridge'
 
-type MessagePayload<T> = {
+interface BridgeMessagePayload<T = any> {
   channel: string
   payload: T
 }
@@ -11,12 +11,13 @@ class CSharpBridgeV2 {
   private static CSBridge: CSharpBridgeV2 | null = null
 
   static getBridge(): CSharpBridgeV2 | null {
-    if (CSharpBridgeV2.CSBridge === null || CSharpBridgeV2.CSBridge.CSBridge === undefined) {
+    if (CSharpBridgeV2.CSBridge === null) {
       if (window.chrome && window.chrome.webview) {
         // window.chrome.webview.postMessage("hello");
         CSharpBridgeV2.CSBridge = new CSharpBridgeV2()
-        window.externalFunctions.__BRIDGE_LISTEN__ = CSharpBridgeV2.CSBridge.bridgeInvoke
-        window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__ = new Map()
+        ;(window as any).externalFunctions = (window as any).externalFunctions || {}
+        ;(window as any).externalFunctions.__BRIDGE_LISTEN__ = CSharpBridgeV2.CSBridge.bridgeInvoke
+        ;(window as any).externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__ = new Map()
       } else {
         console.error('Not running in WebView2 environment')
       }
@@ -25,10 +26,10 @@ class CSharpBridgeV2 {
   }
 
   bridgeInvoke(channel: string, json: string) {
-    const bridgeListenFunctions = window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__
+    const bridgeListenFunctions = (window as any).externalFunctions?.__BRIDGE_LISTEN__FUNCTIONS__
     const listeners = bridgeListenFunctions.get(channel)
     if (listeners) {
-      listeners.forEach((listener) => {
+      listeners.forEach((listener: any) => {
         try {
           listener.callback(json)
           if (listener.once && CSharpBridgeV2.CSBridge) {
@@ -42,23 +43,25 @@ class CSharpBridgeV2 {
   }
 
   // 发送消息到后端
-  send<T, V>(channel: string, data?: T | null = null, callback: ((data: V) => void) | null = null) {
-    const obj: MessagePayload = {
+  send<T, V>(channel: string, data: T | null = null, callback: ((data: V) => void) | null = null) {
+    const obj: BridgeMessagePayload<T> = {
       channel,
       payload: data,
     }
     if (callback !== null && callback !== undefined) {
       this.listen(channel, callback, true)
     }
-    window.chrome.webview.postMessage(obj)
+    if (window.chrome?.webview) {
+      window.chrome.webview.postMessage(obj)
+    }
   }
 
   /**
    * 监听后端消息
    */
   listen<V>(channel: string, callback: (data: V) => void, once: boolean = false) {
-    const bridgeListenFunctions = window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__
-    if (!bridgeListenFunctions.has(channel)) {
+    const bridgeListenFunctions = (window as any).externalFunctions?.__BRIDGE_LISTEN__FUNCTIONS__
+    if (!bridgeListenFunctions?.has(channel)) {
       bridgeListenFunctions.set(channel, new Set())
     }
 
@@ -70,12 +73,12 @@ class CSharpBridgeV2 {
 
   // 移除指定通道的所有监听器
   off(channel: string) {
-    window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__.delete(channel)
+    ;(window as any).externalFunctions?.__BRIDGE_LISTEN__FUNCTIONS__?.delete(channel)
   }
 
   // 移除特定监听器
   removeListen(channel: string, listener: unknown) {
-    const bridgeListenFunctions = window.externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__
+    const bridgeListenFunctions = (window as any).externalFunctions?.__BRIDGE_LISTEN__FUNCTIONS__
     const channelListeners = bridgeListenFunctions.get(channel)
     if (channelListeners) {
       // 需要类型转换以匹配存储的监听器类型
@@ -89,3 +92,14 @@ class CSharpBridgeV2 {
 }
 
 export default CSharpBridgeV2
+
+// 扩展 Window 接口
+declare global {
+  interface Window {
+    chrome?: {
+      webview?: {
+        postMessage: (data: any) => void
+      }
+    }
+  }
+}

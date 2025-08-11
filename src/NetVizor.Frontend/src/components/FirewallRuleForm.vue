@@ -223,8 +223,8 @@ import {
   NButton,
   NIcon,
   NSpace,
-  FormInst,
-  FormRules,
+  type FormInst,
+  type FormRules,
   useMessage,
 } from 'naive-ui'
 import {

@@ -164,3 +164,18 @@ export interface FirewallStatistics {
   topApplications: string[]
   topPorts: string[]
 }
+
+// 显示用的规则类型（简化版本）
+export interface DisplayRule {
+  id: string
+  name: string
+  description?: string
+  enabled: boolean
+  direction: RuleDirection
+  action: RuleAction
+  program: string
+  protocol: string
+  port: string
+  profiles: string[]
+  grouping?: string
+}

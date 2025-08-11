@@ -200,9 +200,9 @@ const loadRule = async () => {
     if (loadedRule) {
       rule.value = loadedRule
     }
-  } catch (error) {
+  } catch (error: any) {
     // 忽略取消错误
-    if (error.name !== 'AbortError' && !error.message?.includes('Cancel')) {
+    if (error?.name !== 'AbortError' && !error?.message?.includes('Cancel')) {
       console.error('加载规则失败:', error)
     }
   } finally {

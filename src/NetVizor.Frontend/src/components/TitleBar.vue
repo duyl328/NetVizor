@@ -69,14 +69,14 @@ const tabConfig = [
 ]
 
 // 根据当前路由设置激活的Tab
-const activeTab = ref(route.name || 'monitor')
+const activeTab = ref(String(route.name) || 'monitor')
 
 // 监听路由变化，同步Tab状态
 watch(
   () => route.name,
   (newRouteName) => {
     if (newRouteName) {
-      activeTab.value = newRouteName
+      activeTab.value = String(newRouteName)
     }
   },
 )

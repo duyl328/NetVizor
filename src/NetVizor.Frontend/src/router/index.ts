@@ -4,15 +4,8 @@ import {
   type RouteComponent,
   type RouteRecordRaw,
 } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import DevIndex from '@/views/dev/DevIndex.vue'
 import StringUtils from '@/utils/stringUtils'
 import PathUtils from '@/utils/pathUtils'
-import NotFound from '@/views/NotFoundView.vue'
-import AboutView from '@/views/AboutView.vue'
-import FirewallView from '@/views/FirewallView.vue'
-import AnalyseView from '@/views/AnalyseView/AnalyseView.vue'
-import MonitorView from '@/views/MonitorView/index.vue'
 
 // 导入所有 .vue 文件
 const routes = import.meta.glob('@/views/dev/**/*.vue')
@@ -51,11 +44,11 @@ const router = createRouter({
     {
       path: '/home',
       name: 'home',
-      component: HomeView,
+      component: () => import('../views/HomeView.vue'),
       children: [
         {
           path: '/', // 捕获所有其他路径
-          component: NotFound, // 任何其他路径都跳转到默认页面
+          component: () => import('@/views/NotFoundView.vue'), // 任何其他路径都跳转到默认页面
         },
       ],
     },
@@ -63,39 +56,39 @@ const router = createRouter({
     {
       path: '/monitor',
       name: 'monitor',
-      component: MonitorView,
+      component: () => import('@/views/MonitorView/index.vue'),
       meta: { layout: 'main' },
     },
     // 防火墙
     {
       path: '/firewall',
       name: 'firewall',
-      component: FirewallView,
+      component: () => import('@/views/FirewallView.vue'),
       meta: { layout: 'main' },
     },
     // 网络分析
     {
       path: '/analyse',
       name: 'analyse',
-      component: AnalyseView,
+      component: () => import('@/views/AnalyseView/AnalyseView.vue'),
       meta: { layout: 'main' },
     },
 
     {
       path: '/dev',
       name: 'dev',
-      component: DevIndex,
+      component: () => import('@/views/dev/DevIndex.vue'),
       children: [...devPageViews],
     },
     {
       path: '/about',
       name: 'about',
-      component: AboutView,
+      component: () => import('@/views/AboutView.vue'),
     },
     {
       path: '/:pathMatch(.*)*', // 通配符路由
       name: 'NotFound',
-      component: NotFound,
+      component: () => import('@/views/NotFoundView.vue'),
     },
   ],
 })
