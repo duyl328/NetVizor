@@ -67,158 +67,184 @@
 
       <div class="modal-body">
         <!-- 主要Tab内容区域 -->
-        <n-tabs v-model:value="activeMainTab" type="card" size="large" class="detail-tabs" animated>
+        <n-tabs 
+          v-model:value="activeMainTab" 
+          type="card" 
+          size="large" 
+          class="detail-tabs" 
+          animated
+          :tab-style="{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }"
+        >
           <!-- 网络拓扑Tab -->
           <n-tab-pane name="topology" tab="网络拓扑">
-            <div class="tab-content">
-              <div class="chart-section full-height">
-                <div class="section-header">
-                  <h4 class="section-title">
-                    <n-icon :component="GitNetworkOutline" class="section-icon" />
-                    网络连接拓扑
-                  </h4>
-                  <div class="section-controls">
-                    <span class="connection-count">{{ analysisData?.topConnections.length || 0 }} 个连接</span>
-                    <n-button size="small" @click="refreshData">
-                      <template #icon>
-                        <n-icon :component="RefreshOutline" />
-                      </template>
-                      刷新
-                    </n-button>
+            <transition name="tab-fade" mode="out-in">
+              <div class="tab-content" key="topology">
+                <div class="chart-section full-height">
+                  <div class="section-header">
+                    <h4 class="section-title">
+                      <n-icon :component="GitNetworkOutline" class="section-icon" />
+                      网络连接拓扑
+                    </h4>
+                    <div class="section-controls">
+                      <span class="connection-count">{{ analysisData?.topConnections.length || 0 }} 个连接</span>
+                      <n-button size="small" @click="refreshData">
+                        <template #icon>
+                          <n-icon :component="RefreshOutline" />
+                        </template>
+                        刷新
+                      </n-button>
+                    </div>
                   </div>
-                </div>
-                <div class="chart-container extra-large">
-                  <NetworkAnalysisChart
-                    v-if="analysisData"
-                    :data="analysisData"
-                    :loading="loading"
-                  />
-                  <div v-else class="empty-chart">
-                    <n-icon :component="GitNetworkOutline" size="48" />
-                    <span>暂无网络拓扑数据</span>
+                  <div class="chart-container extra-large">
+                    <NetworkAnalysisChart
+                      ref="networkChartRef"
+                      v-if="analysisData"
+                      :data="analysisData"
+                      :loading="loading"
+                    />
+                    <div v-else class="empty-chart">
+                      <n-icon :component="GitNetworkOutline" size="48" />
+                      <span>暂无网络拓扑数据</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </transition>
           </n-tab-pane>
 
           <!-- 流量分析Tab -->
           <n-tab-pane name="traffic" tab="流量分析">
-            <div class="tab-content">
-              <div class="analysis-grid">
-                <!-- 协议分布 -->
-                <div class="chart-section">
-                  <div class="section-header">
-                    <h4 class="section-title">
-                      <n-icon :component="StatsChartOutline" class="section-icon" />
-                      协议分布
-                    </h4>
-                  </div>
-                  <div class="chart-container large">
-                    <ProtocolChart v-if="protocolChartData.length > 0" :data="protocolChartData" />
-                    <div v-else class="empty-chart">
-                      <n-icon :component="PieChartOutline" size="32" />
-                      <span>暂无协议数据</span>
+            <transition name="tab-slide" mode="out-in">
+              <div class="tab-content" key="traffic">
+                <div class="analysis-grid">
+                  <!-- 协议分布 -->
+                  <div class="chart-section">
+                    <div class="section-header">
+                      <h4 class="section-title">
+                        <n-icon :component="StatsChartOutline" class="section-icon" />
+                        协议分布
+                      </h4>
+                    </div>
+                    <div class="chart-container large">
+                      <ProtocolChart 
+                        ref="protocolChartRef"
+                        v-if="protocolChartData.length > 0" 
+                        :data="protocolChartData" 
+                      />
+                      <div v-else class="empty-chart">
+                        <n-icon :component="PieChartOutline" size="32" />
+                        <span>暂无协议数据</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- 流量趋势 -->
-                <div class="chart-section">
-                  <div class="section-header">
-                    <h4 class="section-title">
-                      <n-icon :component="TrendingUpOutline" class="section-icon" />
-                      流量趋势
-                    </h4>
-                  </div>
-                  <div class="chart-container large">
-                    <TimeTrendChart v-if="timeTrendData.length > 0" :data="timeTrendData" />
-                    <div v-else class="empty-chart">
-                      <n-icon :component="BarChartOutline" size="32" />
-                      <span>暂无趋势数据</span>
+                  <!-- 流量趋势 -->
+                  <div class="chart-section">
+                    <div class="section-header">
+                      <h4 class="section-title">
+                        <n-icon :component="TrendingUpOutline" class="section-icon" />
+                        流量趋势
+                      </h4>
+                    </div>
+                    <div class="chart-container large">
+                      <TimeTrendChart 
+                        ref="trendChartRef"
+                        v-if="timeTrendData.length > 0" 
+                        :data="timeTrendData" 
+                      />
+                      <div v-else class="empty-chart">
+                        <n-icon :component="BarChartOutline" size="32" />
+                        <span>暂无趋势数据</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </transition>
           </n-tab-pane>
 
           <!-- 连接详情Tab -->
           <n-tab-pane name="connections" tab="连接详情">
-            <div class="tab-content table-content">
-              <div class="table-section">
-                <div class="section-header">
-                  <h4 class="section-title">
-                    <n-icon :component="GitNetworkOutline" class="section-icon" />
-                    连接详情
-                  </h4>
-                  <div class="section-controls">
-                    <span class="data-count">共 {{ analysisData?.topConnections.length || 0 }} 条记录</span>
-                    <n-button size="small" @click="refreshData">
-                      <template #icon>
-                        <n-icon :component="RefreshOutline" />
-                      </template>
-                      刷新
-                    </n-button>
+            <transition name="tab-scale" mode="out-in">
+              <div class="tab-content table-content" key="connections">
+                <div class="table-section">
+                  <div class="section-header">
+                    <h4 class="section-title">
+                      <n-icon :component="GitNetworkOutline" class="section-icon" />
+                      连接详情
+                    </h4>
+                    <div class="section-controls">
+                      <span class="data-count">共 {{ analysisData?.topConnections.length || 0 }} 条记录</span>
+                      <n-button size="small" @click="refreshData">
+                        <template #icon>
+                          <n-icon :component="RefreshOutline" />
+                        </template>
+                        刷新
+                      </n-button>
+                    </div>
+                  </div>
+                  <div class="table-container">
+                    <ConnectionsTable :data="analysisData?.topConnections || []" />
                   </div>
                 </div>
-                <div class="table-container">
-                  <ConnectionsTable :data="analysisData?.topConnections || []" />
-                </div>
               </div>
-            </div>
+            </transition>
           </n-tab-pane>
 
           <!-- 端口统计Tab -->
           <n-tab-pane name="ports" tab="端口统计">
-            <div class="tab-content table-content">
-              <div class="table-section">
-                <div class="section-header">
-                  <h4 class="section-title">
-                    <n-icon :component="StatsChartOutline" class="section-icon" />
-                    端口统计
-                  </h4>
-                  <div class="section-controls">
-                    <span class="data-count">共 {{ portStatsData.length || 0 }} 个端口</span>
-                    <n-button size="small" @click="refreshData">
-                      <template #icon>
-                        <n-icon :component="RefreshOutline" />
-                      </template>
-                      刷新
-                    </n-button>
+            <transition name="tab-scale" mode="out-in">
+              <div class="tab-content table-content" key="ports">
+                <div class="table-section">
+                  <div class="section-header">
+                    <h4 class="section-title">
+                      <n-icon :component="StatsChartOutline" class="section-icon" />
+                      端口统计
+                    </h4>
+                    <div class="section-controls">
+                      <span class="data-count">共 {{ portStatsData.length || 0 }} 个端口</span>
+                      <n-button size="small" @click="refreshData">
+                        <template #icon>
+                          <n-icon :component="RefreshOutline" />
+                        </template>
+                        刷新
+                      </n-button>
+                    </div>
+                  </div>
+                  <div class="table-container">
+                    <PortStatsTable :data="portStatsData" />
                   </div>
                 </div>
-                <div class="table-container">
-                  <PortStatsTable :data="portStatsData" />
-                </div>
               </div>
-            </div>
+            </transition>
           </n-tab-pane>
 
           <!-- 时间线Tab -->
           <n-tab-pane name="timeline" tab="时间线">
-            <div class="tab-content table-content">
-              <div class="table-section">
-                <div class="section-header">
-                  <h4 class="section-title">
-                    <n-icon :component="TrendingUpOutline" class="section-icon" />
-                    活动时间线
-                  </h4>
-                  <div class="section-controls">
-                    <span class="data-count">{{ timeRangeText }} 内的活动</span>
-                    <n-button size="small" @click="refreshData">
-                      <template #icon>
-                        <n-icon :component="RefreshOutline" />
-                      </template>
-                      刷新
-                    </n-button>
+            <transition name="tab-scale" mode="out-in">
+              <div class="tab-content table-content" key="timeline">
+                <div class="table-section">
+                  <div class="section-header">
+                    <h4 class="section-title">
+                      <n-icon :component="TrendingUpOutline" class="section-icon" />
+                      活动时间线
+                    </h4>
+                    <div class="section-controls">
+                      <span class="data-count">{{ timeRangeText }} 内的活动</span>
+                      <n-button size="small" @click="refreshData">
+                        <template #icon>
+                          <n-icon :component="RefreshOutline" />
+                        </template>
+                        刷新
+                      </n-button>
+                    </div>
+                  </div>
+                  <div class="table-container">
+                    <TimelineView :data="analysisData?.timeTrends || []" />
                   </div>
                 </div>
-                <div class="table-container">
-                  <TimelineView :data="analysisData?.timeTrends || []" />
-                </div>
               </div>
-            </div>
+            </transition>
           </n-tab-pane>
         </n-tabs>
       </div>
@@ -331,6 +357,44 @@ const analysisData = ref<NetworkAnalysisData | null>(null)
 const loading = ref(false)
 const activeTab = ref('connections')
 const activeMainTab = ref('topology')
+
+// 图表引用
+const networkChartRef = ref()
+const protocolChartRef = ref()
+const trendChartRef = ref()
+
+// 刷新所有图表尺寸
+const resizeAllCharts = async () => {
+  await nextTick()
+  setTimeout(() => {
+    // 刷新网络图表
+    if (networkChartRef.value && networkChartRef.value.$refs?.chartRef?.chart) {
+      networkChartRef.value.$refs.chartRef.chart.resize()
+    }
+    // 刷新协议图表
+    if (protocolChartRef.value && protocolChartRef.value.$refs?.chartRef?.chart) {
+      protocolChartRef.value.$refs.chartRef.chart.resize()
+    }
+    // 刷新趋势图表
+    if (trendChartRef.value && trendChartRef.value.$refs?.chartRef?.chart) {
+      trendChartRef.value.$refs.chartRef.chart.resize()
+    }
+  }, 150)
+}
+
+// 监听Tab切换，刷新图表
+watch(activeMainTab, () => {
+  resizeAllCharts()
+})
+
+// 监听弹窗显示状态
+watch(() => props.show, (newShow) => {
+  if (newShow) {
+    nextTick(() => {
+      resizeAllCharts()
+    })
+  }
+})
 
 // 计算属性
 const timeRangeText = computed(() => {
@@ -446,7 +510,12 @@ watch(() => [props.appId, props.timeRange], () => {
   if (props.show && props.appId) {
     fetchAnalysisData()
   }
-})
+}, { flush: 'post' })
+
+// 监听数据变化，刷新图表
+watch(analysisData, () => {
+  resizeAllCharts()
+}, { flush: 'post' })
 </script>
 
 <style scoped>
@@ -617,16 +686,37 @@ watch(() => [props.appId, props.timeRange], () => {
   padding: 12px 20px;
   border-radius: 8px;
   margin-right: 8px;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+:deep(.detail-tabs .n-tabs-tab::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.detail-tabs .n-tabs-tab:hover::before) {
+  left: 100%;
 }
 
 :deep(.detail-tabs .n-tabs-tab--active) {
   background: var(--accent-primary);
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 :deep(.detail-tabs .n-tabs-tab:hover:not(.n-tabs-tab--active)) {
   background: var(--bg-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 :deep(.detail-tabs .n-tabs-content) {
@@ -650,6 +740,75 @@ watch(() => [props.appId, props.timeRange], () => {
 
 .tab-content.table-content {
   background: var(--bg-card);
+}
+
+/* Tab切换动画 */
+.tab-fade-enter-active,
+.tab-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-fade-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+}
+
+.tab-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.95);
+}
+
+.tab-slide-enter-active,
+.tab-slide-leave-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px) rotateY(10deg);
+}
+
+.tab-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px) rotateY(-10deg);
+}
+
+.tab-scale-enter-active,
+.tab-scale-leave-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tab-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.9) translateY(10px);
+}
+
+.tab-scale-leave-to {
+  opacity: 0;
+  transform: scale(1.1) translateY(-10px);
+}
+
+/* 图表容器动画 */
+.chart-container {
+  transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+  transform: translateY(-2px);
+}
+
+.chart-section {
+  transition: all 0.3s ease;
+}
+
+.chart-section:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-primary);
+}
+
+.table-section:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-primary);
 }
 
 /* 分析网格（流量分析Tab中的布局） */
@@ -696,6 +855,11 @@ watch(() => [props.appId, props.timeRange], () => {
   border-bottom: 1px solid var(--border-secondary);
   flex-shrink: 0;
   background: var(--bg-tertiary);
+  transition: all 0.3s ease;
+}
+
+.section-header:hover {
+  background: var(--bg-hover);
 }
 
 .section-controls {
