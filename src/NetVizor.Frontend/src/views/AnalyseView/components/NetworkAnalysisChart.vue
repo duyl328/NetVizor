@@ -166,8 +166,14 @@ const chartOption = computed<EChartsOption>(() => {
           show: true,
           position: 'bottom',
           formatter: '{b}',
-          fontSize: 10,
-          color: 'var(--text-secondary)'
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#2c3e50',
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          padding: [2, 6],
+          borderRadius: 4,
+          borderColor: '#e1e5e9',
+          borderWidth: 1
         }
       })
       nodeSet.add(remoteIpNodeId)
@@ -189,8 +195,12 @@ const chartOption = computed<EChartsOption>(() => {
           show: true,
           position: 'right',
           formatter: `{b}`,
-          fontSize: 9,
-          color: 'var(--text-muted)'
+          fontSize: 10,
+          fontWeight: 500,
+          color: '#34495e',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          padding: [1, 4],
+          borderRadius: 3
         }
       })
       nodeSet.add(portNodeId)
