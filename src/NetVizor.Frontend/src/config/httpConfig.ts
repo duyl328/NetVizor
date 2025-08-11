@@ -9,6 +9,7 @@
  *     c'est de voir le monde tel qu'il est et de l'aimer.
  */
 import type { HttpConfig } from '@/types/http.ts'
+import { httpClient } from '@/utils/http'
 
 // 2. 配置管理器 (config/httpConfig.ts)
 class HttpConfigManager {
@@ -26,7 +27,10 @@ class HttpConfigManager {
   setConfig(config: Partial<HttpConfig>): void {
     this.config = { ...this.config, ...config };
   }
-
+  setUrl(baseUrl:string):void{
+    this.config.baseURL = baseUrl;
+    httpClient.updateConfig(this.config);
+  }
   /**
    * 获取配置
    */

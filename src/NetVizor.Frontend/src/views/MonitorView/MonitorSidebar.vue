@@ -202,6 +202,29 @@ const setAppItemRef = (el: unknown, index: number) => {
     appItemRefs.value[index] = el
   }
 }
+function postWithPolling(url: string, data: any, interval = 2000, maxRetries = 10) {
+  let attempt = 0;
+
+  const tryRequest = () => {
+    httpClient
+    .post(url, JSON.stringify(data))
+    .then((res: ResponseModel) => {
+      console.log('订阅应用信息成功:', res);
+      // 成功后就停止
+    })
+    .catch((err) => {
+      attempt++;
+      if (attempt < maxRetries) {
+        console.warn(`请求失败(${attempt}/${maxRetries})，${interval}ms 后重试...`);
+        setTimeout(tryRequest, interval);
+      } else {
+        console.error(`请求最终失败，已达到最大重试次数:`, err);
+      }
+    });
+  };
+
+  tryRequest();
+}
 
 // 监听 WebSocket 连接状态
 onMounted(() => {
@@ -216,14 +239,7 @@ onMounted(() => {
           interval: 1000,
         }
 
-        httpClient
-          .post(`/subscribe-application`, JSON.stringify(subAppInfo))
-          .then((res: ResponseModel) => {
-            console.log('订阅应用信息成功:', res)
-          })
-          .catch((err) => {
-            console.error('订阅应用信息失败:', err)
-          })
+        postWithPolling("/subscribe-application", subAppInfo, 500, 20);
       }
     },
     { immediate: true },
