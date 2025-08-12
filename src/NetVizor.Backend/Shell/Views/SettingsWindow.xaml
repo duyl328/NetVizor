@@ -12,54 +12,55 @@
     MinWidth="560"
     WindowStartupLocation="CenterScreen"
     ResizeMode="NoResize"
+    Icon="/Assets/Icons/app.ico"
     Background="#F8F9FA">
 
     <!-- 窗口资源 -->
     <Window.Resources>
         <!-- 卡片样式 -->
         <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#E5E7EB" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,12" />
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.1"/>
+                    <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.1" />
                 </Setter.Value>
             </Setter>
         </Style>
 
         <!-- 分组标题样式 -->
         <Style x:Key="GroupTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#1F2937"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#1F2937" />
+            <Setter Property="Margin" Value="0,0,0,12" />
         </Style>
 
         <!-- 标签样式 -->
         <Style x:Key="LabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="#4B5563"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#4B5563" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
         </Style>
 
         <!-- 颜色按钮样式 -->
         <Style x:Key="ColorButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" 
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="4">
                         </Border>
                     </ControlTemplate>
@@ -69,32 +70,32 @@
 
         <!-- 输入框样式 -->
         <Style x:Key="InputStyle" TargetType="TextBox">
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="FontSize" Value="13" />
         </Style>
 
         <!-- 按钮样式 -->
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#3B82F6"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#3B82F6" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="6" 
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#2563EB"/>
+                                <Setter Property="Background" Value="#2563EB" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -103,25 +104,25 @@
         </Style>
 
         <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#6B7280" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#D1D5DB" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
+                        <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6" 
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F9FAFB"/>
+                                <Setter Property="Background" Value="#F9FAFB" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -140,51 +141,58 @@
         <!-- 内容滚动区域 -->
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="20">
             <StackPanel>
-                
+
                 <!-- 外观设置 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="🎨 外观设置" Style="{StaticResource GroupTitleStyle}"/>
-                        
+                        <TextBlock Text="🎨 外观设置" Style="{StaticResource GroupTitleStyle}" />
+
                         <!-- 颜色设置 -->
                         <Grid Margin="0,0,0,16">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            
+
                             <!-- 文字颜色 -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal">
-                                <TextBlock Text="文字颜色" Style="{StaticResource LabelStyle}" Width="80"/>
-                                <TextBox x:Name="TextColorBox" Text="#333333" Style="{StaticResource InputStyle}" Width="120" Margin="0,0,8,0"/>
-                                <Button x:Name="TextColorButton" Background="#333333" Style="{StaticResource ColorButtonStyle}" Click="SelectTextColor_Click"/>
+                                <TextBlock Text="文字颜色" Style="{StaticResource LabelStyle}" Width="80" />
+                                <TextBox x:Name="TextColorBox" Text="#333333" Style="{StaticResource InputStyle}"
+                                         Width="120" Margin="0,0,8,0" />
+                                <Button x:Name="TextColorButton" Background="#333333"
+                                        Style="{StaticResource ColorButtonStyle}" Click="SelectTextColor_Click" />
                             </StackPanel>
 
                             <!-- 背景颜色 -->
                             <StackPanel Grid.Row="2" Orientation="Horizontal">
-                                <TextBlock Text="背景颜色" Style="{StaticResource LabelStyle}" Width="80"/>
-                                <TextBox x:Name="BackgroundColorBox" Text="#F0FFFFFF" Style="{StaticResource InputStyle}" Width="120" Margin="0,0,8,0"/>
-                                <Button x:Name="BackgroundColorButton" Background="#F0FFFFFF" Style="{StaticResource ColorButtonStyle}" Click="SelectBackgroundColor_Click"/>
+                                <TextBlock Text="背景颜色" Style="{StaticResource LabelStyle}" Width="80" />
+                                <TextBox x:Name="BackgroundColorBox" Text="#F0FFFFFF"
+                                         Style="{StaticResource InputStyle}" Width="120" Margin="0,0,8,0" />
+                                <Button x:Name="BackgroundColorButton" Background="#F0FFFFFF"
+                                        Style="{StaticResource ColorButtonStyle}" Click="SelectBackgroundColor_Click" />
                             </StackPanel>
 
                             <!-- 透明度 -->
                             <StackPanel Grid.Row="4" Orientation="Horizontal">
-                                <TextBlock Text="透明度" Style="{StaticResource LabelStyle}" Width="80"/>
-                                <Slider x:Name="OpacitySlider" Minimum="10" Maximum="100" Value="94" 
-                                        TickFrequency="10" IsSnapToTickEnabled="True" ValueChanged="OpacitySlider_ValueChanged" 
-                                        Width="120" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="OpacityText" Text="94%" TextAlignment="Center" VerticalAlignment="Center" 
-                                          Width="40" FontWeight="SemiBold" Foreground="#3B82F6"/>
+                                <TextBlock Text="透明度" Style="{StaticResource LabelStyle}" Width="80" />
+                                <Slider x:Name="OpacitySlider" Minimum="10" Maximum="100" Value="94"
+                                        TickFrequency="10" IsSnapToTickEnabled="True"
+                                        ValueChanged="OpacitySlider_ValueChanged"
+                                        Width="120" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="OpacityText" Text="94%" TextAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Width="40" FontWeight="SemiBold" Foreground="#3B82F6" />
                             </StackPanel>
                         </Grid>
 
                         <!-- 预览区域 -->
                         <StackPanel>
-                            <TextBlock Text="预览效果" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
-                            <Border x:Name="PreviewBorder" Background="LightGray" BorderBrush="#D1D5DB" BorderThickness="1" 
+                            <TextBlock Text="预览效果" Style="{StaticResource LabelStyle}" Margin="0,0,0,8" />
+                            <Border x:Name="PreviewBorder" Background="LightGray" BorderBrush="#D1D5DB"
+                                    BorderThickness="1"
                                     CornerRadius="6" Padding="16,12" HorizontalAlignment="Center">
                                 <StackPanel x:Name="PreviewPanel" Orientation="Horizontal">
                                     <Grid>
@@ -192,20 +200,24 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="↑" Foreground="Red" FontSize="12" FontWeight="Bold" 
-                                                  VerticalAlignment="Center" Margin="0,0,6,0" />
-                                        <TextBlock Grid.Column="1" x:Name="PreviewUploadText" Text="1.25 MB/s" FontSize="12" 
-                                                  FontWeight="Bold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="0" Text="↑" Foreground="Red" FontSize="12"
+                                                   FontWeight="Bold"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Grid.Column="1" x:Name="PreviewUploadText" Text="1.25 MB/s"
+                                                   FontSize="12"
+                                                   FontWeight="Bold" VerticalAlignment="Center" />
                                     </Grid>
                                     <Grid Margin="15,0,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="↓" Foreground="Green" FontSize="12" FontWeight="Bold" 
-                                                  VerticalAlignment="Center" Margin="0,0,2,0" />
-                                        <TextBlock Grid.Column="1" x:Name="PreviewDownloadText" Text="15.67 MB/s" FontSize="12" 
-                                                  FontWeight="Bold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="0" Text="↓" Foreground="Green" FontSize="12"
+                                                   FontWeight="Bold"
+                                                   VerticalAlignment="Center" Margin="0,0,2,0" />
+                                        <TextBlock Grid.Column="1" x:Name="PreviewDownloadText" Text="15.67 MB/s"
+                                                   FontSize="12"
+                                                   FontWeight="Bold" VerticalAlignment="Center" />
                                     </Grid>
                                 </StackPanel>
                             </Border>
@@ -216,21 +228,22 @@
                 <!-- 显示设置 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="📊 显示设置" Style="{StaticResource GroupTitleStyle}"/>
-                        
+                        <TextBlock Text="📊 显示设置" Style="{StaticResource GroupTitleStyle}" />
+
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="16"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="16"/>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="16" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="16" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            
+
                             <!-- 速度单位 -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal">
-                                <TextBlock Text="速度单位" Style="{StaticResource LabelStyle}" Width="80"/>
-                                <ComboBox x:Name="SpeedUnitComboBox" Width="150" SelectionChanged="SpeedUnitComboBox_SelectionChanged">
+                                <TextBlock Text="速度单位" Style="{StaticResource LabelStyle}" Width="80" />
+                                <ComboBox x:Name="SpeedUnitComboBox" Width="150"
+                                          SelectionChanged="SpeedUnitComboBox_SelectionChanged">
                                     <ComboBoxItem Content="自动选择" Tag="Auto" IsSelected="True" />
                                     <ComboBoxItem Content="B/s" Tag="Bytes" />
                                     <ComboBoxItem Content="KB/s" Tag="KB" />
@@ -240,25 +253,32 @@
 
                             <!-- 布局方向 -->
                             <StackPanel Grid.Row="2">
-                                <TextBlock Text="布局方向" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBlock Text="布局方向" Style="{StaticResource LabelStyle}" Margin="0,0,0,8" />
                                 <StackPanel Orientation="Horizontal">
-                                    <RadioButton x:Name="VerticalLayoutRadio" Content="纵向" IsChecked="True" Margin="0,0,20,0" 
-                                                Checked="LayoutDirection_Changed" FontSize="13"/>
-                                    <RadioButton x:Name="HorizontalLayoutRadio" Content="横向" Checked="LayoutDirection_Changed" FontSize="13"/>
+                                    <RadioButton x:Name="VerticalLayoutRadio" Content="纵向" IsChecked="True"
+                                                 Margin="0,0,20,0"
+                                                 Checked="LayoutDirection_Changed" FontSize="13" />
+                                    <RadioButton x:Name="HorizontalLayoutRadio" Content="横向"
+                                                 Checked="LayoutDirection_Changed" FontSize="13" />
                                 </StackPanel>
                             </StackPanel>
 
                             <!-- 显示选项 -->
                             <StackPanel Grid.Row="4">
-                                <TextBlock Text="显示选项" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBlock Text="显示选项" Style="{StaticResource LabelStyle}" Margin="0,0,0,8" />
                                 <StackPanel>
-                                    <CheckBox x:Name="ShowUnitCheckBox" Content="显示单位" IsChecked="True" 
-                                             Checked="ShowUnitCheckBox_Changed" Unchecked="ShowUnitCheckBox_Changed" FontSize="13"/>
-                                    <CheckBox x:Name="ShowTopListCheckBox" Content="显示网速排行榜" Margin="0,8,0,0" IsChecked="False"
-                                             Checked="ShowTopListCheckBox_Changed" Unchecked="ShowTopListCheckBox_Changed" FontSize="13"/>
+                                    <CheckBox x:Name="ShowUnitCheckBox" Content="显示单位" IsChecked="True"
+                                              Checked="ShowUnitCheckBox_Changed" Unchecked="ShowUnitCheckBox_Changed"
+                                              FontSize="13" />
+                                    <CheckBox x:Name="ShowTopListCheckBox" Content="显示网速排行榜" Margin="0,8,0,0"
+                                              IsChecked="False"
+                                              Checked="ShowTopListCheckBox_Changed"
+                                              Unchecked="ShowTopListCheckBox_Changed" FontSize="13" />
                                     <StackPanel Orientation="Horizontal" Margin="20,8,0,0">
-                                        <TextBlock Text="排行榜数量:" VerticalAlignment="Center" Margin="0,0,8,0" Style="{StaticResource LabelStyle}"/>
-                                        <ComboBox x:Name="TopListCountComboBox" Width="80" SelectionChanged="TopListCountComboBox_SelectionChanged">
+                                        <TextBlock Text="排行榜数量:" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                   Style="{StaticResource LabelStyle}" />
+                                        <ComboBox x:Name="TopListCountComboBox" Width="80"
+                                                  SelectionChanged="TopListCountComboBox_SelectionChanged">
                                             <ComboBoxItem Content="1" Tag="1" />
                                             <ComboBoxItem Content="2" Tag="2" />
                                             <ComboBoxItem Content="3" Tag="3" IsSelected="True" />
@@ -275,11 +295,12 @@
                 <!-- 交互设置 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="🖱️ 交互设置" Style="{StaticResource GroupTitleStyle}"/>
-                        
+                        <TextBlock Text="🖱️ 交互设置" Style="{StaticResource GroupTitleStyle}" />
+
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="双击动作" Style="{StaticResource LabelStyle}" Width="80"/>
-                            <ComboBox x:Name="DoubleClickActionComboBox" Width="150" SelectionChanged="DoubleClickActionComboBox_SelectionChanged">
+                            <TextBlock Text="双击动作" Style="{StaticResource LabelStyle}" Width="80" />
+                            <ComboBox x:Name="DoubleClickActionComboBox" Width="150"
+                                      SelectionChanged="DoubleClickActionComboBox_SelectionChanged">
                                 <ComboBoxItem Content="无动作" Tag="None" IsSelected="True" />
                                 <ComboBoxItem Content="流量分析" Tag="TrafficAnalysis" />
                                 <ComboBoxItem Content="打开设置" Tag="Settings" />
@@ -291,22 +312,28 @@
                 <!-- 窗口行为 -->
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <TextBlock Text="🪟 窗口行为" Style="{StaticResource GroupTitleStyle}"/>
-                        
+                        <TextBlock Text="🪟 窗口行为" Style="{StaticResource GroupTitleStyle}" />
+
                         <StackPanel>
-                            <CheckBox x:Name="TopmostCheckBox" Content="始终置顶" IsChecked="True" 
-                                     Checked="TopmostCheckBox_Changed" Unchecked="TopmostCheckBox_Changed" FontSize="13"/>
+                            <CheckBox x:Name="TopmostCheckBox" Content="始终置顶" IsChecked="True"
+                                      Checked="TopmostCheckBox_Changed" Unchecked="TopmostCheckBox_Changed"
+                                      FontSize="13" />
                             <CheckBox x:Name="LockPositionCheckBox" Content="锁定窗口位置" IsChecked="False" Margin="0,8,0,0"
-                                     Checked="LockPositionCheckBox_Changed" Unchecked="LockPositionCheckBox_Changed" FontSize="13"/>
+                                      Checked="LockPositionCheckBox_Changed" Unchecked="LockPositionCheckBox_Changed"
+                                      FontSize="13" />
                             <CheckBox x:Name="ClickThroughCheckBox" Content="启用点击穿透" IsChecked="False" Margin="0,8,0,0"
-                                     Checked="ClickThroughCheckBox_Changed" Unchecked="ClickThroughCheckBox_Changed" FontSize="13"/>
+                                      Checked="ClickThroughCheckBox_Changed" Unchecked="ClickThroughCheckBox_Changed"
+                                      FontSize="13" />
                             <CheckBox x:Name="SnapToScreenCheckBox" Content="不能超出屏幕" IsChecked="False" Margin="0,8,0,0"
-                                     Checked="SnapToScreenCheckBox_Changed" Unchecked="SnapToScreenCheckBox_Changed" FontSize="13"/>
-                            <CheckBox x:Name="ShowDetailedInfoCheckBox" Content="显示详细信息" IsChecked="False" Margin="0,8,0,0"
-                                     Checked="ShowDetailedInfoCheckBox_Changed" Unchecked="ShowDetailedInfoCheckBox_Changed" FontSize="13"/>
-                            
-                            <Button Content="重置窗口位置" Click="ResetWindowPosition_Click" Margin="0,16,0,0" 
-                                   Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left"/>
+                                      Checked="SnapToScreenCheckBox_Changed" Unchecked="SnapToScreenCheckBox_Changed"
+                                      FontSize="13" />
+                            <CheckBox x:Name="ShowDetailedInfoCheckBox" Content="显示详细信息" IsChecked="False"
+                                      Margin="0,8,0,0"
+                                      Checked="ShowDetailedInfoCheckBox_Changed"
+                                      Unchecked="ShowDetailedInfoCheckBox_Changed" FontSize="13" />
+
+                            <Button Content="重置窗口位置" Click="ResetWindowPosition_Click" Margin="0,16,0,0"
+                                    Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -316,11 +343,12 @@
         <!-- 底部按钮栏 -->
         <Border Grid.Row="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="20,16">
             <Grid>
-                <Button Content="恢复默认" Click="RestoreDefaults_Click" HorizontalAlignment="Left" 
-                       Style="{StaticResource SecondaryButtonStyle}"/>
+                <Button Content="恢复默认" Click="RestoreDefaults_Click" HorizontalAlignment="Left"
+                        Style="{StaticResource SecondaryButtonStyle}" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="应用" Click="Apply_Click" Margin="0,0,12,0" Style="{StaticResource PrimaryButtonStyle}"/>
-                    <Button Content="关闭" Click="Close_Click" Style="{StaticResource SecondaryButtonStyle}"/>
+                    <Button Content="应用" Click="Apply_Click" Margin="0,0,12,0"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                    <Button Content="关闭" Click="Close_Click" Style="{StaticResource SecondaryButtonStyle}" />
                 </StackPanel>
             </Grid>
         </Border>

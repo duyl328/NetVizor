@@ -9,6 +9,7 @@
     xmlns:userControls="clr-namespace:Shell.UserControls"
     mc:Ignorable="d"
     Title="NetVizor Dashboard"
+    Icon="/Assets/Icons/app.ico"
     Height="900"
     Width="1500">
     <Grid>
