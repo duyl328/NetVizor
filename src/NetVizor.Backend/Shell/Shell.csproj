@@ -9,6 +9,12 @@
         <UseWindowsForms>true</UseWindowsForms> <!-- 加上这句，才能正确启用 Forms 支持 -->
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets\Icons\app.ico</ApplicationIcon>
+        <AssemblyTitle>NetVizor</AssemblyTitle>
+        <AssemblyDescription>网络监控与管理工具</AssemblyDescription>
+        <AssemblyCompany>YuanLL</AssemblyCompany>
+        <AssemblyProduct>NetVizor</AssemblyProduct>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -42,51 +48,10 @@
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
         <None Remove="Assets\Icons\app.ico"/>
-        <Content Include="Assets\Icons\app.ico">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-        <None Update="wwwroot\assets\js\views.BdKezxME.js">
+        <Resource Include="Assets\Icons\app.ico"/>
+        <Content Include="wwwroot\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\vendor.CniNRiIb.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\favicon.ico">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\utils-vendor.G8u8hGnM.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\components.UDtJ8svY.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\vue-vendor.IL9U3oRS.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\index.html">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\charts-vendor.D6DPwxZz.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\icons-vendor.txK6AxSp.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\css\vue-vendor.BCw0uU-l.css">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\js\index.rwl-8vkS.js">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\css\components.BcFSLL5H.css">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\css\index.BMG5FuIJ.css">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="wwwroot\assets\css\views.DcUNVeyP.css">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
