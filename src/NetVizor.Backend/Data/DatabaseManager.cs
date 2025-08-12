@@ -79,13 +79,14 @@ public static class DatabaseManager
     /// </summary>
     private static string GetDefaultDatabasePath()
     {
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var appFolder = Path.Combine(appDataPath, "NetVizor");
+        // 获取运行文件所在目录
+        var exeDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        var dbFolder = Path.Combine(exeDirectory, "db");
 
-        if (!Directory.Exists(appFolder))
-            Directory.CreateDirectory(appFolder);
+        if (!Directory.Exists(dbFolder))
+            Directory.CreateDirectory(dbFolder);
 
-        return Path.Combine(appFolder, "netvizor.db");
+        return Path.Combine(dbFolder, "netvizor.db");
     }
 
     /// <summary>
