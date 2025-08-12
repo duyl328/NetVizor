@@ -15,14 +15,15 @@ public static class SysHelper
     public static int GetAvailablePort()
     {
         // todo: 2025/6/24 15:53 开发过程中使用固定端口
-        return 8267;
-        
+        // return 8267;
+
         TcpListener listener = new TcpListener(IPAddress.Loopback, 0); // 端口号为0表示由系统自动分配
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         return port;
     }
+
     public static bool IsAdministrator()
     {
         var identity = System.Security.Principal.WindowsIdentity.GetCurrent();

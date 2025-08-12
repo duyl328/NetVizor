@@ -1,3 +1,5 @@
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Windows;
@@ -28,6 +30,16 @@ namespace Shell;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    /// <summary>
+    /// Http 服务监听
+    /// </summary>
+    public static HttpListener? HttpListener { get; set; }
+
+    /// <summary>
+    /// http 服务地址
+    /// </summary>
+    public static string WebServerPath { get; set; }
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         // 异常处理
@@ -165,6 +177,8 @@ public partial class App : System.Windows.Application
 
     private void StartMyServer()
     {
+        NewMethod();
+
         int port = SysHelper.GetAvailablePort();
 
         AppConfig.Instance.WebSocketPort = port;
@@ -194,9 +208,6 @@ public partial class App : System.Windows.Application
 
         // 启动 http 服务
         Task.Run(() => { _ = StartHttpServer(); });
-
-        // 开启监听
-        NewMethod();
     }
 
     private static async Task NewMethod()
@@ -218,10 +229,24 @@ public partial class App : System.Windows.Application
     private static DateTime _cacheLastUpdateTime = DateTime.MinValue;
     private static readonly TimeSpan _cacheExpireTime = TimeSpan.FromMinutes(5); // 缓存5分钟
 
-    private static async Task StartHttpServer()
+    private async Task StartHttpServer()
     {
+        int port = SysHelper.GetAvailablePort();
+        AppConfig.Instance.HttpApiPort = port;
+        AppConfig.Instance.HttpApiPath = $"http://127.0.0.1:{port}";
+
         // 开启 http 服务
-        var server = new HttpServer("http://localhost:8268/");
+        var server = new HttpServer(AppConfig.Instance.HttpApiPath);
+
+
+        // 开启html服务
+        int port1 = SysHelper.GetAvailablePort();
+        AppConfig.Instance.HttpPort = port1;
+        AppConfig.Instance.HttpPath = $"http://127.0.0.1:{port1}";
+        StartHttpServer(AppConfig.Instance.HttpPort); //  启动本地HTTP服务器        // 开启监听
+
+        // 启动 Http 服务
+
         // 添加中间件
         server.UseMiddleware(Middlewares.RequestLogging);
         server.UseMiddleware(Middlewares.Cors);
@@ -844,12 +869,12 @@ public partial class App : System.Windows.Application
             try
             {
                 var timeRange = context.QueryParams["timeRange"] ?? "hour";
-                
+
                 // 检查缓存是否有效
                 var cacheKey = $"interfaces_{timeRange}";
                 var now = DateTime.Now;
-                
-                if (_networkInterfaceCache.ContainsKey(cacheKey) && 
+
+                if (_networkInterfaceCache.ContainsKey(cacheKey) &&
                     (now - _cacheLastUpdateTime) < _cacheExpireTime)
                 {
                     // 使用缓存数据
@@ -870,32 +895,32 @@ public partial class App : System.Windows.Application
                 {
                     case "hour":
                         // 从 GlobalNetwork 表获取最近1小时的数据
-                        var hourData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
-                            DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds(), 
+                        var hourData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("",
+                            DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds(),
                             DateTimeOffset.UtcNow.ToUnixTimeSeconds());
                         foreach (var item in hourData)
                             networkCardGuids.Add(item.NetworkCardGuid);
                         break;
                     case "day":
                         // 从 GlobalNetwork 表获取最近1天的数据
-                        var dayData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
-                            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(), 
+                        var dayData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("",
+                            DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeSeconds(),
                             DateTimeOffset.UtcNow.ToUnixTimeSeconds());
                         foreach (var item in dayData)
                             networkCardGuids.Add(item.NetworkCardGuid);
                         break;
                     case "week":
                         // 从 GlobalNetwork 表获取最近7天的数据
-                        var weekData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
-                            DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds(), 
+                        var weekData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("",
+                            DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds(),
                             DateTimeOffset.UtcNow.ToUnixTimeSeconds());
                         foreach (var item in weekData)
                             networkCardGuids.Add(item.NetworkCardGuid);
                         break;
                     case "month":
                         // 从 GlobalNetwork 表获取最近30天的数据
-                        var monthData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", 
-                            DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds(), 
+                        var monthData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("",
+                            DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeSeconds(),
                             DateTimeOffset.UtcNow.ToUnixTimeSeconds());
                         foreach (var item in monthData)
                             networkCardGuids.Add(item.NetworkCardGuid);
@@ -973,7 +998,8 @@ public partial class App : System.Windows.Application
                 var now = DateTimeOffset.UtcNow;
 
                 // 检查是否有小时数据 (GlobalNetworkHourly)
-                var hasHourlyData = await HasNetworkDataInTimeRangeAsync("hourly", now.AddHours(-1).ToUnixTimeSeconds());
+                var hasHourlyData =
+                    await HasNetworkDataInTimeRangeAsync("hourly", now.AddHours(-1).ToUnixTimeSeconds());
                 if (hasHourlyData)
                 {
                     availableRanges.Add(new
@@ -1012,7 +1038,8 @@ public partial class App : System.Windows.Application
                 }
 
                 // 检查是否有月数据
-                var hasMonthlyData = await HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-30).ToUnixTimeSeconds());
+                var hasMonthlyData =
+                    await HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-30).ToUnixTimeSeconds());
                 if (hasMonthlyData)
                 {
                     availableRanges.Add(new
@@ -1061,7 +1088,7 @@ public partial class App : System.Windows.Application
             {
                 _networkInterfaceCache.Clear();
                 _cacheLastUpdateTime = DateTime.MinValue;
-                
+
                 await context.Response.WriteJsonAsync(new ResponseModel<string>
                 {
                     Success = true,
@@ -1091,7 +1118,7 @@ public partial class App : System.Windows.Application
             {
                 var timeRange = context.QueryParams["timeRange"] ?? "1hour";
                 var interfaceId = context.QueryParams["interfaceId"] ?? "all";
-                
+
                 var points = new List<object>();
                 var now = DateTimeOffset.UtcNow;
 
@@ -1099,22 +1126,26 @@ public partial class App : System.Windows.Application
                 {
                     case "1hour":
                         // 从 GlobalNetwork 表获取最近1小时数据，按5秒间隔
-                        var hourData = await GetTrafficTrendsAsync("hour", interfaceId, now.AddHours(-1).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        var hourData = await GetTrafficTrendsAsync("hour", interfaceId,
+                            now.AddHours(-1).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
                         points = hourData;
                         break;
                     case "1day":
                         // 从 GlobalNetworkHourly 表获取最近1天数据，按小时间隔
-                        var dayData = await GetTrafficTrendsAsync("day", interfaceId, now.AddDays(-1).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        var dayData = await GetTrafficTrendsAsync("day", interfaceId,
+                            now.AddDays(-1).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
                         points = dayData;
                         break;
                     case "7days":
                         // 从 GlobalNetworkDaily 表获取最近7天数据，按天间隔
-                        var weekData = await GetTrafficTrendsAsync("week", interfaceId, now.AddDays(-7).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        var weekData = await GetTrafficTrendsAsync("week", interfaceId,
+                            now.AddDays(-7).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
                         points = weekData;
                         break;
                     case "30days":
                         // 从 GlobalNetworkDaily 表获取最近30天数据，按天间隔
-                        var monthData = await GetTrafficTrendsAsync("month", interfaceId, now.AddDays(-30).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
+                        var monthData = await GetTrafficTrendsAsync("month", interfaceId,
+                            now.AddDays(-30).ToUnixTimeSeconds(), now.ToUnixTimeSeconds());
                         points = monthData;
                         break;
                 }
@@ -1149,10 +1180,10 @@ public partial class App : System.Windows.Application
             {
                 var timeRange = context.QueryParams["timeRange"] ?? "1hour";
                 var limit = int.Parse(context.QueryParams["limit"] ?? "10");
-                
+
                 // 根据时间范围计算天数，对于1hour特殊处理
                 IEnumerable<AppNetworkTopInfo> topApps;
-                
+
                 if (timeRange == "1hour")
                 {
                     // 对于1小时数据，我们需要特殊处理，因为GetTopAppsByTrafficAsync不支持小时查询
@@ -1170,6 +1201,7 @@ public partial class App : System.Windows.Application
                     };
                     topApps = await DatabaseManager.Instance.Networks.GetTopAppsByTrafficAsync(limit, days);
                 }
+
                 var result = new List<object>();
 
                 foreach (var app in topApps)
@@ -1179,7 +1211,7 @@ public partial class App : System.Windows.Application
                     string processName = System.IO.Path.GetFileName(app.AppPath ?? "");
                     string displayName = app.AppName ?? "";
                     string iconBase64 = "";
-                    
+
                     if (!string.IsNullOrEmpty(displayName) && !string.IsNullOrEmpty(app.AppId))
                     {
                         // 如果JOIN没有获取到应用名称，尝试单独查询
@@ -1190,7 +1222,7 @@ public partial class App : System.Windows.Application
                             iconBase64 = appInfo.Base64Icon ?? "";
                         }
                     }
-                    
+
                     if (string.IsNullOrEmpty(displayName))
                     {
                         displayName = processName.Replace(".exe", "") ?? "Unknown";
@@ -1235,10 +1267,10 @@ public partial class App : System.Windows.Application
                 var timeRange = context.QueryParams["timeRange"] ?? "1hour";
                 var page = int.Parse(context.QueryParams["page"] ?? "1");
                 var pageSize = int.Parse(context.QueryParams["pageSize"] ?? "100");
-                
+
                 // 根据时间范围计算天数，对于1hour特殊处理
                 IEnumerable<AppNetworkTopInfo> allApps;
-                
+
                 if (timeRange == "1hour")
                 {
                     // 对于1小时数据，我们需要特殊处理，因为GetTopAppsByTrafficAsync不支持小时查询
@@ -1257,8 +1289,9 @@ public partial class App : System.Windows.Application
                     // 获取总数据（限制较大数量用于分页）
                     allApps = await DatabaseManager.Instance.Networks.GetTopAppsByTrafficAsync(pageSize * page, days);
                 }
+
                 var totalCount = allApps.Count();
-                
+
                 // 分页处理
                 var pagedApps = allApps.Skip((page - 1) * pageSize).Take(pageSize).ToList();
                 var items = new List<object>();
@@ -1288,7 +1321,7 @@ public partial class App : System.Windows.Application
                             company = appInfo.Company ?? "";
                         }
                     }
-                    
+
                     if (isNullOrEmpty)
                     {
                         displayName = processName.Replace(".exe", "") ?? "Unknown";
@@ -1582,7 +1615,7 @@ public partial class App : System.Windows.Application
             {
                 var appId = context.QueryParams["appId"];
                 var timeRange = context.QueryParams["timeRange"] ?? "1day";
-                
+
                 if (string.IsNullOrEmpty(appId))
                 {
                     context.Response.StatusCode = 400;
@@ -1607,9 +1640,10 @@ public partial class App : System.Windows.Application
 
                 // 获取应用基本信息
                 var appInfo = await DatabaseManager.Instance.AppInfos.GetAppByAppIdAsync(appId);
-                
+
                 // 获取网络数据
-                var networkData = await DatabaseManager.Instance.Networks.GetAppNetworkByTimeRangeAsync(appId, startTime, now);
+                var networkData =
+                    await DatabaseManager.Instance.Networks.GetAppNetworkByTimeRangeAsync(appId, startTime, now);
                 var networkList = networkData.ToList();
 
                 // 计算基本统计
@@ -1632,8 +1666,10 @@ public partial class App : System.Windows.Application
                         totalDownload = g.Sum(x => x.DownloadBytes),
                         totalTraffic = g.Sum(x => x.UploadBytes + x.DownloadBytes),
                         connectionCount = g.Count(),
-                        firstSeen = DateTimeOffset.FromUnixTimeSeconds(g.Min(x => x.Timestamp)).ToString("yyyy-MM-dd HH:mm:ss"),
-                        lastSeen = DateTimeOffset.FromUnixTimeSeconds(g.Max(x => x.Timestamp)).ToString("yyyy-MM-dd HH:mm:ss")
+                        firstSeen = DateTimeOffset.FromUnixTimeSeconds(g.Min(x => x.Timestamp))
+                            .ToString("yyyy-MM-dd HH:mm:ss"),
+                        lastSeen = DateTimeOffset.FromUnixTimeSeconds(g.Max(x => x.Timestamp))
+                            .ToString("yyyy-MM-dd HH:mm:ss")
                     })
                     .OrderByDescending(x => x.totalTraffic)
                     .Take(30)
@@ -1648,7 +1684,10 @@ public partial class App : System.Windows.Application
                         protocol = g.Key,
                         connectionCount = g.Count(),
                         totalTraffic = g.Sum(x => x.UploadBytes + x.DownloadBytes),
-                        percentage = Math.Round((double)g.Count() / networkList.Where(x => x.UploadBytes + x.DownloadBytes > 0).Count() * 100, 2)
+                        percentage =
+                            Math.Round(
+                                (double)g.Count() /
+                                networkList.Where(x => x.UploadBytes + x.DownloadBytes > 0).Count() * 100, 2)
                     })
                     .OrderByDescending(x => x.totalTraffic)
                     .ToList();
@@ -1697,7 +1736,7 @@ public partial class App : System.Windows.Application
                         icon = appInfo?.Base64Icon ?? "",
                         hash = appInfo?.Hash ?? ""
                     },
-                    
+
                     // 统计摘要
                     summary = new
                     {
@@ -1711,16 +1750,16 @@ public partial class App : System.Windows.Application
                         uniqueRemoteIPs = networkList.Select(x => x.RemoteIP).Distinct().Count(),
                         uniqueRemotePorts = networkList.Select(x => x.RemotePort).Distinct().Count()
                     },
-                    
+
                     // 前30个流量最高的连接
                     topConnections = topConnections,
-                    
+
                     // 协议占比统计
                     protocolStats = protocolStats,
-                    
+
                     // 时间趋势
                     timeTrends = timeTrends,
-                    
+
                     // 端口分析
                     portAnalysis = portAnalysis
                 };
@@ -1761,14 +1800,14 @@ public partial class App : System.Windows.Application
     {
         var result = new List<GlobalNetworkAggregatedBase>();
         var startTime = DateTimeOffset.UtcNow.AddHours(-hours).ToUnixTimeSeconds();
-        
+
         // 使用现有的方法来获取所有网卡的小时数据
         // 先获取所有存在的网卡GUID
-        try 
+        try
         {
             var allHourlyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByHourAsync("", hours);
             var networkGuids = allHourlyData.Select(x => "").Distinct(); // 这里需要从实际数据中提取
-            
+
             foreach (var guid in networkGuids)
             {
                 if (!string.IsNullOrEmpty(guid))
@@ -1779,7 +1818,7 @@ public partial class App : System.Windows.Application
         {
             // 如果出错，返回空列表
         }
-        
+
         return result;
     }
 
@@ -1787,12 +1826,12 @@ public partial class App : System.Windows.Application
     private static async Task<List<GlobalNetworkAggregatedBase>> GetAllNetworkCardsDailyDataAsync(int days)
     {
         var result = new List<GlobalNetworkAggregatedBase>();
-        
-        try 
+
+        try
         {
             var allDailyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByDayAsync("", days);
             var networkGuids = allDailyData.Select(x => "").Distinct(); // 这里需要从实际数据中提取
-            
+
             foreach (var guid in networkGuids)
             {
                 if (!string.IsNullOrEmpty(guid))
@@ -1803,7 +1842,7 @@ public partial class App : System.Windows.Application
         {
             // 如果出错，返回空列表
         }
-        
+
         return result;
     }
 
@@ -1818,7 +1857,7 @@ public partial class App : System.Windows.Application
                 case "hourly":
                     var hourlyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByHourAsync("", 1);
                     return hourlyData.Any();
-                case "daily":  
+                case "daily":
                     var dailyData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByDayAsync("", 1);
                     return dailyData.Any();
                 default:
@@ -1833,10 +1872,11 @@ public partial class App : System.Windows.Application
     }
 
     // 辅助方法：获取流量趋势数据
-    private static async Task<List<object>> GetTrafficTrendsAsync(string timeRange, string interfaceId, long startTime, long endTime)
+    private static async Task<List<object>> GetTrafficTrendsAsync(string timeRange, string interfaceId, long startTime,
+        long endTime)
     {
         var points = new List<object>();
-        
+
         try
         {
             if (timeRange == "hour")
@@ -1845,19 +1885,22 @@ public partial class App : System.Windows.Application
                 if (interfaceId == "all")
                 {
                     // 获取所有网卡数据并聚合
-                    var allData = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync("", startTime, endTime);
+                    var allData =
+                        await DatabaseManager.Instance.Networks
+                            .GetGlobalNetworkByTimeRangeAsync("", startTime, endTime);
                     var groupedData = allData.GroupBy(d => d.Timestep).Select(g => new
                     {
                         timestamp = g.Key.ToString(),
                         uploadSpeed = g.Sum(x => x.Upload),
                         downloadSpeed = g.Sum(x => x.Download)
                     });
-                    
+
                     points.AddRange(groupedData);
                 }
                 else
                 {
-                    var data = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync(interfaceId, startTime, endTime);
+                    var data = await DatabaseManager.Instance.Networks.GetGlobalNetworkByTimeRangeAsync(interfaceId,
+                        startTime, endTime);
                     points.AddRange(data.Select(d => new
                     {
                         timestamp = d.Timestep.ToString(),
@@ -1878,7 +1921,7 @@ public partial class App : System.Windows.Application
                         uploadSpeed = g.Sum(x => x.AvgUpload),
                         downloadSpeed = g.Sum(x => x.AvgDownload)
                     });
-                    
+
                     points.AddRange(groupedData);
                 }
                 else
@@ -1905,7 +1948,7 @@ public partial class App : System.Windows.Application
                         uploadSpeed = g.Sum(x => x.AvgUpload),
                         downloadSpeed = g.Sum(x => x.AvgDownload)
                     });
-                    
+
                     points.AddRange(groupedData);
                 }
                 else
@@ -1924,7 +1967,7 @@ public partial class App : System.Windows.Application
         {
             // 如果出错，返回空数据
         }
-        
+
         return points;
     }
 
@@ -1957,9 +2000,125 @@ public partial class App : System.Windows.Application
             8080 => "HTTP-Alt",
             8443 => "HTTPS-Alt",
             _ when port >= 1024 && port <= 5000 => "User Port",
-            _ when port > 5000 && port < 32768 => "Service Port", 
+            _ when port > 5000 && port < 32768 => "Service Port",
             _ when port >= 32768 => "Dynamic Port",
             _ => "Unknown"
+        };
+    }
+
+
+    /// <summary>
+    /// 开启网页服务
+    /// </summary>
+    /// <param name="port"></param>
+    private void StartHttpServer(int port)
+    {
+        HttpListener = new HttpListener();
+        string WebServerPort = $"http://127.0.0.1:{port}/";
+        WebServerPath = WebServerPort;
+        HttpListener.Prefixes.Add(WebServerPort);
+        HttpListener.Start();
+
+        ThreadPool.QueueUserWorkItem((_) =>
+        {
+            while (HttpListener.IsListening)
+            {
+                try
+                {
+                    var context = HttpListener.GetContext();
+                    string urlPath = context.Request.Url.AbsolutePath.TrimStart('/');
+
+                    // 如果是根路径，直接返回 index.html
+                    if (string.IsNullOrEmpty(urlPath))
+                    {
+                        urlPath = "index.html";
+                    }
+
+                    string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", urlPath);
+
+                    // 检查文件是否存在
+                    if (File.Exists(localPath))
+                    {
+                        // 文件存在，直接返回
+                        byte[] buffer = File.ReadAllBytes(localPath);
+                        context.Response.ContentType = GetContentType(localPath);
+                        context.Response.ContentLength64 = buffer.Length;
+                        context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+                        context.Response.OutputStream.Close();
+                    }
+                    else
+                    {
+                        // 文件不存在，判断是否为静态资源
+                        if (IsStaticResource(urlPath))
+                        {
+                            // 静态资源不存在，返回 404
+                            context.Response.StatusCode = 404;
+                            context.Response.Close();
+                        }
+                        else
+                        {
+                            // 非静态资源，SPA fallback 到 index.html
+                            string indexPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot",
+                                "index.html");
+                            if (File.Exists(indexPath))
+                            {
+                                byte[] buffer = File.ReadAllBytes(indexPath);
+                                context.Response.ContentType = "text/html";
+                                context.Response.ContentLength64 = buffer.Length;
+                                context.Response.OutputStream.Write(buffer, 0, buffer.Length);
+                                context.Response.OutputStream.Close();
+                            }
+                            else
+                            {
+                                context.Response.StatusCode = 404;
+                                context.Response.Close();
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // log if needed
+                    Console.WriteLine($"HTTP Server Error: {ex.Message}");
+                }
+            }
+        });
+    }
+
+// 判断是否为静态资源
+    private bool IsStaticResource(string path)
+    {
+        string[] staticExtensions =
+        {
+            ".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf", ".eot",
+            ".map"
+        };
+        string extension = Path.GetExtension(path).ToLower();
+        return staticExtensions.Contains(extension);
+    }
+
+// 获取正确的 MIME 类型
+    private string GetContentType(string filePath)
+    {
+        string extension = Path.GetExtension(filePath).ToLower();
+        return extension switch
+        {
+            ".html" or ".htm" => "text/html",
+            ".css" => "text/css",
+            ".js" => "application/javascript",
+            ".mjs" => "application/javascript", // ES6 模块
+            ".json" => "application/json",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".ico" => "image/x-icon",
+            ".woff" => "font/woff",
+            ".woff2" => "font/woff2",
+            ".ttf" => "font/ttf",
+            ".eot" => "application/vnd.ms-fontobject",
+            ".map" => "application/json", // source map 文件
+            _ => "application/octet-stream"
         };
     }
 }

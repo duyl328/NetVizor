@@ -72,7 +72,7 @@ public partial class WebPanel : System.Windows.Controls.UserControl
         // webView.CoreWebView2.Navigate($"file:///{htmlPath.Replace("\\", "/")}");
 
         // 示例 2：加载远程网页
-        webView.CoreWebView2.Navigate("http://localhost:3000");
+        webView.CoreWebView2.Navigate(AppConfig.Instance.HttpPath);
 
         webView.CoreWebView2.WebMessageReceived += (sender, args) =>
         {
@@ -109,6 +109,9 @@ public partial class WebPanel : System.Windows.Controls.UserControl
                 case "GetWebSocketPath":
                     WebSocketPath();
                     break;
+                case "GetHttpPath":
+                    HttpPath();
+                    break;
                 case "CloseWebSocket":
                     CloseWebSocket();
                     break;
@@ -120,6 +123,18 @@ public partial class WebPanel : System.Windows.Controls.UserControl
                     break;
             }
         };
+    }
+
+    private async void HttpPath()
+    {
+        var instanceHttpPath = AppConfig.Instance.HttpApiPath;
+        Log.Information($"instanceHttpPath -> :{instanceHttpPath}");
+        string result = await webView.ExecuteScriptAsync($"""
+                                                            window.externalFunctions.__BRIDGE_LISTEN__('ListenHttpPath','{instanceHttpPath}');
+                                                          """);
+        string result1 = await webView.ExecuteScriptAsync($"""
+                                                             window.externalFunctions.__BRIDGE_LISTEN__('GetHttpPath','{instanceHttpPath}');
+                                                           """);
     }
 
     private void OpenWebSocket()

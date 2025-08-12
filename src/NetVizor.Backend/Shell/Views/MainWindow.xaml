@@ -9,8 +9,8 @@
     xmlns:userControls="clr-namespace:Shell.UserControls"
     mc:Ignorable="d"
     Title="NetVizor Dashboard"
-    Height="700"
-    Width="1300">
+    Height="900"
+    Width="1500">
     <Grid>
         <userControls:WebPanel />
     </Grid>

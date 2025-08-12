@@ -33,6 +33,26 @@ public sealed class AppConfig
     public string? WebSocketPath { get; set; }
 
     /// <summary>
+    /// Http 端口
+    /// </summary>
+    public int HttpPort { get; set; }
+
+    /// <summary>
+    /// Http 连接地址
+    /// </summary>
+    public string? HttpPath { get; set; }
+
+    /// <summary>
+    /// Http 端口
+    /// </summary>
+    public int HttpApiPort { get; set; }
+
+    /// <summary>
+    /// Http 连接地址
+    /// </summary>
+    public string? HttpApiPath { get; set; }
+
+    /// <summary>
     /// 订阅字符串
     /// </summary>
     public static readonly string ApplicationInfoSubscribe = "ApplicationInfo";
