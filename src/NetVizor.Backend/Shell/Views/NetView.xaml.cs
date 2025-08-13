@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -40,6 +41,8 @@ public partial class NetView : Window
     public NetView()
     {
         InitializeComponent();
+        WebView2Init();
+
         Loaded += OnLoaded;
         InitializeTrayIcon();
         this.Loaded += NetView_Loaded;
@@ -52,6 +55,24 @@ public partial class NetView : Window
 
         // Initialize settings - will be loaded asynchronously in OnLoaded
         _appSettings = new AppSetting();
+    }
+
+    private async Task WebView2Init()
+    {
+        bool hasRuntime = await WebView2Helper.IsWebView2RuntimeInstalled();
+
+        if (!hasRuntime)
+        {
+            if (System.Windows.MessageBox.Show(
+                    "您未安装 WebView2 运行时，无法打开该页面。\n是否立即下载？") == MessageBoxResult.Yes)
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+                    UseShellExecute = true
+                });
+            }
+        }
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -131,12 +152,12 @@ public partial class NetView : Window
         try
         {
             var netViewSettings = Shell.Models.NetViewSettings.Instance;
-            
+
             // 同步外观设置
             netViewSettings.TextColor = _appSettings.TextColor;
             netViewSettings.BackgroundColor = _appSettings.BackgroundColor;
             netViewSettings.BackgroundOpacity = _appSettings.Opacity;
-            
+
             // 同步显示设置
             netViewSettings.SpeedUnit = _appSettings.SpeedUnit switch
             {
@@ -146,16 +167,16 @@ public partial class NetView : Window
                 3 => Shell.Models.SpeedUnit.Auto,
                 _ => Shell.Models.SpeedUnit.Auto
             };
-            
+
             netViewSettings.ShowUnit = _appSettings.ShowUnit;
-            netViewSettings.LayoutDirection = _appSettings.LayoutDirection == 0 
-                ? Shell.Models.LayoutDirection.Horizontal 
+            netViewSettings.LayoutDirection = _appSettings.LayoutDirection == 0
+                ? Shell.Models.LayoutDirection.Horizontal
                 : Shell.Models.LayoutDirection.Vertical;
-            
+
             // 同步网速Top榜设置
             netViewSettings.ShowNetworkTopList = _appSettings.ShowNetworkTopList;
             netViewSettings.NetworkTopListCount = _appSettings.NetworkTopListCount;
-            
+
             // 同步交互设置
             netViewSettings.DoubleClickAction = _appSettings.DoubleClickAction switch
             {
@@ -164,14 +185,14 @@ public partial class NetView : Window
                 2 => Shell.Models.DoubleClickAction.Settings,
                 _ => Shell.Models.DoubleClickAction.None
             };
-            
+
             // 同步窗口行为设置
             netViewSettings.LockPosition = _appSettings.IsPositionLocked;
             netViewSettings.ClickThrough = _appSettings.IsClickThrough;
             netViewSettings.Topmost = _appSettings.IsTopmost;
             netViewSettings.SnapToScreen = _appSettings.SnapToScreen;
             netViewSettings.ShowDetailedInfo = _appSettings.ShowDetailedInfo;
-            
+
             System.Diagnostics.Debug.WriteLine("已将数据库设置同步到NetViewSettings实例");
         }
         catch (Exception ex)

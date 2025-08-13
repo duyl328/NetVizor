@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -20,6 +21,7 @@ using Shell.Views;
 using Utils.ETW.Etw;
 using Utils.Firewall;
 using Dapper;
+using Shell.Utils;
 using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace Shell;
@@ -83,6 +85,23 @@ public partial class App : System.Windows.Application
 
         // 设置应用程序在关闭最后一个窗口时不自动退出
         this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // 检测 WebView2
+        bool hasRuntime = await WebView2Helper.IsWebView2RuntimeInstalled();
+        if (!hasRuntime)
+        {
+            // 非阻塞提示
+            MessageBox.Show(
+                "检测到您未安装 WebView2 运行时，统计页面等功能将不可用。\n\n点击“确定”访问下载页面。"
+            );
+
+            // 跳转官方下载
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+                UseShellExecute = true
+            });
+        }
     }
 
     private async void Mouth()
