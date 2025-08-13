@@ -8,6 +8,7 @@ using Common.Logger;
 using Data.Models;
 using Data;
 using System.Linq;
+using Shell.Utils;
 
 namespace Shell.Views;
 
@@ -155,6 +156,15 @@ public partial class SettingsWindow : Window
         ClickThroughCheckBox.IsChecked = _settings.IsClickThrough;
         SnapToScreenCheckBox.IsChecked = _settings.SnapToScreen;
         ShowDetailedInfoCheckBox.IsChecked = _settings.ShowDetailedInfo;
+        
+        // 检查实际的Windows启动状态并同步到UI和设置
+        var actualStartupState = WindowsStartupHelper.IsStartupEnabled();
+        if (actualStartupState != _settings.AutoStart)
+        {
+            Log.Info($"Windows启动状态({actualStartupState})与数据库设置({_settings.AutoStart})不一致，以Windows实际状态为准");
+            _settings.AutoStart = actualStartupState;
+        }
+        AutoStartCheckBox.IsChecked = _settings.AutoStart;
 
         UpdateColorButtons();
     }
@@ -342,6 +352,11 @@ public partial class SettingsWindow : Window
         // 详细信息设置变化，不需要预览更新
     }
 
+    private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        // 开机自启动设置变化，不需要预览更新
+    }
+
     private void UpdatePreview()
     {
         if (PreviewBorder == null || PreviewPanel == null) return;
@@ -468,6 +483,14 @@ public partial class SettingsWindow : Window
             _settings.IsClickThrough = ClickThroughCheckBox.IsChecked == true;
             _settings.SnapToScreen = SnapToScreenCheckBox.IsChecked == true;
             _settings.ShowDetailedInfo = ShowDetailedInfoCheckBox.IsChecked == true;
+            
+            // 应用开机自启动设置
+            _settings.AutoStart = AutoStartCheckBox.IsChecked == true;
+            var startupResult = WindowsStartupHelper.SetStartup(_settings.AutoStart);
+            if (!startupResult)
+            {
+                Log.Warning("设置开机自启动失败，但设置已保存到数据库");
+            }
 
             // 设置更新时间
             _settings.UpdateTime = DateTimeOffset.Now.ToUnixTimeSeconds();

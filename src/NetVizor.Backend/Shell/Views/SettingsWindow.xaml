@@ -331,6 +331,10 @@
                                       Margin="0,8,0,0"
                                       Checked="ShowDetailedInfoCheckBox_Changed"
                                       Unchecked="ShowDetailedInfoCheckBox_Changed" FontSize="13" />
+                            <CheckBox x:Name="AutoStartCheckBox" Content="开机自启动" IsChecked="False"
+                                      Margin="0,8,0,0"
+                                      Checked="AutoStartCheckBox_Changed"
+                                      Unchecked="AutoStartCheckBox_Changed" FontSize="13" />
 
                             <Button Content="重置窗口位置" Click="ResetWindowPosition_Click" Margin="0,16,0,0"
                                     Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" />
