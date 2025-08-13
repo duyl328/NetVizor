@@ -26,19 +26,19 @@ public sealed class AppConfig
     /// WebSocket 端口
     /// </summary>
     public int WebSocketPort { get; set; }
-
-    /// <summary>
-    /// WebSocket 连接地址
-    /// </summary>
-    public string? WebSocketPath { get; set; }
-
+    
     /// <summary>
     /// Http 端口
     /// </summary>
     public int HttpPort { get; set; }
 
     /// <summary>
-    /// Http 连接地址
+    /// WebSocket 连接地址
+    /// </summary>
+    public string? WebSocketPath { get; set; }
+    
+    /// <summary>
+    /// Http 服务地址
     /// </summary>
     public string? HttpPath { get; set; }
 
