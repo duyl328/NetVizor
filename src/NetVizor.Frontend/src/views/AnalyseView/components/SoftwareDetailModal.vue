@@ -70,8 +70,34 @@
       </div>
 
       <div class="modal-body">
+        <!-- 错误状态显示 -->
+        <div v-if="errorState.hasError" class="error-container">
+          <div class="error-content">
+            <div class="error-header">
+              <n-icon :component="CloseOutline" class="error-icon" />
+              <h4 class="error-title">数据加载失败</h4>
+            </div>
+            <p class="error-message">{{ errorState.message }}</p>
+            <div v-if="errorState.details" class="error-details">
+              <details>
+                <summary class="error-summary">查看详细信息</summary>
+                <pre class="error-details-content">{{ errorState.details }}</pre>
+              </details>
+            </div>
+            <div class="error-actions">
+              <n-button type="primary" @click="refreshData">
+                <template #icon>
+                  <n-icon :component="RefreshOutline" />
+                </template>
+                重试
+              </n-button>
+            </div>
+          </div>
+        </div>
+        
         <!-- 主要Tab内容区域 -->
         <n-tabs
+          v-else
           v-model:value="activeMainTab"
           type="card"
           class="detail-tabs"
@@ -104,6 +130,7 @@
                     <NetworkAnalysisChart
                       ref="networkChartRef"
                       v-if="analysisData"
+                      :key="`network-${componentKey}`"
                       :data="analysisData"
                       :loading="loading"
                     />
@@ -134,6 +161,7 @@
                       <ProtocolChart
                         ref="protocolChartRef"
                         v-if="protocolChartData.length > 0"
+                        :key="`protocol-${componentKey}`"
                         :data="protocolChartData"
                       />
                       <div v-else class="empty-chart">
@@ -155,6 +183,7 @@
                       <TimeTrendChart
                         ref="trendChartRef"
                         v-if="timeTrendData.length > 0"
+                        :key="`trend-${componentKey}`"
                         :data="timeTrendData"
                       />
                       <div v-else class="empty-chart">
@@ -191,7 +220,10 @@
                     </div>
                   </div>
                   <div class="table-container">
-                    <ConnectionsTable :data="analysisData?.topConnections || []" />
+                    <ConnectionsTable 
+                      :key="`connections-${componentKey}`"
+                      :data="analysisData?.topConnections || []" 
+                    />
                   </div>
                 </div>
               </div>
@@ -219,7 +251,10 @@
                     </div>
                   </div>
                   <div class="table-container">
-                    <PortStatsTable :data="portStatsData" />
+                    <PortStatsTable 
+                      :key="`ports-${componentKey}`"
+                      :data="portStatsData" 
+                    />
                   </div>
                 </div>
               </div>
@@ -247,7 +282,10 @@
                     </div>
                   </div>
                   <div class="table-container">
-                    <TimelineView :data="analysisData?.timeTrends || []" />
+                    <TimelineView 
+                      :key="`timeline-${componentKey}`"
+                      :data="analysisData?.timeTrends || []" 
+                    />
                   </div>
                 </div>
               </div>
@@ -365,6 +403,20 @@ const loading = ref(false)
 const activeTab = ref('connections')
 const activeMainTab = ref('topology')
 
+// 错误状态
+const errorState = ref<{
+  hasError: boolean
+  message: string
+  details?: string
+}>({
+  hasError: false,
+  message: '',
+  details: ''
+})
+
+// 组件强制刷新key
+const componentKey = ref(0)
+
 // 图表引用
 const networkChartRef = ref()
 const protocolChartRef = ref()
@@ -439,11 +491,17 @@ watch(activeMainTab, () => {
   resizeAllCharts()
 })
 
-// 监听弹窗显示状态
+// 监听弹窗显示状态 - 强制刷新组件
 watch(
   () => props.show,
-  (newShow) => {
-    if (newShow) {
+  (newShow, oldShow) => {
+    console.log('[SoftwareDetailModal] 弹窗显示状态变化:', { newShow, oldShow })
+    
+    if (newShow && !oldShow) {
+      // 弹窗从关闭到打开时，强制刷新所有组件
+      console.log('[SoftwareDetailModal] 弹窗打开，强制刷新组件，componentKey:', componentKey.value, '->', componentKey.value + 1)
+      componentKey.value++
+      
       nextTick(() => {
         resizeAllCharts()
       })
@@ -507,36 +565,143 @@ const portStatsData = computed(() => {
 
 // API调用
 const fetchAnalysisData = async () => {
-  if (!props.appId) return
+  if (!props.appId) {
+    console.warn('[SoftwareDetailModal] fetchAnalysisData: appId为空，跳过请求')
+    return
+  }
+
+  console.log('[SoftwareDetailModal] 开始请求网络分析数据:', {
+    appId: props.appId,
+    timeRange: props.timeRange,
+    show: props.show
+  })
 
   loading.value = true
+  // 清除之前的错误状态
+  errorState.value = {
+    hasError: false,
+    message: '',
+    details: ''
+  }
+  
   try {
     const params = {
       appId: props.appId,
       timeRange: props.timeRange,
     }
 
+    console.log('[SoftwareDetailModal] 请求参数:', params)
+    console.log('[SoftwareDetailModal] 请求URL: /apps/network-analysis')
+
     const response: ApiResponse<NetworkAnalysisData> = await httpClient.get(
       '/apps/network-analysis',
       params,
     )
 
+    console.log('[SoftwareDetailModal] 收到响应:', {
+      success: response.success,
+      message: response.message,
+      hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : null
+    })
+
     if (response.success && response.data) {
       analysisData.value = response.data
+      console.log('[SoftwareDetailModal] 数据设置成功:', {
+        appInfo: response.data.appInfo,
+        connectionsCount: response.data.topConnections?.length || 0,
+        protocolStatsCount: response.data.protocolStats?.length || 0,
+        timeTrendsCount: response.data.timeTrends?.length || 0,
+        portAnalysisCount: response.data.portAnalysis?.length || 0
+      })
     } else {
-      console.error('获取网络分析数据失败:', response.message)
+      console.error('[SoftwareDetailModal] 获取网络分析数据失败:', {
+        success: response.success,
+        message: response.message,
+        data: response.data
+      })
+      
+      // 设置错误状态
+      errorState.value = {
+        hasError: true,
+        message: response.message || '获取数据失败',
+        details: `请求成功但返回失败状态: ${JSON.stringify({
+          success: response.success,
+          message: response.message
+        })}`
+      }
+      
       analysisData.value = null
     }
   } catch (error) {
-    console.error('获取网络分析数据异常:', error)
+    console.error('[SoftwareDetailModal] 获取网络分析数据异常:', error)
+    
+    let errorMessage = '网络请求失败'
+    let errorDetails = ''
+    
+    // 详细的错误信息
+    if (error instanceof Error) {
+      console.error('[SoftwareDetailModal] 错误详情:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+      errorMessage = error.message
+      errorDetails = `错误类型: ${error.name}`
+    }
+    
+    // 如果是HTTP错误，尝试获取更多信息
+    if (error && typeof error === 'object' && 'response' in error) {
+      const httpError = error as any
+      console.error('[SoftwareDetailModal] HTTP错误详情:', {
+        status: httpError.response?.status,
+        statusText: httpError.response?.statusText,
+        data: httpError.response?.data,
+        url: httpError.config?.url,
+        method: httpError.config?.method,
+        params: httpError.config?.params
+      })
+      
+      const status = httpError.response?.status
+      const responseData = httpError.response?.data
+      
+      if (status === 400) {
+        errorMessage = '请求参数错误 (400)'
+        if (responseData?.message) {
+          errorMessage += `: ${responseData.message}`
+        }
+        errorDetails = `请求URL: ${httpError.config?.url}\n请求参数: ${JSON.stringify(httpError.config?.params, null, 2)}\n响应数据: ${JSON.stringify(responseData, null, 2)}`
+      } else if (status === 404) {
+        errorMessage = 'API接口不存在 (404)'
+        errorDetails = `请求URL: ${httpError.config?.url}`
+      } else if (status === 500) {
+        errorMessage = '服务器内部错误 (500)'
+        errorDetails = responseData?.message || '服务器处理请求时发生错误'
+      } else {
+        errorMessage = `HTTP ${status} 错误`
+        errorDetails = httpError.response?.statusText || '未知HTTP错误'
+      }
+    }
+    
+    // 设置错误状态
+    errorState.value = {
+      hasError: true,
+      message: errorMessage,
+      details: errorDetails
+    }
+    
     analysisData.value = null
   } finally {
     loading.value = false
+    console.log('[SoftwareDetailModal] 请求完成，loading设置为false')
   }
 }
 
 // 事件处理
 const refreshData = () => {
+  console.log('[SoftwareDetailModal] 手动刷新数据')
+  // 强制刷新组件
+  componentKey.value++
   fetchAnalysisData()
 }
 
@@ -562,9 +727,19 @@ const formatBytes = (bytes: number): string => {
 
 watch(
   () => [props.appId, props.timeRange],
-  () => {
+  (newValues, oldValues) => {
+    console.log('[SoftwareDetailModal] 监听到参数变化:', {
+      newValues,
+      oldValues,
+      show: props.show,
+      appId: props.appId
+    })
+    
     if (props.show && props.appId) {
+      console.log('[SoftwareDetailModal] 参数变化触发数据获取')
       fetchAnalysisData()
+    } else {
+      console.log('[SoftwareDetailModal] 跳过数据获取，条件不满足')
     }
   },
   { flush: 'post' },
@@ -1133,6 +1308,90 @@ watch(
     font-size: 13px;
     margin-right: 4px;
   }
+}
+
+/* 错误状态样式 */
+.error-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--bg-secondary);
+}
+
+.error-content {
+  max-width: 600px;
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.error-icon {
+  color: var(--accent-error);
+  font-size: 24px;
+}
+
+.error-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.error-message {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.error-details {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.error-summary {
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  user-select: none;
+}
+
+.error-summary:hover {
+  background: var(--bg-hover);
+}
+
+.error-details-content {
+  margin: 12px 0 0 0;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-actions {
+  margin-top: 24px;
 }
 
 /* 暗色主题适配 */

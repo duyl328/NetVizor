@@ -24,7 +24,7 @@ if (bridge) {
         console.log(data, 'HTTP 路径')
       })
     }
-  }, 500)
+  }, 100)
 } else {
   // todo: 2025/6/25 08:32 开发阶段直接使用固定节点
   webSocketStore.initialize('ws://127.0.0.1:8267')
