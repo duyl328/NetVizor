@@ -8,6 +8,9 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Shell.Views;
 using Common.Logger;
+using System.IO;
+using System.Windows.Forms;
+using System.Drawing;
 
 namespace Shell.Utils;
 
@@ -247,10 +250,32 @@ public class TrayIconManager : IDisposable
     {
         try
         {
-            return new Icon("Assets/Icons/app.ico");
+            // 尝试多种路径来加载图标
+            string[] possiblePaths = {
+                "Assets/Icons/app.ico",
+                "./Assets/Icons/app.ico",
+                "Shell/Assets/Icons/app.ico",
+                "./Shell/Assets/Icons/app.ico",
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Icons", "app.ico"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Shell", "Assets", "Icons", "app.ico")
+            };
+
+            foreach (string path in possiblePaths)
+            {
+                if (File.Exists(path))
+                {
+                    Log.Info($"成功加载托盘图标: {path}");
+                    return new Icon(path);
+                }
+            }
+
+            // 如果找不到图标文件，记录警告并使用系统默认图标
+            Log.Warning("未找到app.ico文件，使用系统默认图标");
+            return SystemIcons.Application;
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Warning($"加载托盘图标失败: {ex.Message}，使用系统默认图标");
             return SystemIcons.Application;
         }
     }
