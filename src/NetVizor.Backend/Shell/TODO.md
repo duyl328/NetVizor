@@ -1,160 +1,52 @@
-# NetVizor Frontend - API 定义文档
+## 🚀 NetVizor v1.0.0 — 初版发布
 
-## 1. 网络接口API
+**NetVizor** 是一款基于 Windows 的现代化网络监控与防火墙管理工具，开源、免费、可视化体验极佳。
+它能帮你实时查看电脑上每个软件的网络连接详情、流量使用情况、防火墙规则，并支持历史数据分析。
 
-### 1.1 获取网络接口列表（在全局网速数据表中，把存在的网卡都展示出来，其中需要传递timeRange，以表示拿哪里的数据，day指的是1天的数据，你应该去 GlobalNetworkHourly 中寻找，因为其内部最小单位为小时。如果是 week 则应该去 GlobalNetworkDaily 因为这个表的时间为天，mouth 也对应的是GlobalNetworkDaily，如果是 hour 则应该去 GlobalNetwork 找，他内部的时间是 5 秒。这个值一共4中可能，hour,day,week,mouth，默认 hour
-目前数据库存储的有对应的 网卡ID，需要查询到所有的网卡ID再单独获取对应的网卡信息并返回 Common\Utils\NetworkAdapterHelper.cs 提供了网卡信息的获取方法
-```
-GET /api/statistics/interfaces?timeRange=day
-```
-**返回:**
-```json
-{
-  "data": [
-    {
-      "id": "eth0",
-      "name": "以太网",
-      "displayName": "Realtek PCIe GbE Family Controller",
-      "isActive": true,
-      "macAddress": "00:11:22:33:44:55"
-    },
-    {
-      "id": "wifi0", 
-      "name": "WiFi",
-      "displayName": "Intel Wi-Fi 6 AX200",
-      "isActive": false,
-      "macAddress": "66:77:88:99:AA:BB"
-    }
-  ]
-}
-```
+和传统的 SimpleWall、TinyWall 等相比，NetVizor 拥有更直观的 UI、更全面的数据分析功能，以及现代化的交互体验。
 
-### 1.2 获取可用时间范围（这里的逻辑是是否有对应的数据，因为我们的数据库会定时的收集和整理信息，如果用户刚安装软件，肯定不会有月数据，也不会有周数据，所以需要据此来确定用户能展示的数据范围，同样分为 hour，day,week,mouth 返回这四个等级就行，hour只要用户安装超过10秒就有数据了，所以最低返回 hour 就行
-```
-GET /api/statistics/available-ranges
-```
-**返回:**
-```json
-{
-  "data": {
-    "type": "hour",
-    "name": "1小时",
-    "available": true,
-    "startTime": "2025-01-08T15:00:00Z"
-  }
-}
-```
+---
 
-## 2. 流量数据API
+### 快速上手
 
-### 2.1 获取流量趋势数据
-```
-GET /api/traffic/trends
-```
-**参数:**
-- `timeRange`: 时间范围 (1hour|1day|7days|30days)
-- `interfaceId`: 网卡ID，可选，默认为"all"表示所有网卡
+### ✨ 核心功能
 
-**返回:**
-```json
-{
-  "data": {
-    "interface": "all",
-    "timeRange": "1hour",
-    "points": [
-      {
-        "timestamp": "1754565364",
-        "uploadSpeed": 1024000,
-        "downloadSpeed": 5120000
-      },{
-        "timestamp": "1754565364",
-        "uploadSpeed": 1024000,
-        "downloadSpeed": 5120000
-      },{
-        "timestamp": "1754565364",
-        "uploadSpeed": 1024000,
-        "downloadSpeed": 5120000
-      },{
-        "timestamp": "1754565364",
-        "uploadSpeed": 1024000,
-        "downloadSpeed": 5120000
-      }
-    ]
-  }
-}
-```
+#### 1. 悬浮窗 & 系统托盘
 
-### 2.2 获取Top应用流量数据
-```
-GET /api/traffic/top-apps
-```
-**参数:**
-- `timeRange`: 时间范围
-- `limit`: 返回数量，默认10
+* 类似 TrafficMonitor 的悬浮窗，实时显示总上传/下载速度。
+* 支持自定义背景色、文字色、布局方向、网速单位等。
+* 可选 **网速排行榜**，实时显示最占带宽的应用。
 
-**返回:**
-```json
-{
-  "data": [
-    {
-      "processName": "chrome.exe",
-      "displayName": "Google Chrome",
-      "icon": "+Uj0Iu09gH8tBUABUAB2HeA3IEEdYdHLY0EAAAAASUVORK5CYII=",
-      "totalBytes": 1073741824
-    },{
-      "processName": "chrome.exe",
-      "displayName": "Google Chrome",
-      "icon": "+Uj0Iu09gH8tBUABUAB2HeA3IEEdYdHLY0EAAAAASUVORK5CYII=",
-      "totalBytes": 1073741824
-    },{
-      "processName": "chrome.exe",
-      "displayName": "Google Chrome",
-      "icon": "+Uj0Iu09gH8tBUABUAB2HeA3IEEdYdHLY0EAAAAASUVORK5CYII=",
-      "totalBytes": 1073741824
-    }
-  ]
-}
-```
+#### 2. 实时监控
 
-## 3. 软件排行榜API
+* **软件列表**：显示所有联网软件的图标、名称、线程数、内存占用等。
+* **详细信息**：查看实时网速、PID、子线程信息、连接时长等。
+* **连接详情**：协议、状态、本地/远程 IP 及端口、流量占用、存活时间等。
+* **软件元数据**：版本、路径、公司、版权信息。
 
-### 3.1 获取软件流量TOP100排行
-```
-GET /api/apps/top-traffic
-```
-**参数:**
-- `timeRange`: 时间范围 (1hour|1day|7days|30days)
-- `page`: 页码，默认1
-- `pageSize`: 每页数量，默认100
+#### 3. 防火墙管理
 
-**返回:**
-```json
-{
-  "data": {
-    "total": 156,
-    "page": 1,
-    "pageSize": 100,
-    "items": [
-      {
-        "rank": 1,
-        "processName": "chrome.exe", 
-        "displayName": "Google Chrome",
-        "processPath": "C:\\Program Files\\Google\\Chrome\\chrome.exe",
-        "icon": "H8tBUABUAB2HeA3IEEdYdHLY0EAAAAASUVORK5CYII",
-        "totalBytes": 1073741824,
-        "uploadBytes": 104857600,
-        "connectionCount": 23
-      },{
-        "rank": 2,
-        "processName": "chrome.exe1", 
-        "displayName": "Google Chrome1",
-        "processPath": "C:\\Program Files\\Google\\Chrome\\chrome.exe",
-        "icon": "H8tBUABUAB2HeA3IEEdYdHLY0EAAAAASUVORK5CYII",
-        "totalBytes": 1073741824,
-        "uploadBytes": 104857600,
-        "connectionCount": 32
-      }
-    ]
-  }
-}
-```
+* 可视化查看 **启用/禁用规则、入站/出站规则**。
+* 支持新建、编辑、删除、开启/关闭规则。
+* 列表支持多条件筛选 & 即时搜索，虚拟列表渲染无卡顿。
+* 界面基于 NaiveUI，现代化体验。
+
+#### 4. 数据分析
+
+* 自动收集全局及各软件的流量数据（每分钟一次）。
+* 支持查看近 1 小时、24 小时、7 天、30 天的数据。
+* **趋势图**：全局网速变化 & 按网卡过滤。
+* **Top 应用流量**：玫瑰图展示占带宽最多的软件。
+* **详细分析**：
+
+  * 网络拓扑：可视化连接关系。
+  * 流量分析：不同协议占比 & 走势。
+  * 连接详情：本地/远程连接频率、流量、持续时间。
+  * 端口统计：本地端口使用次数与流量。
+  * 时间线：每小时带宽与数据占用情况。
+
+---
+
+### 📜 开源协议
+
+本项目基于 **GPL v3.0** 发布，任何人可自由使用、修改、分发，但必须保留相同协议。
