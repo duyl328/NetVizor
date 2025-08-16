@@ -207,14 +207,14 @@
                                                    FontSize="12"
                                                    FontWeight="Bold" VerticalAlignment="Center" />
                                     </Grid>
-                                    <Grid Width="80" Margin="15,0,0,0">
+                                    <Grid Width="80" Margin="0,0,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="↓" Foreground="Green" FontSize="12"
                                                    FontWeight="Bold"
-                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                   VerticalAlignment="Center" Margin="0,0,2,0" />
                                         <TextBlock Grid.Column="1" x:Name="PreviewDownloadText" Text="15.67 MB/s"
                                                    FontSize="12"
                                                    FontWeight="Bold" VerticalAlignment="Center" />
