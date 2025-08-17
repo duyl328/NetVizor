@@ -39,8 +39,8 @@ export default defineConfig(({ mode }) => {
     // 防止 Vite 掩盖 Rust 错误
     clearScreen: false,
     server: {
-      port: 3000,
-      strictPort: true,
+      port: 0,
+      strictPort: false,
       host: "0.0.0.0",
       watch: {
       },

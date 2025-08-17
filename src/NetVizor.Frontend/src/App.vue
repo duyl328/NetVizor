@@ -10,6 +10,9 @@ import { NConfigProvider, NGlobalStyle, NMessageProvider, NLoadingBarProvider, N
 import { useThemeStore } from '@/stores/theme'
 import NetworkConnectionPanel2 from '@/components/NetworkConnectionPanel2.vue'
 import MainLayout from './layouts/MainLayout.vue'
+import DemoBanner from '@/components/DemoBanner.vue'
+import DemoModeIndicator from '@/components/DemoModeIndicator.vue'
+import { environmentDetector } from '@/utils/environmentDetector'
 
 const router = useRouter()
 // 是否展示生成路由
@@ -75,11 +78,18 @@ if (nodeEnv !== undefined && !StringUtils.isBlank(nodeEnv) && nodeEnv === app.DE
 const themeStore = useThemeStore()
 // 提供主题给子组件
 provide('theme', themeStore.theme)
+// 演示模式检测
+const isDemoMode = ref(environmentDetector.shouldUseMockData())
+
 // 初始化主题
 onMounted(() => {
   themeStore.initTheme()
   // 标记页面已准备好，启用过渡动画
   document.body.classList.add('theme-ready')
+
+  // 打印环境信息
+  console.log('[App] 应用初始化完成')
+  console.log('[App] 环境信息:', environmentDetector.getEnvironmentInfo())
 })
 // region 拖拽 tab
 // 添加拖拽相关状态
@@ -150,6 +160,18 @@ const getLayout = (route) => {
       <n-dialog-provider>
         <n-loading-bar-provider>
           <n-global-style />
+
+      <!-- 演示模式横幅 -->
+      <DemoBanner v-if="isDemoMode" position="top" :persistent="true" />
+
+      <!-- 演示模式指示器 -->
+      <DemoModeIndicator
+        v-if="isDemoMode"
+        position="top-right"
+        variant="badge"
+        :show-details="true"
+        :show-activity="true"
+      />
 
       <!-- 可拖动的导航栏 -->
       <div

@@ -131,10 +131,42 @@
 - `npm run lint`: 代码检查
 - `npm run format`: 代码格式化
 
+## 演示模式系统
+
+### 环境自动检测
+项目具备智能环境检测功能，自动切换数据源：
+- **生产环境**: 检测到WebView2时使用真实数据和桥接通信
+- **演示模式**: `VITE_DEMO_MODE=true`时使用模拟数据
+- **开发模式**: `VITE_DEMO_MODE=false`时连接开发API
+
+### 演示模式特性
+- **完整UI功能**: 保留所有界面和交互功能
+- **逼真模拟数据**: 包含25个进程、40条防火墙规则、实时流量图表
+- **智能数据生成**: 模拟工作时间流量模式、地理分布、协议统计
+- **实时更新模拟**: WebSocket数据推送、图表动画、状态变化
+- **用户提示界面**: 演示横幅、状态指示器、下载引导
+
+### 核心组件
+- `environmentDetector.ts`: 环境检测和数据源选择
+- `mockDataService.ts`: 模拟数据生成器
+- `dataSourceAdapter.ts`: 数据源适配器统一接口
+- `DemoBanner.vue`: 演示模式横幅组件
+- `DemoModeIndicator.vue`: 演示状态指示器
+
+### 部署配置
+- **开发模式**: `npm run dev` (连接真实API)
+- **演示开发**: `npm run dev:demo` (使用模拟数据)
+- **演示构建**: `npm run build:demo` (用于GitHub Pages)
+- **自动部署**: GitHub Actions工作流自动部署到Pages
+
+### 测试工具
+内置演示模式测试工具，控制台运行 `testDemoMode()` 验证功能。
+
 ## 开发注意事项
 - 主要使用虚拟列表组件处理大数据量
 - WebView2环境下运行，注意桥接通信
 - 支持开发时显示调试导航(IS_SHOW_GENERATE_ROUTER控制)
+- 演示模式完全独立，不影响生产功能
 - 使用TODO.md作为开发任务管理工具
 
 

@@ -1,6 +1,7 @@
 import type { MessagePayload } from '@/correspond/IBridge'
 import { CSharpBridge } from '@/correspond/CSharpBridge'
 import { TauriBridge } from '@/correspond/TauriBridge'
+import { environmentDetector } from '@/utils/environmentDetector'
 
 interface BridgeMessagePayload<T = any> {
   channel: string
@@ -19,7 +20,10 @@ class CSharpBridgeV2 {
         ;(window as any).externalFunctions.__BRIDGE_LISTEN__ = CSharpBridgeV2.CSBridge.bridgeInvoke
         ;(window as any).externalFunctions.__BRIDGE_LISTEN__FUNCTIONS__ = new Map()
       } else {
-        console.error('Not running in WebView2 environment')
+        // 只在非演示模式下显示此警告
+        if (!environmentDetector.shouldUseMockData()) {
+          console.warn('[CSharpBridgeV2] WebView2环境未检测到，运行在浏览器模式')
+        }
       }
     }
     return CSharpBridgeV2.CSBridge

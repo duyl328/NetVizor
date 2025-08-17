@@ -5,6 +5,8 @@ import { WebSocketResponse } from '@/types/websocket'
 import { ApplicationType } from '@/types/infoModel'
 import { httpClient } from '@/utils/http'
 import { ResponseModel, SubscriptionInfo } from '@/types/response'
+import { environmentDetector } from '@/utils/environmentDetector'
+import { dataSourceAdapter } from '@/utils/dataSourceAdapter'
 
 export const useApplicationStore = defineStore('applicationInfoSub', () => {
   const appInfos: Ref<ApplicationType[]> = ref([])
@@ -123,6 +125,17 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
    * 订阅信息
    */
   function subscribe() {
+    console.log('[ApplicationStore] 订阅应用程序信息')
+
+    // 检查演示模式
+    if (environmentDetector.shouldUseMockData()) {
+      console.log('[ApplicationStore] 演示模式：使用模拟数据')
+      loadDemoData()
+      startDemoDataUpdates()
+      return
+    }
+
+    // 真实模式：使用WebSocket
     const webSocketStore = useWebSocketStore()
     const { isOpen } = storeToRefs(webSocketStore)
     watch(
@@ -140,6 +153,34 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
       },
       { immediate: true },
     )
+  }
+
+  // 加载演示数据
+  async function loadDemoData() {
+    try {
+      const applications = await dataSourceAdapter.getApplicationList()
+      console.log('[ApplicationStore] 加载演示数据:', applications.length, '个应用程序')
+      appInfos.value = applications as ApplicationType[]
+    } catch (error) {
+      console.error('[ApplicationStore] 加载演示数据失败:', error)
+    }
+  }
+
+  // 启动演示数据更新
+  function startDemoDataUpdates() {
+    const subscriptionId = dataSourceAdapter.subscribeRealtimeData((data) => {
+      if (data.type === 'application_update' && data.data) {
+        // 随机更新一个应用的数据
+        const appData = data.data as ApplicationType
+        const index = appInfos.value.findIndex(a => a.id === appData.id)
+        if (index !== -1) {
+          appInfos.value[index] = appData
+        }
+        console.log('[ApplicationStore] 实时更新应用数据:', appData.name)
+      }
+    }, 5000) // 每5秒更新一次
+
+    console.log('[ApplicationStore] 演示模式实时更新已启动:', subscriptionId)
   }
 
   function unsubscribe() {
