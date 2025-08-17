@@ -250,8 +250,22 @@ public class TrayIconManager : IDisposable
     {
         try
         {
-            // 尝试多种路径来加载图标
-            string[] possiblePaths = {
+            // 首先尝试从嵌入资源加载图标
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var resourceName = "Shell.Assets.Icons.app.ico";
+
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            {
+                if (stream != null)
+                {
+                    Log.Info($"成功从资源加载托盘图标: {resourceName}");
+                    return new Icon(stream);
+                }
+            }
+
+            // 如果资源加载失败，尝试从文件系统加载
+            string[] possiblePaths =
+            {
                 "Assets/Icons/app.ico",
                 "./Assets/Icons/app.ico",
                 "Shell/Assets/Icons/app.ico",
@@ -264,7 +278,7 @@ public class TrayIconManager : IDisposable
             {
                 if (File.Exists(path))
                 {
-                    Log.Info($"成功加载托盘图标: {path}");
+                    Log.Info($"成功从文件系统加载托盘图标: {path}");
                     return new Icon(path);
                 }
             }
