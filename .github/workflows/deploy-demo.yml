@@ -41,7 +41,7 @@ jobs:
 
       - name: 安装依赖
         working-directory: src/NetVizor.Frontend
-        run: npm ci
+        run: npm install
 
       - name: 构建演示版本
         working-directory: src/NetVizor.Frontend

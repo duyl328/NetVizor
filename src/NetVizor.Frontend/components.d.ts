@@ -17,7 +17,6 @@ declare module 'vue' {
     IconEcosystem: typeof import('./src/components/icons/IconEcosystem.vue')['default']
     IconSupport: typeof import('./src/components/icons/IconSupport.vue')['default']
     IconTooling: typeof import('./src/components/icons/IconTooling.vue')['default']
-    NButton: typeof import('naive-ui')['NButton']
     NetworkConnectionPanel2: typeof import('./src/components/NetworkConnectionPanel2.vue')['default']
     NHighlight: typeof import('naive-ui')['NHighlight']
     NIcon: typeof import('naive-ui')['NIcon']

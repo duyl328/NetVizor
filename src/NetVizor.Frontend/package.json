@@ -31,7 +31,7 @@
     "unplugin-vue-components": "^28.7.0",
     "vicons": "^0.0.1",
     "vue": "^3.5.13",
-    "vue-echarts": "^7.0.3",
+    "vue-echarts": "8.0.0-beta.1",
     "vue-router": "^4.5.0",
     "vue-virtual-scroller": "2.0.0-beta.8"
   },
