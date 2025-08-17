@@ -17,7 +17,8 @@ public partial class WebPanel : System.Windows.Controls.UserControl
 
         // Class1.Main2();
 
-        InitWebView();
+        // 延迟初始化WebView，避免构造函数中的异步调用
+        this.Loaded += WebPanel_Loaded;
 
         // 注册管理 WebSocket 事件
         // WebSocketManger();
@@ -25,6 +26,18 @@ public partial class WebPanel : System.Windows.Controls.UserControl
         // ETW 信息获取
         // 检查管理员权限
         // NewMethod();
+    }
+
+    private async void WebPanel_Loaded(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await InitWebViewAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"WebView初始化失败: {ex.Message}");
+        }
     }
 
     private static async Task NewMethod()
@@ -61,7 +74,7 @@ public partial class WebPanel : System.Windows.Controls.UserControl
         });
     }
 
-    private async void InitWebView()
+    private async Task InitWebViewAsync()
     {
         // 初始化 WebView2
         await webView.EnsureCoreWebView2Async();

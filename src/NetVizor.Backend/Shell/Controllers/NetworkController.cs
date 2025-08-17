@@ -10,11 +10,14 @@ using Data;
 using Data.Models;
 using Data.Repositories;
 using Shell.Utils;
+using Shell.Services;
 
 namespace Shell.Controllers;
 
 public class NetworkController : BaseController
 {
+    private static ServerStartupManager? _serverManager;
+
     public async Task GetInterfacesAsync(HttpContext context)
     {
         try
@@ -110,7 +113,8 @@ public class NetworkController : BaseController
             var availableRanges = new List<object>();
             var now = DateTimeOffset.UtcNow;
 
-            var hasHourlyData = await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("hourly", now.AddHours(-1).ToUnixTimeSeconds());
+            var hasHourlyData =
+                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("hourly", now.AddHours(-1).ToUnixTimeSeconds());
             if (hasHourlyData)
             {
                 availableRanges.Add(new
@@ -122,7 +126,8 @@ public class NetworkController : BaseController
                 });
             }
 
-            var hasDailyData = await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-1).ToUnixTimeSeconds());
+            var hasDailyData =
+                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-1).ToUnixTimeSeconds());
             if (hasDailyData)
             {
                 availableRanges.Add(new
@@ -134,7 +139,8 @@ public class NetworkController : BaseController
                 });
             }
 
-            var hasWeeklyData = await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-7).ToUnixTimeSeconds());
+            var hasWeeklyData =
+                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-7).ToUnixTimeSeconds());
             if (hasWeeklyData)
             {
                 availableRanges.Add(new
@@ -146,7 +152,8 @@ public class NetworkController : BaseController
                 });
             }
 
-            var hasMonthlyData = await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-30).ToUnixTimeSeconds());
+            var hasMonthlyData =
+                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-30).ToUnixTimeSeconds());
             if (hasMonthlyData)
             {
                 availableRanges.Add(new
@@ -218,7 +225,8 @@ public class NetworkController : BaseController
                 _ => (now.AddHours(-1).ToUnixTimeSeconds(), "hour")
             };
 
-            var points = await NetworkApiHelper.GetTrafficTrendsAsync(mappedTimeRange, interfaceId, startTime, now.ToUnixTimeSeconds());
+            var points = await NetworkApiHelper.GetTrafficTrendsAsync(mappedTimeRange, interfaceId, startTime,
+                now.ToUnixTimeSeconds());
 
             await WriteJsonResponseAsync(context, new ResponseModel<object>
             {
@@ -306,5 +314,94 @@ public class NetworkController : BaseController
         {
             await WriteErrorResponseAsync(context, $"获取Top应用流量数据失败: {ex.Message}", 500);
         }
+    }
+
+    /// <summary>
+    /// 获取实时网络统计数据
+    /// </summary>
+    public async Task GetRealTimeStatsAsync(HttpContext context)
+    {
+        try
+        {
+            if (_serverManager == null)
+            {
+                await WriteErrorResponseAsync(context, "网络监控服务未启动", 503);
+                return;
+            }
+
+            // 获取所有活跃进程的实时统计
+            var activeProcessStats = _serverManager.GetAllActiveProcessStats();
+
+            // 计算总体统计
+            var totalUploadSpeed = activeProcessStats.Sum(s => s.BytesOutPerSecond);
+            var totalDownloadSpeed = activeProcessStats.Sum(s => s.BytesInPerSecond);
+            var totalSpeed = totalUploadSpeed + totalDownloadSpeed;
+
+            // 格式化进程列表
+            var processes = activeProcessStats.OrderByDescending(s => s.TotalBytesPerSecond)
+                .Take(20) // 只返回前20个活跃进程
+                .Select(s => new
+                {
+                    processId = s.ProcessId,
+                    processName = s.ProcessName,
+                    connectionCount = s.ConnectionCount,
+                    bytesInPerSecond = s.BytesInPerSecond,
+                    bytesOutPerSecond = s.BytesOutPerSecond,
+                    totalBytesPerSecond = s.TotalBytesPerSecond,
+                    formattedDownloadSpeed = s.FormattedDownloadSpeed,
+                    formattedUploadSpeed = s.FormattedUploadSpeed,
+                    formattedTotalSpeed = s.FormattedTotalSpeed,
+                    lastUpdate = s.LastUpdate
+                }).ToList();
+
+            var result = new
+            {
+                timestamp = DateTime.Now,
+                summary = new
+                {
+                    totalUploadSpeed = totalUploadSpeed,
+                    totalDownloadSpeed = totalDownloadSpeed,
+                    totalSpeed = totalSpeed,
+                    formattedUploadSpeed = FormatSpeed(totalUploadSpeed),
+                    formattedDownloadSpeed = FormatSpeed(totalDownloadSpeed),
+                    formattedTotalSpeed = FormatSpeed(totalSpeed),
+                    activeProcessCount = activeProcessStats.Count
+                },
+                processes = processes
+            };
+
+            await WriteJsonResponseAsync(context, new ResponseModel<object>
+            {
+                Success = true,
+                Data = result,
+                Message = "获取实时网络统计成功"
+            });
+        }
+        catch (Exception ex)
+        {
+            await WriteErrorResponseAsync(context, $"获取实时网络统计失败: {ex.Message}", 500);
+        }
+    }
+
+    /// <summary>
+    /// 设置ServerStartupManager实例（供启动时调用）
+    /// </summary>
+    public static void SetServerManager(ServerStartupManager serverManager)
+    {
+        _serverManager = serverManager;
+    }
+
+    /// <summary>
+    /// 格式化网速显示
+    /// </summary>
+    private static string FormatSpeed(double bytesPerSec)
+    {
+        if (bytesPerSec >= 1024 * 1024 * 1024)
+            return $"{bytesPerSec / (1024.0 * 1024 * 1024):F1} GB/s";
+        if (bytesPerSec >= 1024 * 1024)
+            return $"{bytesPerSec / (1024.0 * 1024):F1} MB/s";
+        if (bytesPerSec >= 1024)
+            return $"{bytesPerSec / 1024.0:F1} KB/s";
+        return $"{bytesPerSec:F0} B/s";
     }
 }

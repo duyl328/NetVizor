@@ -11,8 +11,8 @@
     Width="1200"
     MinHeight="600"
     MinWidth="800"
-    WindowStartupLocation="CenterScreen"
-    Icon="pack://application:,,,/Assets/Icons/app.ico">
-    
-    <userControls:WebPanel x:Name="WebPanel" />
+    WindowStartupLocation="CenterScreen">
+
+    <Border x:Name="WebContainer">
+    </Border>
 </Window>

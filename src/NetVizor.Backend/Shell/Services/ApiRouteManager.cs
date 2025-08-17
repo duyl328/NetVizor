@@ -34,10 +34,7 @@ public class ApiRouteManager : IDisposable
         _server.UseMiddleware(Middlewares.Cors);
 
         // 基础API
-        _server.Get("/api", async (context) => 
-        {
-            await context.Response.WriteJsonAsync(new { message = "Hi!" });
-        });
+        _server.Get("/api", async (context) => { await context.Response.WriteJsonAsync(new { message = "Hi!" }); });
 
         // 订阅相关API
         RegisterSubscriptionRoutes();
@@ -120,6 +117,7 @@ public class ApiRouteManager : IDisposable
         _server.Get("/api/realtime/active-apps", _systemController.GetActiveAppsAsync);
         _server.Get("/api/system/info", _systemController.GetSystemInfoAsync);
         _server.Get("/api/system/collection-stats", _systemController.GetCollectionStatsAsync);
+        _server.Get("/api/network/realtime-stats", _networkController.GetRealTimeStatsAsync);
     }
 
     private void RegisterAppAnalysisRoutes()

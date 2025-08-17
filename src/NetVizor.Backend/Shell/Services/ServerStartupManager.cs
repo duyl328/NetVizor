@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Application;
 using Application.Utils;
@@ -8,6 +11,12 @@ using Common.Net.WebSocketConn;
 using Common.Utils;
 using Utils.ETW.Etw;
 using Utils.ETW.Core;
+using Utils.ETW.Models;
+using Infrastructure.Models;
+using Infrastructure.utils;
+using Data;
+using Data.Models;
+using Shell.Controllers;
 
 namespace Shell.Services;
 
@@ -16,6 +25,7 @@ public class ServerStartupManager
     private readonly ApiRouteManager _apiRouteManager;
     private readonly StaticFileServer _staticFileServer;
     private HighPrecisionNetworkMonitor? _networkMonitor;
+    private EnhancedEtwNetworkManager? _etwNetworkManager;
 
     public ServerStartupManager()
     {
@@ -57,7 +67,15 @@ public class ServerStartupManager
             // 启动监控
             _networkMonitor.Start();
 
+            // 同时启动ETW监控以确保兼容性和数据完整性
+            _etwNetworkManager = new EnhancedEtwNetworkManager();
+            _etwNetworkManager.StartMonitoring();
+
             Log.Info("高精度网络监控已启动 - 基于TCP连接表方案，解决ETW突发流量统计不准确问题");
+            Log.Info("ETW网络监控已启动 - 确保数据完整性和兼容性");
+
+            // 设置NetworkController的ServerManager引用
+            NetworkController.SetServerManager(this);
         }
         catch (Exception ex)
         {
@@ -117,6 +135,8 @@ public class ServerStartupManager
         _apiRouteManager?.Stop();
         _networkMonitor?.Stop();
         _networkMonitor?.Dispose();
+        _etwNetworkManager?.StopMonitoring();
+        _etwNetworkManager?.Dispose();
     }
 
     #region 网络监控事件处理器
@@ -124,25 +144,109 @@ public class ServerStartupManager
     /// <summary>
     /// 处理单个进程的网络统计更新
     /// </summary>
-    private void OnProcessNetworkStatsUpdated(HighPrecisionNetworkMonitor.ProcessNetworkStats stats)
+    private async void OnProcessNetworkStatsUpdated(HighPrecisionNetworkMonitor.ProcessNetworkStats stats)
     {
-        // 可以在这里将统计数据推送给前端或写入数据库
-        Log.Debug($"进程网络统计更新: {stats}");
+        try
+        {
+            // 将统计数据推送给前端
+            var networkData = new
+            {
+                type = "process_network_stats",
+                data = new
+                {
+                    processId = stats.ProcessId,
+                    processName = stats.ProcessName,
+                    connectionCount = stats.ConnectionCount,
+                    bytesInPerSecond = stats.BytesInPerSecond,
+                    bytesOutPerSecond = stats.BytesOutPerSecond,
+                    totalBytesPerSecond = stats.TotalBytesPerSecond,
+                    formattedDownloadSpeed = stats.FormattedDownloadSpeed,
+                    formattedUploadSpeed = stats.FormattedUploadSpeed,
+                    formattedTotalSpeed = stats.FormattedTotalSpeed,
+                    lastUpdate = stats.LastUpdate
+                }
+            };
 
-        // 示例：通过WebSocket推送给前端
-        // WebSocketManager.Instance.BroadcastMessage("network_stats", stats);
+            // 通过WebSocket推送给前端
+            var message = new Common.Net.WebSocketConn.ResponseMessage
+            {
+                Type = "network_stats",
+                Data = networkData,
+                Success = true
+            };
+            await WebSocketManager.Instance.BroadcastMessage(message);
+
+            // 更新到GlobalNetworkMonitor以保持兼容性
+            UpdateGlobalNetworkMonitorWithStats(stats);
+
+            Log.Debug($"进程网络统计更新: {stats}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"处理进程网络统计更新时出错: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// 处理所有活跃进程的网络统计批量更新
     /// </summary>
-    private void OnAllProcessStatsUpdated(List<HighPrecisionNetworkMonitor.ProcessNetworkStats> statsList)
+    private async void OnAllProcessStatsUpdated(List<HighPrecisionNetworkMonitor.ProcessNetworkStats> statsList)
     {
-        Log.Debug($"批量网络统计更新: {statsList.Count} 个活跃进程");
+        try
+        {
+            Log.Debug($"批量网络统计更新: {statsList.Count} 个活跃进程");
 
-        // 示例：可以在这里进行数据聚合或向前端推送汇总信息
-        var totalSpeed = statsList.Sum(s => s.TotalBytesPerSecond);
-        Log.Info($"系统总网速: {FormatSpeed(totalSpeed)}");
+            // 计算系统总流量
+            var totalUploadSpeed = statsList.Sum(s => s.BytesOutPerSecond);
+            var totalDownloadSpeed = statsList.Sum(s => s.BytesInPerSecond);
+            var totalSpeed = totalUploadSpeed + totalDownloadSpeed;
+
+            // 创建全局网络统计数据
+            var globalStats = new
+            {
+                type = "global_network_stats",
+                data = new
+                {
+                    activeProcessCount = statsList.Count,
+                    totalUploadSpeed = totalUploadSpeed,
+                    totalDownloadSpeed = totalDownloadSpeed,
+                    totalSpeed = totalSpeed,
+                    formattedUploadSpeed = FormatSpeed(totalUploadSpeed),
+                    formattedDownloadSpeed = FormatSpeed(totalDownloadSpeed),
+                    formattedTotalSpeed = FormatSpeed(totalSpeed),
+                    timestamp = DateTime.Now,
+                    topProcesses = statsList.OrderByDescending(s => s.TotalBytesPerSecond)
+                        .Take(5)
+                        .Select(s => new
+                        {
+                            processId = s.ProcessId,
+                            processName = s.ProcessName,
+                            speed = s.TotalBytesPerSecond,
+                            formattedSpeed = s.FormattedTotalSpeed
+                        })
+                        .ToList()
+                }
+            };
+
+            // 推送全局统计给前端
+            var globalMessage = new Common.Net.WebSocketConn.ResponseMessage
+            {
+                Type = "global_network_stats",
+                Data = globalStats,
+                Success = true
+            };
+            await WebSocketManager.Instance.BroadcastMessage(globalMessage);
+
+            // 存储全局网络数据到数据库
+            _ = Task.Run(() => SaveGlobalNetworkStatsAsync(totalUploadSpeed, totalDownloadSpeed));
+
+            Log.Info(
+                $"系统总网速: {FormatSpeed(totalSpeed)} (↑{FormatSpeed(totalUploadSpeed)} ↓{FormatSpeed(totalDownloadSpeed)})");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"处理批量网络统计更新时出错: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -186,6 +290,69 @@ public class ServerStartupManager
     {
         return _networkMonitor?.GetAllActiveProcessStats() ??
                new List<HighPrecisionNetworkMonitor.ProcessNetworkStats>();
+    }
+
+    /// <summary>
+    /// 更新GlobalNetworkMonitor以保持兼容性
+    /// </summary>
+    private void UpdateGlobalNetworkMonitorWithStats(HighPrecisionNetworkMonitor.ProcessNetworkStats stats)
+    {
+        try
+        {
+            // 创建一个NetworkModel来更新GlobalNetworkMonitor
+            var networkModel = new NetworkModel
+            {
+                ProcessId = (int)stats.ProcessId,
+                ThreadId = 0, // 使用默认值
+                ProcessName = stats.ProcessName,
+                SourceIp = IPAddress.Loopback, // 使用默认值
+                DestinationIp = IPAddress.Loopback, // 使用默认值 
+                SourcePort = 0, // 使用默认值
+                DestinationPort = 0, // 使用默认值
+                ConnectType = ProtocolType.TCP, // 使用TCP
+                IsPartialConnection = false, // 使用默认值
+                BytesSent = (long)stats.BytesOutPerSecond, // 当前秒的发送字节数
+                BytesReceived = (long)stats.BytesInPerSecond, // 当前秒的接收字节数
+                LastSeenTime = DateTime.Now,
+                RecordTime = stats.LastUpdate,
+                IsIncrementalData = true,
+                State = ConnectionState.Connected
+            };
+
+            // 更新到GlobalNetworkMonitor
+            GlobalNetworkMonitor.Instance.UpdateConnectionInfo(networkModel);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"更新GlobalNetworkMonitor时出错: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 异步保存全局网络统计到数据库
+    /// </summary>
+    private async Task SaveGlobalNetworkStatsAsync(double uploadSpeed, double downloadSpeed)
+    {
+        try
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            // 创建全局网络记录
+            var globalNetwork = new GlobalNetwork
+            {
+                Timestep = timestamp,
+                Upload = (long)uploadSpeed,
+                Download = (long)downloadSpeed,
+                NetworkCardGuid = "system_total" // 使用固定值表示系统总计
+            };
+
+            // 保存到数据库
+            await DatabaseManager.Instance.Networks.SaveGlobalNetworkAsync(globalNetwork);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"保存全局网络统计到数据库时出错: {ex.Message}");
+        }
     }
 
     #endregion
