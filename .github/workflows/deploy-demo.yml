@@ -1,0 +1,66 @@
+name: Deploy Demo to GitHub Pages
+
+on:
+  # 当推送到main分支时触发
+  push:
+    branches: [ main ]
+  
+  # 允许手动触发
+  workflow_dispatch:
+
+# 设置GITHUB_TOKEN的权限，以允许部署到GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 确保只有一个部署同时运行，跳过排队运行的部分
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # 构建作业
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: 'npm'
+          cache-dependency-path: src/NetVizor.Frontend/package-lock.json
+
+      - name: 配置 GitHub Pages  
+        uses: actions/configure-pages@v4
+        with:
+          static_site_generator: vite
+
+      - name: 安装依赖
+        working-directory: src/NetVizor.Frontend
+        run: npm ci
+
+      - name: 构建演示版本
+        working-directory: src/NetVizor.Frontend
+        run: npm run build:demo
+
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: src/NetVizor.Frontend/dist
+
+  # 部署作业
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
