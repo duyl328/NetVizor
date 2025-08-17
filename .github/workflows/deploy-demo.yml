@@ -31,17 +31,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "18"
-          cache: 'npm'
-          cache-dependency-path: src/NetVizor.Frontend/package-lock.json
 
       - name: 配置 GitHub Pages  
         uses: actions/configure-pages@v4
         with:
           static_site_generator: vite
 
-      - name: 安装依赖
+      - name: 清理并安装依赖
         working-directory: src/NetVizor.Frontend
-        run: npm install
+        run: |
+          rm -rf node_modules package-lock.json pnpm-lock.yaml
+          npm install --force
 
       - name: 构建演示版本
         working-directory: src/NetVizor.Frontend
