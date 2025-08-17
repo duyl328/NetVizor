@@ -5,7 +5,7 @@
       <div class="modal-header">
         <div class="header-left">
           <img
-            v-if="analysisData?.appInfo.icon"
+            v-if="analysisData?.appInfo?.icon"
             :src="'data:image/png;base64,' + analysisData.appInfo.icon"
             class="app-icon"
             @error="handleIconError"
@@ -13,10 +13,10 @@
           <n-icon v-else :component="DesktopOutline" class="app-icon-fallback" />
 
           <div class="header-info">
-            <h3 class="app-name">{{ analysisData?.appInfo.name || 'Unknown Application' }}</h3>
+            <h3 class="app-name">{{ analysisData?.appInfo?.name || 'Unknown Application' }}</h3>
             <p class="app-details">
-              {{ analysisData?.appInfo.company || 'Unknown Company' }}
-              <span v-if="analysisData?.appInfo.version"
+              {{ analysisData?.appInfo?.company || 'Unknown Company' }}
+              <span v-if="analysisData?.appInfo?.version"
                 >• v{{ analysisData.appInfo.version }}</span
               >
             </p>
@@ -40,30 +40,30 @@
       <!-- 统计概览卡片 -->
       <div class="stats-overview">
         <div class="stat-card">
-          <div class="stat-value">{{ formatBytes(analysisData?.summary.totalTraffic || 0) }}</div>
+          <div class="stat-value">{{ formatBytes(analysisData?.summary?.totalTraffic || 0) }}</div>
           <div class="stat-label">总流量</div>
           <div class="stat-trend">
-            <span class="upload">↑ {{ formatBytes(analysisData?.summary.totalUpload || 0) }}</span>
+            <span class="upload">↑ {{ formatBytes(analysisData?.summary?.totalUpload || 0) }}</span>
             <span class="download"
-              >↓ {{ formatBytes(analysisData?.summary.totalDownload || 0) }}</span
+              >↓ {{ formatBytes(analysisData?.summary?.totalDownload || 0) }}</span
             >
           </div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-value">{{ analysisData?.summary.totalConnections || 0 }}</div>
+          <div class="stat-value">{{ analysisData?.summary?.totalConnections || 0 }}</div>
           <div class="stat-label">总连接数</div>
-          <div class="stat-extra">{{ analysisData?.summary.uniqueRemoteIPs || 0 }} 个远程IP</div>
+          <div class="stat-extra">{{ analysisData?.summary?.uniqueRemoteIPs || 0 }} 个远程IP</div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-value">{{ analysisData?.summary.uniqueRemotePorts || 0 }}</div>
+          <div class="stat-value">{{ analysisData?.summary?.uniqueRemotePorts || 0 }}</div>
           <div class="stat-label">使用端口</div>
           <div class="stat-extra">{{ timeRangeText }}</div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-value">{{ analysisData?.portAnalysis.length || 0 }}</div>
+          <div class="stat-value">{{ analysisData?.portAnalysis?.length || 0 }}</div>
           <div class="stat-label">活跃端口</div>
           <div class="stat-extra">多协议通信</div>
         </div>
@@ -116,7 +116,7 @@
                     </h4>
                     <div class="section-controls">
                       <span class="connection-count"
-                        >{{ analysisData?.topConnections.length || 0 }} 个连接</span
+                        >{{ analysisData?.topConnections?.length || 0 }} 个连接</span
                       >
                       <n-button size="small" @click="refreshData">
                         <template #icon>
@@ -209,7 +209,7 @@
                     </h4>
                     <div class="section-controls">
                       <span class="data-count"
-                        >共 {{ analysisData?.topConnections.length || 0 }} 条记录</span
+                        >共 {{ analysisData?.topConnections?.length || 0 }} 条记录</span
                       >
                       <n-button size="small" @click="refreshData">
                         <template #icon>

@@ -124,13 +124,13 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
   /**
    * 订阅信息
    */
-  function subscribe() {
-    console.log('[ApplicationStore] 订阅应用程序信息')
+  async function subscribe() {
+    console.log(`[${new Date().toLocaleTimeString()}] [ApplicationStore] 订阅应用程序信息`)
 
     // 检查演示模式
     if (environmentDetector.shouldUseMockData()) {
-      console.log('[ApplicationStore] 演示模式：使用模拟数据')
-      loadDemoData()
+      console.log(`[${new Date().toLocaleTimeString()}] [ApplicationStore] 演示模式：使用模拟数据`)
+      await loadDemoData() // 等待初始数据加载完成
       startDemoDataUpdates()
       return
     }
@@ -159,7 +159,7 @@ export const useApplicationStore = defineStore('applicationInfoSub', () => {
   async function loadDemoData() {
     try {
       const applications = await dataSourceAdapter.getApplicationList()
-      console.log('[ApplicationStore] 加载演示数据:', applications.length, '个应用程序')
+      console.log(`[${new Date().toLocaleTimeString()}] [ApplicationStore] 加载演示数据:`, applications.length, '个应用程序')
       appInfos.value = applications as ApplicationType[]
     } catch (error) {
       console.error('[ApplicationStore] 加载演示数据失败:', error)

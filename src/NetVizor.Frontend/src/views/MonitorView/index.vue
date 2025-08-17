@@ -123,9 +123,11 @@ const resetLayout = () => {
 const useApplicationStore1 = useApplicationStore()
 
 // 键盘快捷键
-onMounted(() => {
-  // 创建事件绑定
-  useApplicationStore1.subscribe()
+onMounted(async () => {
+  // 创建事件绑定 - 确保按正确顺序加载数据
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorView] 开始订阅应用程序信息`)
+  await useApplicationStore1.subscribe()
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorView] 应用程序信息订阅完成`)
 
 
   const handleKeydown = (event: KeyboardEvent) => {

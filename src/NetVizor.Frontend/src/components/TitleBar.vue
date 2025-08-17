@@ -1,60 +1,83 @@
 <template>
-  <div class="title-bar">
-    <div class="title-bar-left">
-      <div class="app-title">
-        <div class="app-icon">
-          <span>N</span>
+  <div class="title-bar-wrapper">
+    <!-- 演示模式横幅 -->
+    <div v-if="isDemoMode" class="demo-banner-compact">
+      <div class="demo-content">
+        <div class="demo-info">
+          <n-icon :component="InformationCircleOutline" size="18" class="demo-icon" />
+          <span class="demo-text">🎯 在线演示版本 - 体验完整功能</span>
+          <span class="demo-badge">DEMO</span>
         </div>
-        <span class="app-name">NetVisor</span>
-      </div>
-
-      <div class="view-switcher">
-        <n-tabs
-          type="segment"
-          class="n-tab-group-set"
-          animated
-          :value="activeTab"
-          @update:value="handleTabChange"
-        >
-          <n-tab
-            class="n-tab-item-set"
-            v-for="tab in tabConfig"
-            :key="tab.name"
-            :name="tab.name"
-            :tab="tab.label"
-          />
-        </n-tabs>
+        <div class="demo-actions">
+          <n-button size="tiny" type="primary" @click="handleDownload">
+            <template #icon>
+              <n-icon :component="DownloadOutline" />
+            </template>
+            下载
+          </n-button>
+        </div>
       </div>
     </div>
 
-    <div class="title-bar-right">
-      <div class="status-indicator" :class="statusClass">
-        <div class="status-dot"></div>
-        <span>{{ statusText }}</span>
+    <div class="title-bar">
+      <div class="title-bar-left">
+        <div class="app-title">
+          <div class="app-icon">
+            <span>N</span>
+          </div>
+          <span class="app-name">NetVisor</span>
+        </div>
+
+        <div class="view-switcher">
+          <n-tabs
+            type="segment"
+            class="n-tab-group-set"
+            animated
+            :value="activeTab"
+            @update:value="handleTabChange"
+          >
+            <n-tab
+              class="n-tab-item-set"
+              v-for="tab in tabConfig"
+              :key="tab.name"
+              :name="tab.name"
+              :tab="tab.label"
+            />
+          </n-tabs>
+        </div>
       </div>
 
-      <n-button circle size="small" quaternary @click="openSettings">
-        <template #icon>
-          <n-icon :component="SettingsOutline" />
-        </template>
-      </n-button>
+      <div class="title-bar-right">
+        <div class="status-indicator" :class="statusClass">
+          <div class="status-dot"></div>
+          <span>{{ statusText }}</span>
+        </div>
 
-      <n-button circle size="small" quaternary @click="toggleDarkMode">
-        <template #icon>
-          <n-icon :component="isDark ? SunnyOutline : MoonOutline" />
-        </template>
-      </n-button>
+        <n-button circle size="small" quaternary @click="openSettings">
+          <template #icon>
+            <n-icon :component="SettingsOutline" />
+          </template>
+        </n-button>
+
+        <n-button circle size="small" quaternary @click="toggleDarkMode">
+          <template #icon>
+            <n-icon :component="isDark ? SunnyOutline : MoonOutline" />
+          </template>
+        </n-button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { NButton, NIcon, NTabs, NTab } from 'naive-ui'
-import { SettingsOutline, MoonOutline, SunnyOutline } from '@vicons/ionicons5'
+import { SettingsOutline, MoonOutline, SunnyOutline, InformationCircleOutline, DownloadOutline } from '@vicons/ionicons5'
 import { computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import { useThemeStore } from '@/stores/theme'
 import { useWebSocketStore } from '@/stores/websocketStore'
+import { environmentDetector } from '@/utils/environmentDetector'
 import { WebSocketState } from '@/types/websocket'
 
 // region 路由的激活和绑定
@@ -134,6 +157,15 @@ const openSettings = () => {
   console.log('打开设置')
 }
 // endregion
+
+// region 演示模式
+const message = useMessage()
+const isDemoMode = computed(() => environmentDetector.shouldUseMockData())
+
+const handleDownload = () => {
+  message.info('完整版本下载功能即将开放，敬请期待！')
+}
+// endregion
 </script>
 
 <style scoped>
@@ -184,9 +216,113 @@ const openSettings = () => {
   transition: all 0.3s ease !important;
 }
 
+/* 标题栏包装器 */
+.title-bar-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* 演示模式紧凑横条 */
+.demo-banner-compact {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+  color: white;
+  padding: 8px 24px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 添加动态背景效果 */
+.demo-banner-compact::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.demo-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.demo-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.demo-icon {
+  color: #fbbf24;
+  animation: pulse-icon 2s infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.demo-text {
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.demo-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
+  to { box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+}
+
+.demo-actions .n-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.demo-actions .n-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
 /* 顶部标题栏 */
 .title-bar {
-  height: 100%;
+  height: 60px;
   min-height: 60px;
   border-bottom: 1px solid var(--border-primary);
   background: var(--bg-overlay);
@@ -195,9 +331,6 @@ const openSettings = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .title-bar-left {

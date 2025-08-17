@@ -184,9 +184,10 @@ class DataSourceAdapter {
   // ================= 模拟数据实现 =================
 
   private async getMockProcessList(): Promise<ProcessType[]> {
-    // 模拟网络延迟
-    await this.delay(100, 300)
-    return mockDataService.generateProcessList(25)
+    // 演示模式立即返回数据，不模拟延迟
+    const processes = mockDataService.generateProcessList(8) // 减少到8个进程，更符合实际
+    console.log(`[${new Date().toLocaleTimeString()}] [DataAdapter] 生成演示进程数据:`, processes.length, '个进程')
+    return processes
   }
 
   private async getMockConnectionList(): Promise<ConnectionInfo[]> {
@@ -202,8 +203,9 @@ class DataSourceAdapter {
   }
 
   private async getMockApplicationList(): Promise<any[]> {
-    await this.delay(100, 200)
-    return mockDataService.generateApplicationList(15)
+    const applications = mockDataService.generateApplicationList(15)
+    console.log(`[${new Date().toLocaleTimeString()}] [DataAdapter] 生成演示应用数据:`, applications.length, '个应用')
+    return applications
   }
 
   private async getMockFirewallStatus(): Promise<FirewallStatus> {

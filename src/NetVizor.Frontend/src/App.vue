@@ -161,9 +161,6 @@ const getLayout = (route) => {
         <n-loading-bar-provider>
           <n-global-style />
 
-      <!-- 演示模式横幅 -->
-      <DemoBanner v-if="isDemoMode" position="top" :persistent="true" />
-
       <!-- 演示模式指示器 -->
       <DemoModeIndicator
         v-if="isDemoMode"

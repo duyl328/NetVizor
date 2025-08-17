@@ -53,13 +53,37 @@ class MockDataService {
 
   private generateProcessName(): string {
     const processes = [
-      'chrome.exe', 'firefox.exe', 'edge.exe', 'notepad.exe', 'explorer.exe',
+      'chrome.exe', 'firefox.exe', 'msedge.exe', 'notepad.exe', 'explorer.exe',
       'code.exe', 'WeChat.exe', 'QQ.exe', 'Spotify.exe', 'Discord.exe',
       'steam.exe', 'obs64.exe', 'Photoshop.exe', 'winrar.exe', 'TeamViewer.exe',
       'node.exe', 'python.exe', 'java.exe', 'nginx.exe', 'httpd.exe',
-      'svchost.exe', 'system', 'csrss.exe', 'dwm.exe', 'conhost.exe'
+      'svchost.exe', 'csrss.exe', 'dwm.exe', 'conhost.exe'
     ]
     return this.randomChoice(processes)
+  }
+
+  // 根据应用名称生成相关的进程名
+  getRelatedProcessName(appName: string): string {
+    const appProcessMap: { [key: string]: string[] } = {
+      'chrome': ['chrome.exe', 'chrome_crashpad_handler.exe'],
+      'google chrome': ['chrome.exe', 'chrome_crashpad_handler.exe'],
+      'firefox': ['firefox.exe', 'firefox_helper.exe'],
+      'mozilla firefox': ['firefox.exe', 'firefox_helper.exe'],
+      'edge': ['msedge.exe', 'msedge_proxy.exe'],
+      'microsoft edge': ['msedge.exe', 'msedge_proxy.exe'],
+      'code': ['code.exe', 'code_helper.exe'],
+      'visual studio code': ['code.exe', 'code_helper.exe'],
+      'wechat': ['WeChat.exe', 'WeChatAppEx.exe'],
+      'qq': ['QQ.exe', 'QQExternal.exe'],
+      'discord': ['Discord.exe', 'discord_voice.exe'],
+      'steam': ['steam.exe', 'steamwebhelper.exe'],
+      'spotify': ['Spotify.exe', 'SpotifyWebHelper.exe']
+    }
+
+    const normalizedAppName = appName.toLowerCase().replace(/\s+/g, ' ')
+    const relatedProcesses = appProcessMap[normalizedAppName] || [this.generateProcessName()]
+    
+    return this.randomChoice(relatedProcesses)
   }
 
   private generateDomainName(): string {
@@ -112,7 +136,7 @@ class MockDataService {
   generateProcessInfo(): ProcessType {
     const processName = this.generateProcessName()
     const startTime = new Date(Date.now() - this.randomInt(0, 86400000)) // 过去24小时内
-    const connectionCount = this.randomInt(0, 20)
+    const connectionCount = this.randomInt(2, 15) // 确保每个进程至少有2个连接
     const connections: ConnectionInfo[] = []
 
     const pid = this.processId++

@@ -206,7 +206,7 @@ defineExpose({
 
 // 计算图表配置
 const chartOption = computed<EChartsOption>(() => {
-  if (!props.data || props.loading) {
+  if (!props.data || props.loading || !props.data.appInfo || !props.data.topConnections) {
     return {
       title: {
         text: '暂无数据',
@@ -221,6 +221,21 @@ const chartOption = computed<EChartsOption>(() => {
   }
 
   const { appInfo, topConnections } = props.data
+
+  // 验证必要数据
+  if (!appInfo?.appId) {
+    return {
+      title: {
+        text: '应用信息缺失',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          color: 'var(--text-muted)',
+          fontSize: 16
+        }
+      }
+    }
+  }
 
   // 创建节点和边
   const nodes: any[] = []

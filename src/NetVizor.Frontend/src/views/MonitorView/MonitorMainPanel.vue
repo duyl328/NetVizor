@@ -122,7 +122,7 @@
         </div>
         <div class="filter-stats">
           <span class="stats-text">
-            已选择 {{ selectedProcessIds.size }} / {{ filteredProcesses.length }} 个进程
+            已选择 {{ selectedProcessIds.size }} / {{ displayProcesses.length }} 个进程
             {{ selectedProcessIds.size > 0 ? `· ${displayConnections.length} 个连接` : '' }}
           </span>
         </div>
@@ -367,6 +367,8 @@ import { useTrafficStore } from '@/stores/trafficStore'
 import type { ProcessType, ConnectionInfo, IPEndPoint } from '@/types/process'
 import { ConnectionState, FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
 import { convertFileSize } from '@/utils/fileUtil'
+import { environmentDetector } from '@/utils/environmentDetector'
+import { mockDataService } from '@/utils/mockDataService'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 const webSocketStore = useWebSocketStore()
@@ -383,8 +385,32 @@ const { filterText, isFiltering, filteredProcesses } = storeToRefs(filterStore)
 
 const trafficStore = useTrafficStore()
 
-// 订阅进程信息
-processStore.subscribe()
+// 立即输出基础日志
+console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🔥 组件脚本开始执行`)
+console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🌍 当前模式:`, import.meta.env.MODE)
+console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🎭 DEMO模式:`, import.meta.env.VITE_DEMO_MODE)
+
+// 为应用生成相关的进程数据
+const generateRelatedProcesses = async (appName: string): Promise<ProcessType[]> => {
+  const processes: ProcessType[] = []
+  
+  // 生成2-3个与应用相关的进程
+  const processCount = Math.random() > 0.5 ? 2 : 3
+  
+  for (let i = 0; i < processCount; i++) {
+    const relatedProcessName = mockDataService.getRelatedProcessName(appName)
+    const process = mockDataService.generateProcessInfo()
+    
+    // 修改进程名为相关名称
+    process.processName = relatedProcessName
+    process.mainModuleName = relatedProcessName
+    process.mainModulePath = `C:\\Program Files\\${appName}\\${relatedProcessName}`
+    
+    processes.push(process)
+  }
+  
+  return processes
+}
 
 // Props
 const props = defineProps<{
@@ -423,9 +449,9 @@ const virtualListHeight = computed(() => {
 
 // 计算统计数据
 const stats = computed(() => {
-  const activeProcesses = filteredProcesses.value.filter((p) => !p.hasExited)
-  const totalConnections = filteredProcesses.value.reduce((sum, p) => sum + p.connections.length, 0)
-  const activeConnections = filteredProcesses.value.reduce(
+  const activeProcesses = displayProcesses.value.filter((p) => !p.hasExited)
+  const totalConnections = displayProcesses.value.reduce((sum, p) => sum + p.connections.length, 0)
+  const activeConnections = displayProcesses.value.reduce(
     (sum, p) => sum + p.connections.filter((c) => c.isActive).length,
     0,
   )
@@ -434,7 +460,7 @@ const stats = computed(() => {
 
   return {
     activeProcesses: activeProcesses.length,
-    totalProcesses: filteredProcesses.value.length,
+    totalProcesses: displayProcesses.value.length,
     totalConnections,
     activeConnections,
     totalUploadSpeed,
@@ -473,22 +499,53 @@ const stopDataCollection = () => {
   }
 }
 
+// 演示模式下根据选中应用过滤进程
+const displayProcesses = computed(() => {
+  if (environmentDetector.shouldUseMockData() && selectedApp.value) {
+    // 演示模式：根据选中应用过滤相关进程
+    const appName = selectedApp.value.name || selectedApp.value.processName
+    const relatedProcesses = filteredProcesses.value.filter(process => {
+      // 进程名包含应用名，或者是常见的系统进程
+      const processName = process.processName.toLowerCase()
+      const targetApp = appName.toLowerCase()
+      
+      return processName.includes(targetApp) || 
+             processName.includes(targetApp.replace('.exe', '')) ||
+             ['svchost.exe', 'system'].includes(processName) // 保留一些系统进程
+    })
+    
+    // 如果没有找到相关进程，返回前2个进程作为示例
+    if (relatedProcesses.length === 0) {
+      return filteredProcesses.value.slice(0, 2)
+    }
+    
+    // 最多显示3个相关进程
+    return relatedProcesses.slice(0, 3)
+  }
+  
+  // 非演示模式：使用所有过滤后的进程
+  return filteredProcesses.value
+})
+
 // 获取所有连接列表（统一显示）
 const allConnections = computed(() => {
   const connections: unknown[] = []
 
-  filteredProcesses.value.forEach((process) => {
-    process.connections.forEach((connection, index) => {
-      connections.push({
-        key: `${process.processId}-${index}`,
-        ...connection,
-        processId: process.processId,
-        processName: process.processName,
-        processInfo: process, // 添加完整的进程信息
+  displayProcesses.value.forEach((process) => {
+    if (process.connections && Array.isArray(process.connections)) {
+      process.connections.forEach((connection, index) => {
+        connections.push({
+          key: `${process.processId}-${index}`,
+          ...connection,
+          processId: process.processId,
+          processName: process.processName,
+          processInfo: process, // 添加完整的进程信息
+        })
       })
-    })
+    }
   })
 
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 计算连接列表: ${displayProcesses.value.length} 个进程, ${connections.length} 个连接`)
   return connections
 })
 
@@ -524,7 +581,7 @@ const displayConnections = computed(() => {
 
 // 获取进程选择器显示的进程信息
 const processSelectors = computed(() => {
-  return filteredProcesses.value.map(process => ({
+  return displayProcesses.value.map(process => ({
     ...process,
     isSelected: selectedProcessIds.value.has(process.processId),
     connectionCount: process.connections.length,
@@ -652,7 +709,7 @@ const formatUptime = (startTime: Date): string => {
 // 全选/清空进程
 const toggleAllProcesses = () => {
   if (selectedProcessIds.value.size === 0) {
-    filteredProcesses.value.forEach(p => selectedProcessIds.value.add(p.processId))
+    displayProcesses.value.forEach(p => selectedProcessIds.value.add(p.processId))
   } else {
     selectedProcessIds.value.clear()
   }
@@ -816,22 +873,106 @@ const updateMainViewHeight = () => {
 }
 
 // 监听选中应用的变化
-watch(selectedApp, (newVal, oldVal) => {
-  processStore.clear()
+watch(selectedApp, async (newVal, oldVal) => {
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🔄 应用切换:`, newVal?.name)
+  
+  if (!environmentDetector.shouldUseMockData()) {
+    // 非演示模式：清空进程数据
+    processStore.clear()
+    console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🗑️ 清空进程数据（非演示模式）`)
+  } else if (newVal) {
+    // 演示模式：为新选中的应用生成相关进程数据
+    console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🎭 演示模式为应用生成相关进程:`, newVal.name)
+    
+    try {
+      // 生成与应用相关的进程数据
+      const relatedProcesses = await generateRelatedProcesses(newVal.name)
+      console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] ✅ 生成了${relatedProcesses.length}个相关进程`)
+      
+      // 替换进程数据
+      processStore.clear()
+      processInfos.value.push(...relatedProcesses)
+    } catch (error) {
+      console.error(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] ❌ 生成相关进程失败:`, error)
+    }
+  }
+  
   filterStore.clearFilter()
   selectedProcessIds.value.clear()
-  console.log(newVal.id, '==========')
+  
+  // 演示模式下应用切换后重新自动选择进程
+  if (environmentDetector.shouldUseMockData() && newVal) {
+    // 等待下一个tick确保数据更新完成
+    await nextTick()
+    
+    // 自动选择新生成的进程
+    const newProcesses = processInfos.value.filter(p => p.connections && p.connections.length > 0)
+    if (newProcesses.length > 0) {
+      newProcesses.forEach(p => selectedProcessIds.value.add(p.processId))
+      selectedProcessIds.value = new Set(selectedProcessIds.value)
+      
+      console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🎯 应用切换后自动选择进程:`, {
+        进程数: newProcesses.length,
+        进程名: newProcesses.map(p => p.processName)
+      })
+    }
+  }
+  
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🎯 应用切换完成:`, newVal?.id)
 })
 
-onMounted(() => {
+onMounted(async () => {
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 🚀 组件已挂载，开始初始化`)
+  
   nextTick(() => {
     updateMainViewHeight()
   })
 
   window.addEventListener('resize', updateMainViewHeight)
 
+  // 订阅进程信息 - 在组件挂载后执行
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 💥 开始订阅进程信息`)
+  console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 📊 当前进程数量:`, processInfos.value.length)
+
+  try {
+    await processStore.subscribe()
+    console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] ✅ 进程信息订阅完成，当前数量:`, processInfos.value.length)
+  } catch (error) {
+    console.error(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] ❌ 进程信息订阅失败:`, error)
+  }
+
   // 启动数据收集
   startDataCollection()
+
+  // 演示模式下自动选择进程
+  if (environmentDetector.shouldUseMockData()) {
+    // 监听显示的进程数据变化，自动选择进程
+    let stopWatcher: (() => void) | null = null
+    
+    stopWatcher = watch(
+      displayProcesses,
+      (newProcesses) => {
+        if (newProcesses.length > 0 && selectedProcessIds.value.size === 0) {
+          // 自动选择所有显示的进程（已经过滤过，数量不多）
+          const processesToSelect = newProcesses.filter(p => p.connections && p.connections.length > 0)
+          
+          processesToSelect.forEach(p => selectedProcessIds.value.add(p.processId))
+          selectedProcessIds.value = new Set(selectedProcessIds.value)
+          
+          const totalConnections = processesToSelect.reduce((sum, p) => sum + p.connections.length, 0)
+          console.log(`[${new Date().toLocaleTimeString()}] [MonitorMainPanel] 演示模式自动选择进程:`, {
+            进程数: processesToSelect.length,
+            进程名: processesToSelect.map(p => p.processName),
+            总连接数: totalConnections
+          })
+          
+          // 只执行一次，然后停止监听
+          if (stopWatcher) stopWatcher()
+        }
+      },
+      { immediate: true, flush: 'sync' }
+    )
+  }
 
   watch(
     [isOpen, selectedApp],

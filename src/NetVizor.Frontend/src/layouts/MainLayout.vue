@@ -30,9 +30,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 顶部 bar 高度 */
+/* 顶部 bar 高度 - 根据演示模式动态调整 */
 .title-bar-style {
-  height: 60px;
+  /* 标题栏本身60px，演示模式横幅约32px */
+  height: auto;
+  min-height: 60px;
 }
 
 /* 主容器样式 */
@@ -42,16 +44,15 @@ onMounted(() => {
   color: var(--text-primary);
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 主内容区域 */
 .main {
-  min-height: calc(100vh - 60px); /* 减去标题栏高度 */
-  height: calc(100vh - 60px);
-  width: 100vw;
-  position: fixed;
-  top: 60px;
-  left: 0;
+  flex: 1;
+  min-height: 0; /* 允许弹性收缩 */
+  overflow: auto;
 }
 
 /* 滚动条样式 - 使用 CSS 变量 */

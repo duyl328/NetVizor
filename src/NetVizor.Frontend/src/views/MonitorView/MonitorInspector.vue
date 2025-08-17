@@ -102,6 +102,7 @@ import { httpClient } from '@/utils/http'
 import { SubscriptionInfo } from '@/types/response'
 import { convertFileSize } from '@/utils/fileUtil'
 import { FILE_SIZE_UNIT_ENUM } from '@/constants/enums'
+import { environmentDetector } from '@/utils/environmentDetector'
 
 // Props
 defineProps<{
@@ -118,6 +119,18 @@ const { trafficHistory } = storeToRefs(trafficStore)
 
 // 订阅应用详情
 const subscribeToAppDetails = (appPath: string) => {
+  // 演示模式：直接使用选中的应用作为详情
+  if (environmentDetector.shouldUseMockData()) {
+    console.log(`[${new Date().toLocaleTimeString()}] [演示模式] 显示应用详情: ${appPath}`)
+    if (selectedApp.value) {
+      // 立即显示详情，不模拟延迟
+      applicationStore.setInspectingAppDetails(selectedApp.value)
+      console.log(`[${new Date().toLocaleTimeString()}] [演示模式] 应用详情已设置:`, selectedApp.value.name)
+    }
+    return
+  }
+
+  // 真实模式：使用WebSocket订阅
   if (!isOpen.value) return
   console.log(`Subscribing to app details for: ${appPath}`)
   const subInfo = {
@@ -132,6 +145,14 @@ const subscribeToAppDetails = (appPath: string) => {
 
 // 取消订阅应用详情
 const unsubscribeFromAppDetails = () => {
+  // 演示模式：直接清空详情
+  if (environmentDetector.shouldUseMockData()) {
+    console.log('[演示模式] 清空应用详情')
+    applicationStore.setInspectingAppDetails(null)
+    return
+  }
+
+  // 真实模式：使用WebSocket取消订阅
   if (!isOpen.value) return
   console.log('Unsubscribing from app details')
   const subInfo: SubscriptionInfo = {
