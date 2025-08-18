@@ -12,7 +12,6 @@
     MinWidth="560"
     WindowStartupLocation="CenterScreen"
     ResizeMode="NoResize"
-    Icon="pack://application:,,,/Assets/Icons/app.ico"
     Background="#F8F9FA">
 
     <!-- 窗口资源 -->

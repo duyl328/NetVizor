@@ -8,7 +8,6 @@
         <UseWPF>true</UseWPF>
         <UseWindowsForms>true</UseWindowsForms> <!-- 加上这句，才能正确启用 Forms 支持 -->
         <ApplicationManifest>app.manifest</ApplicationManifest>
-        <ApplicationIcon>Assets\Icons\app.ico</ApplicationIcon>
         <AssemblyTitle>NetVizor</AssemblyTitle>
         <AssemblyDescription>网络监控与管理工具</AssemblyDescription>
         <AssemblyCompany>YuanLL</AssemblyCompany>
