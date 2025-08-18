@@ -47,6 +47,6 @@ public abstract class BaseController
 
     protected string GetQueryParam(HttpContext context, string paramName, string defaultValue = "")
     {
-        return context.Request.Headers[paramName] ?? defaultValue;
+        return context.Request.QueryString[paramName] ?? defaultValue;
     }
 }

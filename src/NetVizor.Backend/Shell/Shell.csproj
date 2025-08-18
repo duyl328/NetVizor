@@ -52,6 +52,7 @@
         <Content Include="wwwroot\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
+        <None Remove="now1.html"/>
     </ItemGroup>
 
     <ItemGroup>
