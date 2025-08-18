@@ -100,7 +100,7 @@ public class TrayIconManager : IDisposable
         {
             Icon = LoadIcon(),
             Visible = true,
-            Text = "你的应用程序"
+            Text = "NetVizor"
         };
 
         _notifyIcon.MouseClick += OnTrayIconClick;
@@ -250,20 +250,30 @@ public class TrayIconManager : IDisposable
     {
         try
         {
-            // 首先尝试从嵌入资源加载图标
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            var resourceName = "Shell.Assets.Icons.app.ico";
-
-            using (var stream = assembly.GetManifestResourceStream(resourceName))
+            // 首先尝试从WPF资源加载图标
+            try
             {
-                if (stream != null)
+                var uri = new Uri("/Assets/Icons/app.ico", UriKind.Relative);
+                var resourceInfo = System.Windows.Application.GetResourceStream(uri);
+                if (resourceInfo != null)
                 {
-                    Log.Info($"成功从资源加载托盘图标: {resourceName}");
-                    return new Icon(stream);
+                    using (var stream = resourceInfo.Stream)
+                    {
+                        Log.Info($"成功从WPF资源加载托盘图标: {uri}");
+                        return new Icon(stream);
+                    }
+                }
+                else
+                {
+                    Log.Warning($"WPF资源流为空: {uri}");
                 }
             }
+            catch (Exception ex)
+            {
+                Log.Warning($"从WPF资源加载图标失败: {ex.Message}");
+            }
 
-            // 如果资源加载失败，尝试从文件系统加载
+            // 如果WPF资源加载失败，尝试从文件系统加载
             string[] possiblePaths =
             {
                 "Assets/Icons/app.ico",
