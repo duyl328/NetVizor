@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
 
   return {
+    // GitHub Pages 部署路径配置
+    base: mode === 'demo' ? '/NetVizor/' : '/',
     plugins: [
       vue(),
       AutoImport({
