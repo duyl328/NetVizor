@@ -50,6 +50,7 @@
         <Resource Include="Assets\Icons\app.ico"/>
         <Content Include="wwwroot\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
         </Content>
         <None Remove="now1.html"/>
     </ItemGroup>
