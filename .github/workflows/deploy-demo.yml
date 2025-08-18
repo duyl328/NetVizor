@@ -41,11 +41,18 @@ jobs:
         working-directory: src/NetVizor.Frontend
         run: |
           rm -rf node_modules package-lock.json pnpm-lock.yaml
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory: $(ls -la)"
+          echo "Environment files: $(ls -la .env*)"
           npm install --force
 
       - name: 构建演示版本
         working-directory: src/NetVizor.Frontend
-        run: npm run build:demo
+        run: |
+          echo "Building with mode: demo"
+          echo "Checking .env.demo file:"
+          cat .env.demo || echo "No .env.demo found"
+          npm run build:demo
 
       - name: 上传构建产物
         uses: actions/upload-pages-artifact@v3
