@@ -10,7 +10,8 @@
     mc:Ignorable="d"
     Title="NetVizor Dashboard"
     Height="900"
-    Width="1500">
+    Width="1500"
+    Icon="/Assets/Icons/app.ico">
     <Grid>
         <userControls:WebPanel />
     </Grid>

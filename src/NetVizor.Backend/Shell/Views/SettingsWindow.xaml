@@ -12,7 +12,8 @@
     MinWidth="560"
     WindowStartupLocation="CenterScreen"
     ResizeMode="NoResize"
-    Background="#F8F9FA">
+    Background="#F8F9FA"
+    Icon="/Assets/Icons/app.ico">
 
     <!-- 窗口资源 -->
     <Window.Resources>

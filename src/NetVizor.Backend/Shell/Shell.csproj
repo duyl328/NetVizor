@@ -47,7 +47,7 @@
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
         <None Remove="Assets\Icons\app.ico"/>
-        <EmbeddedResource Include="Assets\Icons\app.ico"/>
+        <Resource Include="Assets\Icons\app.ico"/>
         <Content Include="wwwroot\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
