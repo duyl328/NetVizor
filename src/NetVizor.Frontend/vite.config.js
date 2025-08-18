@@ -43,7 +43,27 @@ export default defineConfig(({ mode }) => {
             host: "0.0.0.0",
             watch: {},
         },
-        build: {},
+        build: {
+            // 禁用CSS代码分割，将所有CSS合并到一个文件
+            cssCodeSplit: false,
+            // 调整chunk大小警告限制，允许大文件
+            chunkSizeWarningLimit: 10000,
+            rollupOptions: {
+                output: {
+                    // 完全禁用代码分割，所有代码打包到单个文件
+                    manualChunks: () => 'index',
+                    // 简化文件命名
+                    chunkFileNames: '[name].js',
+                    entryFileNames: '[name].js',
+                    assetFileNames: (assetInfo) => {
+                        if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+                            return 'style.css';
+                        }
+                        return '[name].[ext]';
+                    }
+                }
+            }
+        },
         resolve: {
             alias: {
                 '@': fileURLToPath(new URL('./src', import.meta.url))
