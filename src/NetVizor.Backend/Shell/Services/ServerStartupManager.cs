@@ -121,12 +121,12 @@ public class ServerStartupManager
 
     private void StartStaticFileServer()
     {
-        // int port = SysHelper.GetAvailablePort();
-        int port = 3000;
+        int port = SysHelper.GetAvailablePort();
+        // int port = 3000;
         AppConfig.Instance.HttpPort = port;
         AppConfig.Instance.HttpPath = $"http://127.0.0.1:{port}";
 
-        // _staticFileServer.Start(AppConfig.Instance.HttpPort);
+        _staticFileServer.Start(AppConfig.Instance.HttpPort);
     }
 
     public void Stop()
