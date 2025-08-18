@@ -593,6 +593,7 @@ const fetchAnalysisData = async () => {
     console.log('[SoftwareDetailModal] 请求参数:', params)
     console.log('[SoftwareDetailModal] 请求URL: /apps/network-analysis')
 
+    // 使用GET方法，参数作为查询字符串
     const response: ApiResponse<NetworkAnalysisData> = await httpClient.get(
       '/apps/network-analysis',
       params,

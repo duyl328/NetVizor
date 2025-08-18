@@ -189,7 +189,7 @@ class HttpClient {
   /**
    * 处理演示模式的API请求
    */
-  private async handleDemoRequest<T = unknown>(url: string, method: string, data?: unknown): Promise<ApiResponse<T>> {
+  private async handleDemoRequest<T = unknown>(url: string, method: string, data?: unknown, params?: unknown): Promise<ApiResponse<T>> {
     console.log(`[HttpClient] 演示模式：模拟API请求 ${method} ${url}`, data)
 
     // 模拟网络延迟
@@ -347,6 +347,112 @@ class HttpClient {
           pageSize: 100,
           items: topTrafficApps
         }
+      } else if (url.includes('/apps/network-analysis')) {
+        // 网络分析详情数据
+        const requestParams = (method === 'GET' ? params : data) as any
+        const appId = requestParams?.appId
+        
+        if (!appId) {
+          // 模拟后端的参数校验错误
+          return {
+            success: false,
+            code: 400,
+            message: '缺少必需参数 appId',
+            data: null as T,
+            timestamp: new Date().toISOString()
+          }
+        }
+        
+        // 根据appId生成不同的模拟数据
+        const appNames = {
+          'chrome_001': { name: 'Google Chrome', company: 'Google LLC', version: '120.0.6099.109' },
+          'firefox_001': { name: 'Mozilla Firefox', company: 'Mozilla Corporation', version: '121.0' },
+          'steam_001': { name: 'Steam', company: 'Valve Corporation', version: '3.4.15.7' },
+          'discord_001': { name: 'Discord', company: 'Discord Inc.', version: '1.0.9016' },
+          'spotify_001': { name: 'Spotify', company: 'Spotify AB', version: '1.2.25.1011' },
+        } as any
+        
+        const appInfo = appNames[appId] || { name: 'Unknown Application', company: 'Unknown Company', version: '1.0.0' }
+        
+        // 生成模拟的网络分析数据
+        const now = Date.now()
+        const startTime = now - (requestParams?.timeRange === '1hour' ? 3600000 : 86400000)
+        
+        // 生成连接数据
+        const connections = []
+        for (let i = 0; i < 20; i++) {
+          connections.push({
+            localIP: '192.168.1.100',
+            localPort: 50000 + i,
+            remoteIP: `52.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+            remotePort: [80, 443, 8080, 3000, 5000][Math.floor(Math.random() * 5)],
+            protocol: Math.random() > 0.7 ? 'UDP' : 'TCP',
+            totalUpload: Math.floor(Math.random() * 10000000),
+            totalDownload: Math.floor(Math.random() * 50000000),
+            totalTraffic: 0,
+            connectionCount: Math.floor(Math.random() * 10) + 1,
+            firstSeen: new Date(startTime + Math.random() * (now - startTime)).toISOString(),
+            lastSeen: new Date(now - Math.random() * 3600000).toISOString()
+          })
+        }
+        
+        // 计算总流量
+        connections.forEach(conn => {
+          conn.totalTraffic = conn.totalUpload + conn.totalDownload
+        })
+        
+        // 协议统计
+        const protocolStats = [
+          { protocol: 'TCP', connectionCount: 15, totalTraffic: 150000000, percentage: 75 },
+          { protocol: 'UDP', connectionCount: 5, totalTraffic: 50000000, percentage: 25 }
+        ]
+        
+        // 时间趋势
+        const timeTrends = []
+        for (let i = 0; i < 24; i++) {
+          const timestamp = Math.floor((startTime + i * 3600000) / 1000)
+          timeTrends.push({
+            timestamp: timestamp,
+            timeStr: new Date(timestamp * 1000).toLocaleTimeString(),
+            upload: Math.floor(Math.random() * 1000000),
+            download: Math.floor(Math.random() * 5000000),
+            connections: Math.floor(Math.random() * 10) + 1
+          })
+        }
+        
+        // 端口分析
+        const portAnalysis = [
+          { port: 80, serviceName: 'HTTP', connectionCount: 8, totalTraffic: 80000000, protocols: ['TCP'] },
+          { port: 443, serviceName: 'HTTPS', connectionCount: 10, totalTraffic: 100000000, protocols: ['TCP'] },
+          { port: 8080, serviceName: 'HTTP-Alt', connectionCount: 2, totalTraffic: 20000000, protocols: ['TCP'] }
+        ]
+        
+        responseData = {
+          appInfo: {
+            appId: appId,
+            name: appInfo.name,
+            company: appInfo.company,
+            version: appInfo.version,
+            path: `C:\\Program Files\\${appInfo.company}\\${appInfo.name}\\app.exe`,
+            icon: '',
+            hash: 'mock_hash_' + appId
+          },
+          summary: {
+            timeRange: requestParams?.timeRange || '1hour',
+            startTime: new Date(startTime).toISOString(),
+            endTime: new Date(now).toISOString(),
+            totalUpload: connections.reduce((sum, conn) => sum + conn.totalUpload, 0),
+            totalDownload: connections.reduce((sum, conn) => sum + conn.totalDownload, 0),
+            totalTraffic: connections.reduce((sum, conn) => sum + conn.totalTraffic, 0),
+            totalConnections: connections.length,
+            uniqueRemoteIPs: new Set(connections.map(conn => conn.remoteIP)).size,
+            uniqueRemotePorts: new Set(connections.map(conn => conn.remotePort)).size
+          },
+          topConnections: connections,
+          protocolStats: protocolStats,
+          timeTrends: timeTrends,
+          portAnalysis: portAnalysis
+        }
       } else if (url.includes('/statistics')) {
         responseData = {
           timestamp: Date.now(),
@@ -416,7 +522,8 @@ class HttpClient {
       return this.handleDemoRequest<T>(
         config.url || '',
         config.method?.toUpperCase() || 'GET',
-        config.data || config.params
+        config.data,
+        config.params
       )
     }
 
