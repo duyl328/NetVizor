@@ -11,10 +11,18 @@ import Components from 'unplugin-vue-components/vite'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
+  
+  // 调试信息
+  console.log('Build mode:', mode)
+  console.log('VITE_BASE_URL:', env.VITE_BASE_URL)
+  console.log('VITE_DEMO_MODE:', env.VITE_DEMO_MODE)
+  
+  const baseUrl = env.VITE_BASE_URL || (mode === 'demo' ? '/NetVizor/' : '/')
+  console.log('Final base URL:', baseUrl)
 
   return {
     // GitHub Pages 部署路径配置
-    base: mode === 'demo' ? '/NetVizor/' : '/',
+    base: baseUrl,
     plugins: [
       vue(),
       AutoImport({
