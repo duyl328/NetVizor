@@ -6,7 +6,16 @@ import { NaiveUiResolver } from 'unplugin-vue-components/resolvers';
 import Components from 'unplugin-vue-components/vite';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd());
+    
+    // 直接根据 mode 设置基础路径，确保在 GitHub Actions 中正确工作
+    const baseUrl = mode === 'demo' ? '/NetVizor/' : '/';
+    
+    console.log('Build mode:', mode);
+    console.log('Base URL:', baseUrl);
+    
     return {
+        // GitHub Pages 部署路径配置
+        base: baseUrl,
         plugins: [
             vue(),
             AutoImport({
