@@ -13,7 +13,7 @@
             <template #icon>
               <n-icon :component="DownloadOutline" />
             </template>
-            下载
+            下载完整版
           </n-button>
         </div>
       </div>
@@ -163,7 +163,13 @@ const message = useMessage()
 const isDemoMode = computed(() => environmentDetector.shouldUseMockData())
 
 const handleDownload = () => {
-  message.info('完整版本下载功能即将开放，敬请期待！')
+  // 尝试打开最新版本，如果不可用则跳转到 tags 页面
+  try {
+    window.open('https://github.com/duyl328/NetVizor/releases/latest', '_blank')
+  } catch (error) {
+    // 后备方案：跳转到 tags 页面
+    window.open('https://github.com/duyl328/NetVizor/tags', '_blank')
+  }
 }
 // endregion
 </script>
