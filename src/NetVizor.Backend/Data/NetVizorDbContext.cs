@@ -173,6 +173,23 @@ public class NetVizorDbContext : IDisposable
                 UNIQUE(AppId, MonthTimestamp)
             )");
 
+        // 创建全局网络聚合数据表 - 按5分钟聚合（用于1小时视图）
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS GlobalNetworkMinutely (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                NetworkCardGuid TEXT NOT NULL,
+                MinuteTimestamp INTEGER NOT NULL,
+                TotalUpload INTEGER DEFAULT 0,
+                TotalDownload INTEGER DEFAULT 0,
+                AvgUpload INTEGER DEFAULT 0,
+                AvgDownload INTEGER DEFAULT 0,
+                MaxUpload INTEGER DEFAULT 0,
+                MaxDownload INTEGER DEFAULT 0,
+                RecordCount INTEGER DEFAULT 0,
+                CreatedTimestamp INTEGER NOT NULL,
+                UNIQUE(NetworkCardGuid, MinuteTimestamp)
+            )");
+
         // 创建全局网络聚合数据表 - 按小时聚合
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS GlobalNetworkHourly (
@@ -264,6 +281,8 @@ public class NetVizorDbContext : IDisposable
             "CREATE INDEX IF NOT EXISTS idx_appnetwork_monthly_timestamp ON AppNetworkMonthly(MonthTimestamp)");
 
         // 全局网络聚合表索引
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_globalnetwork_minutely_timestamp ON GlobalNetworkMinutely(MinuteTimestamp)");
         await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_globalnetwork_hourly_timestamp ON GlobalNetworkHourly(HourTimestamp)");
         await connection.ExecuteAsync(

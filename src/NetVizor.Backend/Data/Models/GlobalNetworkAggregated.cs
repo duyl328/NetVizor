@@ -54,6 +54,17 @@ public abstract class GlobalNetworkAggregatedBase
 }
 
 /// <summary>
+/// 全局网络5分钟聚合数据（用于1小时视图）
+/// </summary>
+public class GlobalNetworkMinutely : GlobalNetworkAggregatedBase
+{
+    /// <summary>
+    /// 分钟时间戳（Unix时间戳，精确到5分钟）
+    /// </summary>
+    public long MinuteTimestamp { get; set; }
+}
+
+/// <summary>
 /// 全局网络小时聚合数据
 /// </summary>
 public class GlobalNetworkHourly : GlobalNetworkAggregatedBase

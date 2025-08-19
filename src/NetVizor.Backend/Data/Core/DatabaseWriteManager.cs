@@ -482,15 +482,19 @@ public class DatabaseWriteManager : IDisposable
             {
                 Log.Information($"开始处理网卡: {networkCardGuid}");
 
-                // 第一步：从原始数据聚合到小时数据
+                // 第一步：从原始数据聚合到5分钟数据
+                Log.Information($"为网卡 {networkCardGuid} 聚合5分钟数据");
+                await AggregateGlobalNetworkMinutelyAsync(networkCardGuid);
+
+                // 第二步：从5分钟数据聚合到小时数据
                 Log.Information($"为网卡 {networkCardGuid} 聚合小时数据");
                 await AggregateGlobalNetworkHourlyAsync(networkCardGuid);
 
-                // 第二步：从小时数据聚合到天数据
+                // 第三步：从小时数据聚合到天数据
                 Log.Information($"为网卡 {networkCardGuid} 聚合天数据");
                 await AggregateGlobalNetworkDailyAsync(networkCardGuid, threeDaysAgo);
 
-                // 第三步：从天数据聚合到周数据
+                // 第四步：从天数据聚合到周数据
                 Log.Information($"为网卡 {networkCardGuid} 聚合周数据");
                 await AggregateGlobalNetworkWeeklyAsync(networkCardGuid, oneWeekAgo);
             }
@@ -794,14 +798,14 @@ public class DatabaseWriteManager : IDisposable
     }
 
     /// <summary>
-    /// 按小时聚合全局网络数据
+    /// 按5分钟聚合全局网络数据
     /// </summary>
-    private async Task AggregateGlobalNetworkHourlyAsync(string networkCardGuid)
+    private async Task AggregateGlobalNetworkMinutelyAsync(string networkCardGuid)
     {
         try
         {
-            var hourSeconds = 3600;
-            Log.Information($"聚合网卡 {networkCardGuid} 的小时数据");
+            var minuteSeconds = 300; // 5分钟 = 300秒
+            Log.Information($"聚合网卡 {networkCardGuid} 的5分钟数据");
 
             var connection = _dataService.Networks.GetType()
                 .GetField("_context",
@@ -818,7 +822,7 @@ public class DatabaseWriteManager : IDisposable
 
             string sql = @"
                 SELECT 
-                    (Timestep / @HourSeconds) * @HourSeconds as HourTimestamp,
+                    (Timestep / @MinuteSeconds) * @MinuteSeconds as MinuteTimestamp,
                     SUM(Upload) as TotalUpload,
                     SUM(Download) as TotalDownload,
                     AVG(Upload) as AvgUpload,
@@ -828,7 +832,100 @@ public class DatabaseWriteManager : IDisposable
                     COUNT(*) as RecordCount
                 FROM GlobalNetwork 
                 WHERE NetworkCardGuid = @NetworkCardGuid
-                GROUP BY (Timestep / @HourSeconds)
+                GROUP BY (Timestep / @MinuteSeconds)
+                ORDER BY MinuteTimestamp";
+
+            var parameters = new { NetworkCardGuid = networkCardGuid, MinuteSeconds = minuteSeconds };
+            var aggregatedData = await contextConnection.QueryAsync(sql, parameters);
+
+            Log.Information($"查询到 {aggregatedData.Count()} 条5分钟聚合数据");
+
+            int savedCount = 0;
+            int skippedCount = 0;
+
+            foreach (dynamic data in aggregatedData)
+            {
+                var minuteTimestamp = (long)data.MinuteTimestamp;
+                var totalUpload = (long)data.TotalUpload;
+                var totalDownload = (long)data.TotalDownload;
+                var avgUpload = (long)data.AvgUpload;
+                var avgDownload = (long)data.AvgDownload;
+                var maxUpload = (long)data.MaxUpload;
+                var maxDownload = (long)data.MaxDownload;
+                var recordCount = (int)data.RecordCount;
+
+                bool exists =
+                    await _dataService.Networks.GlobalNetworkMinutelyExistsAsync(networkCardGuid, minuteTimestamp);
+
+                if (!exists)
+                {
+                    var minutelyData = new GlobalNetworkMinutely
+                    {
+                        NetworkCardGuid = networkCardGuid,
+                        MinuteTimestamp = minuteTimestamp,
+                        TotalUpload = totalUpload,
+                        TotalDownload = totalDownload,
+                        AvgUpload = avgUpload,
+                        AvgDownload = avgDownload,
+                        MaxUpload = maxUpload,
+                        MaxDownload = maxDownload,
+                        RecordCount = recordCount,
+                        CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    };
+
+                    await _dataService.Networks.SaveGlobalNetworkMinutelyAsync(minutelyData);
+                    savedCount++;
+                }
+                else
+                {
+                    skippedCount++;
+                }
+            }
+
+            Log.Information($"网卡 {networkCardGuid} 的5分钟聚合完成，保存了 {savedCount} 条新数据，跳过了 {skippedCount} 条已存在数据");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"聚合网卡 {networkCardGuid} 的5分钟数据失败");
+        }
+    }
+
+    /// <summary>
+    /// 按小时聚合全局网络数据（从5分钟数据聚合）
+    /// </summary>
+    private async Task AggregateGlobalNetworkHourlyAsync(string networkCardGuid)
+    {
+        try
+        {
+            var hourSeconds = 3600;
+            Log.Information($"聚合网卡 {networkCardGuid} 的小时数据，从5分钟数据聚合");
+
+            var connection = _dataService.Networks.GetType()
+                .GetField("_context",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(_dataService.Networks);
+            var contextConnection =
+                connection?.GetType().GetProperty("Connection")?.GetValue(connection) as System.Data.IDbConnection;
+
+            if (contextConnection == null)
+            {
+                Log.Warning("无法获取数据库连接");
+                return;
+            }
+
+            string sql = @"
+                SELECT 
+                    (MinuteTimestamp / @HourSeconds) * @HourSeconds as HourTimestamp,
+                    SUM(TotalUpload) as TotalUpload,
+                    SUM(TotalDownload) as TotalDownload,
+                    AVG(AvgUpload) as AvgUpload,
+                    AVG(AvgDownload) as AvgDownload,
+                    MAX(MaxUpload) as MaxUpload,
+                    MAX(MaxDownload) as MaxDownload,
+                    SUM(RecordCount) as RecordCount
+                FROM GlobalNetworkMinutely 
+                WHERE NetworkCardGuid = @NetworkCardGuid
+                GROUP BY (MinuteTimestamp / @HourSeconds)
                 ORDER BY HourTimestamp";
 
             var parameters = new { NetworkCardGuid = networkCardGuid, HourSeconds = hourSeconds };
@@ -1103,13 +1200,21 @@ public class DatabaseWriteManager : IDisposable
         {
             Log.Information("开始清理全局网络数据");
 
-            // 删除超过3天的原始数据（已聚合到周级数据）
-            var deletedOldData = await _dataService.Networks.DeleteOldGlobalNetworkDataAsync(threeDaysAgo);
-            Log.Information($"删除了 {deletedOldData} 条超过3天的全局网络原始数据");
+            var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var sixHoursAgo = currentTimestamp - 21600; // 6小时前
+            var threeDaysAgoMinutely = currentTimestamp - 259200; // 3天前
+
+            // 删除超过6小时的原始数据（已聚合到5分钟级数据）
+            var deletedRawData = await _dataService.Networks.DeleteOldGlobalNetworkDataAsync(sixHoursAgo);
+            Log.Information($"删除了 {deletedRawData} 条超过6小时的全局网络原始数据");
+
+            // 删除超过3天的5分钟级聚合数据（已聚合到小时级数据）
+            var deletedMinutelyData = await _dataService.Networks.DeleteGlobalNetworkMinutelyBeforeAsync(threeDaysAgoMinutely);
+            Log.Information($"删除了 {deletedMinutelyData} 条超过3天的全局网络5分钟级聚合数据");
 
             // 删除超过1周的周级聚合数据（已聚合到月级数据）
-            var deletedMonthlyData = await _dataService.Networks.DeleteGlobalNetworkWeeklyBeforeAsync(oneWeekAgo);
-            Log.Information($"删除了 {deletedMonthlyData} 条超过1周的全局网络周级聚合数据");
+            var deletedWeeklyData = await _dataService.Networks.DeleteGlobalNetworkWeeklyBeforeAsync(oneWeekAgo);
+            Log.Information($"删除了 {deletedWeeklyData} 条超过1周的全局网络周级聚合数据");
 
             Log.Information("全局网络数据清理完成");
         }

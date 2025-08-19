@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Application.Utils;
@@ -11,6 +12,7 @@ using Data.Models;
 using Data.Repositories;
 using Shell.Utils;
 using Shell.Services;
+using Dapper;
 
 namespace Shell.Controllers;
 
@@ -113,79 +115,128 @@ public class NetworkController : BaseController
             var availableRanges = new List<object>();
             var now = DateTimeOffset.UtcNow;
 
-            var hasHourlyData =
-                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("hourly", now.AddHours(-1).ToUnixTimeSeconds());
-            if (hasHourlyData)
+            // 获取最早和最新的数据时间戳来确定实际数据范围
+            var (earliestTime, latestTime) = await GetDataTimeRangeAsync();
+            
+            if (earliestTime == 0 || latestTime == 0)
+            {
+                // 没有数据时返回空数组
+                await WriteJsonResponseAsync(context, new ResponseModel<object>
+                {
+                    Success = true,
+                    Data = availableRanges,
+                    Message = "暂无网络数据"
+                });
+                return;
+            }
+
+            var dataSpanSeconds = latestTime - earliestTime;
+            var oneHour = 3600;
+            var oneDay = 86400;
+            var oneWeek = 604800;
+            var oneMonth = 2592000;
+
+            // 1小时：至少有1分钟的数据
+            if (dataSpanSeconds >= 60)
             {
                 availableRanges.Add(new
                 {
                     type = "hour",
                     name = "1小时",
                     available = true,
-                    startTime = now.AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    startTime = DateTimeOffset.FromUnixTimeSeconds(Math.Max(earliestTime, latestTime - oneHour)).ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    actualDataSpan = Math.Min(dataSpanSeconds, oneHour)
                 });
             }
 
-            var hasDailyData =
-                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-1).ToUnixTimeSeconds());
-            if (hasDailyData)
+            // 24小时：至少有1小时的数据
+            if (dataSpanSeconds >= oneHour)
             {
                 availableRanges.Add(new
                 {
                     type = "day",
-                    name = "1天",
+                    name = "24小时",
                     available = true,
-                    startTime = now.AddDays(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    startTime = DateTimeOffset.FromUnixTimeSeconds(Math.Max(earliestTime, latestTime - oneDay)).ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    actualDataSpan = Math.Min(dataSpanSeconds, oneDay)
                 });
             }
 
-            var hasWeeklyData =
-                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-7).ToUnixTimeSeconds());
-            if (hasWeeklyData)
+            // 7天：至少有6小时的数据
+            if (dataSpanSeconds >= oneHour * 6)
             {
                 availableRanges.Add(new
                 {
                     type = "week",
-                    name = "1周",
+                    name = "7天",
                     available = true,
-                    startTime = now.AddDays(-7).ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    startTime = DateTimeOffset.FromUnixTimeSeconds(Math.Max(earliestTime, latestTime - oneWeek)).ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    actualDataSpan = Math.Min(dataSpanSeconds, oneWeek)
                 });
             }
 
-            var hasMonthlyData =
-                await NetworkApiHelper.HasNetworkDataInTimeRangeAsync("daily", now.AddDays(-30).ToUnixTimeSeconds());
-            if (hasMonthlyData)
+            // 30天：至少有1天的数据
+            if (dataSpanSeconds >= oneDay)
             {
                 availableRanges.Add(new
                 {
                     type = "month",
-                    name = "1个月",
+                    name = "30天",
                     available = true,
-                    startTime = now.AddDays(-30).ToString("yyyy-MM-ddTHH:mm:ssZ")
-                });
-            }
-
-            if (!availableRanges.Any())
-            {
-                availableRanges.Add(new
-                {
-                    type = "hour",
-                    name = "1小时",
-                    available = true,
-                    startTime = now.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    startTime = DateTimeOffset.FromUnixTimeSeconds(Math.Max(earliestTime, latestTime - oneMonth)).ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    actualDataSpan = Math.Min(dataSpanSeconds, oneMonth)
                 });
             }
 
             await WriteJsonResponseAsync(context, new ResponseModel<object>
             {
                 Success = true,
-                Data = availableRanges.First(),
+                Data = availableRanges,
                 Message = "获取可用时间范围成功"
             });
         }
         catch (Exception ex)
         {
             await WriteErrorResponseAsync(context, $"获取可用时间范围失败: {ex.Message}", 500);
+        }
+    }
+
+    /// <summary>
+    /// 获取数据库中的实际数据时间范围
+    /// </summary>
+    private async Task<(long earliestTime, long latestTime)> GetDataTimeRangeAsync()
+    {
+        try
+        {
+            // 查询全局网络数据的时间范围
+            var globalData = await DatabaseManager.Instance.Networks.GetGlobalNetworkHistoryAsync("", 1);
+            if (!globalData.Any())
+            {
+                return (0, 0);
+            }
+
+            // 获取更精确的时间范围 - 通过反射获取NetworkRepository的连接
+            var networkRepo = DatabaseManager.Instance.Networks;
+            var contextField = networkRepo.GetType().GetField("_context", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var context = contextField?.GetValue(networkRepo);
+            var connection = context?.GetType().GetProperty("Connection")?.GetValue(context) as System.Data.IDbConnection;
+            
+            if (connection == null)
+            {
+                return (0, 0);
+            }
+            
+            var earliestTime = await connection.QuerySingleOrDefaultAsync<long?>(
+                "SELECT MIN(Timestep) FROM GlobalNetwork") ?? 0;
+            var latestTime = await connection.QuerySingleOrDefaultAsync<long?>(
+                "SELECT MAX(Timestep) FROM GlobalNetwork") ?? 0;
+
+            return (earliestTime, latestTime);
+        }
+        catch
+        {
+            return (0, 0);
         }
     }
 

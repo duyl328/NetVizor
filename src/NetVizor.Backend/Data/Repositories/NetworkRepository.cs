@@ -31,6 +31,7 @@ public interface INetworkRepository
     Task<IEnumerable<AppNetworkSummary>> GetAppNetworkByMonthAsync(string appId, int months = 12);
 
     // 全局网络按时间单位聚合查询
+    Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByMinuteAsync(string networkCardGuid, int minutes = 60);
     Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByHourAsync(string networkCardGuid, int hours = 24);
     Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByDayAsync(string networkCardGuid, int days = 7);
     Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByMonthAsync(string networkCardGuid, int months = 12);
@@ -51,6 +52,7 @@ public interface INetworkRepository
     Task<int> SaveAppNetworkMonthlyAsync(AppNetworkMonthly monthly);
 
     // 全局网络聚合数据操作
+    Task<int> SaveGlobalNetworkMinutelyAsync(GlobalNetworkMinutely minutely);
     Task<int> SaveGlobalNetworkHourlyAsync(GlobalNetworkHourly hourly);
     Task<int> SaveGlobalNetworkDailyAsync(GlobalNetworkDaily daily);
     Task<int> SaveGlobalNetworkWeeklyAsync(GlobalNetworkWeekly weekly);
@@ -62,6 +64,7 @@ public interface INetworkRepository
     Task<bool> AppNetworkWeeklyExistsAsync(string appId, long weekTimestamp);
     Task<bool> AppNetworkMonthlyExistsAsync(string appId, long monthTimestamp);
 
+    Task<bool> GlobalNetworkMinutelyExistsAsync(string networkCardGuid, long minuteTimestamp);
     Task<bool> GlobalNetworkHourlyExistsAsync(string networkCardGuid, long hourTimestamp);
     Task<bool> GlobalNetworkDailyExistsAsync(string networkCardGuid, long dayTimestamp);
     Task<bool> GlobalNetworkWeeklyExistsAsync(string networkCardGuid, long weekTimestamp);
@@ -72,6 +75,7 @@ public interface INetworkRepository
     Task<int> DeleteAppNetworkDailyBeforeAsync(long beforeTimestamp);
     Task<int> DeleteAppNetworkWeeklyBeforeAsync(long beforeTimestamp);
 
+    Task<int> DeleteGlobalNetworkMinutelyBeforeAsync(long beforeTimestamp);
     Task<int> DeleteGlobalNetworkHourlyBeforeAsync(long beforeTimestamp);
     Task<int> DeleteGlobalNetworkDailyBeforeAsync(long beforeTimestamp);
     Task<int> DeleteGlobalNetworkWeeklyBeforeAsync(long beforeTimestamp);
@@ -347,6 +351,52 @@ public class NetworkRepository : INetworkRepository
 
     #region 全局网络按时间单位聚合查询
 
+    public async Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByMinuteAsync(string networkCardGuid, int minutes = 60)
+    {
+        var startTime = DateTimeOffset.UtcNow.AddMinutes(-minutes).ToUnixTimeSeconds();
+
+        string sql;
+        object parameters;
+
+        if (string.IsNullOrEmpty(networkCardGuid))
+        {
+            // 获取所有网卡数据
+            sql = @"
+                SELECT 
+                    MinuteTimestamp,
+                    SUM(TotalUpload) as TotalUpload,
+                    SUM(TotalDownload) as TotalDownload,
+                    AVG(AvgUpload) as AvgUpload,
+                    AVG(AvgDownload) as AvgDownload,
+                    MAX(MaxUpload) as MaxUpload,
+                    MAX(MaxDownload) as MaxDownload
+                FROM GlobalNetworkMinutely 
+                WHERE MinuteTimestamp >= @StartTime
+                GROUP BY MinuteTimestamp
+                ORDER BY MinuteTimestamp DESC";
+            parameters = new { StartTime = startTime };
+        }
+        else
+        {
+            // 获取指定网卡数据
+            sql = @"
+                SELECT 
+                    MinuteTimestamp,
+                    TotalUpload,
+                    TotalDownload,
+                    AvgUpload,
+                    AvgDownload,
+                    MaxUpload,
+                    MaxDownload
+                FROM GlobalNetworkMinutely 
+                WHERE NetworkCardGuid = @NetworkCardGuid AND MinuteTimestamp >= @StartTime
+                ORDER BY MinuteTimestamp DESC";
+            parameters = new { NetworkCardGuid = networkCardGuid, StartTime = startTime };
+        }
+
+        return await _context.Connection.QueryAsync<GlobalNetworkSummary>(sql, parameters);
+    }
+
     public async Task<IEnumerable<GlobalNetworkSummary>> GetGlobalNetworkByHourAsync(string networkCardGuid,
         int hours = 24)
     {
@@ -621,6 +671,15 @@ public class NetworkRepository : INetworkRepository
 
     #region 全局网络聚合数据操作
 
+    public async Task<int> SaveGlobalNetworkMinutelyAsync(GlobalNetworkMinutely minutely)
+    {
+        const string sql = @"
+            INSERT INTO GlobalNetworkMinutely (NetworkCardGuid, MinuteTimestamp, TotalUpload, TotalDownload, AvgUpload, AvgDownload, MaxUpload, MaxDownload, RecordCount, CreatedTimestamp)
+            VALUES (@NetworkCardGuid, @MinuteTimestamp, @TotalUpload, @TotalDownload, @AvgUpload, @AvgDownload, @MaxUpload, @MaxDownload, @RecordCount, @CreatedTimestamp)";
+
+        return await _context.Connection.ExecuteAsync(sql, minutely);
+    }
+
     public async Task<int> SaveGlobalNetworkHourlyAsync(GlobalNetworkHourly hourly)
     {
         const string sql = @"
@@ -696,6 +755,15 @@ public class NetworkRepository : INetworkRepository
         return count > 0;
     }
 
+    public async Task<bool> GlobalNetworkMinutelyExistsAsync(string networkCardGuid, long minuteTimestamp)
+    {
+        const string sql =
+            "SELECT COUNT(1) FROM GlobalNetworkMinutely WHERE NetworkCardGuid = @NetworkCardGuid AND MinuteTimestamp = @MinuteTimestamp";
+        var count = await _context.Connection.QuerySingleAsync<int>(sql,
+            new { NetworkCardGuid = networkCardGuid, MinuteTimestamp = minuteTimestamp });
+        return count > 0;
+    }
+
     public async Task<bool> GlobalNetworkHourlyExistsAsync(string networkCardGuid, long hourTimestamp)
     {
         const string sql =
@@ -754,6 +822,12 @@ public class NetworkRepository : INetworkRepository
         return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
     }
 
+    public async Task<int> DeleteGlobalNetworkMinutelyBeforeAsync(long beforeTimestamp)
+    {
+        const string sql = "DELETE FROM GlobalNetworkMinutely WHERE MinuteTimestamp < @BeforeTimestamp";
+        return await _context.Connection.ExecuteAsync(sql, new { BeforeTimestamp = beforeTimestamp });
+    }
+
     public async Task<int> DeleteGlobalNetworkHourlyBeforeAsync(long beforeTimestamp)
     {
         const string sql = "DELETE FROM GlobalNetworkHourly WHERE HourTimestamp < @BeforeTimestamp";
@@ -790,6 +864,7 @@ public class AppNetworkSummary
 
 public class GlobalNetworkSummary
 {
+    public long MinuteTimestamp { get; set; }
     public long HourTimestamp { get; set; }
     public long DayTimestamp { get; set; }
     public long MonthTimestamp { get; set; }
